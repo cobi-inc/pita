@@ -121,7 +121,8 @@ def naive_temp(p : AutoregressiveSampler, context, temp, seq_len):
 
     return prop, log_probs_norm, log_probs_unnorm
 
-def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_tokens, block_num=16, sliding_window=0):
+def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_tokens, block_num=16, sliding_window=0):
+    total_tokens_gen = 0
     c = len(context)
     print(f'Temp: {temp}')
     gen = []
@@ -143,19 +144,79 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
         gen, lp_norm, lp_unnorm = naive_temp(p, gen, temp=temp, seq_len=jump_size+len(gen))
         log_probs_norm.extend(lp_norm)
         log_probs_unnorm.extend(lp_unnorm)
-
+        total_tokens_gen += len(lp_norm)
         for _ in tqdm(range(mcmc_steps)):
             attempts+=1
             t = len(gen)
             context_start = c + block_count * jump_size * sliding_window
-            if(context_start >= t):
+            if(context_start >= t-jump_size):
                 context_start = t-jump_size
 
             print(f"Sampling index in range ({context_start}, {t-1})")
             idx = random.randint(context_start,t-1)
             # llm query takes the burden of time 
             prop, log_prob_prop, target_log_prob_prop = naive_temp(p, gen[:idx], temp=temp, seq_len=t)
+            total_tokens_gen += len(log_prob_prop)
             s = len(prop)
+            assert(len(log_prob_prop) == s - idx)
+            assert(len(target_log_prob_prop) == s - idx)
+            log_prob_cur = log_probs_norm.copy()[idx-c:s-c]
+            target_log_prob_cur = log_probs_unnorm.copy()[idx-c:s-c]
+            log_r = sum(target_log_prob_prop) + sum(log_prob_cur) - sum(target_log_prob_cur) - sum(log_prob_prop)
+            
+            if np.random.rand() < np.exp(log_r):
+                acceptances+=1
+                gen = prop.copy()
+                log_probs_norm[idx-c:] = log_prob_prop.copy()
+                log_probs_unnorm[idx-c:] = target_log_prob_prop.copy()
+
+                del prop
+                del log_prob_prop
+                del target_log_prob_cur
+
+        if p.tokenizer.eos_token_id in gen:
+            print("End token found")
+            eos_idx = gen.index(p.tokenizer.eos_token_id)
+            gen = gen[:eos_idx + 1]
+            log_probs_norm = log_probs_norm[:eos_idx + 1]
+            log_probs_unnorm = log_probs_unnorm[:eos_idx + 1]
+            acceptance_ratio = acceptances/attempts
+            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+
+    acceptance_ratio = acceptances/attempts
+    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+
+def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_tokens, block_num=16):
+    c = len(context)
+    print(f'Temp: {temp}')
+    gen = []
+    if context is not None:
+        gen = context.copy()
+    log_probs_norm = []
+    log_probs_unnorm = []
+
+
+    print(max_new_tokens)
+    assert max_new_tokens % block_num == 0
+    jump_size = int(max_new_tokens // block_num)
+    print(jump_size)
+    attempts = 0
+    acceptances = 0
+    total_tokens_gen = 0
+
+    for _ in tqdm(range(block_num)):
+        gen, lp_norm, lp_unnorm = naive_temp(p, gen, temp=temp, seq_len=jump_size+len(gen))
+        log_probs_norm.extend(lp_norm)
+        log_probs_unnorm.extend(lp_unnorm)
+        total_tokens_gen += len(lp_norm)
+        for _ in tqdm(range(mcmc_steps)):
+            attempts+=1
+            t = len(gen)
+            idx = random.randint(c, t-1)
+            # llm query takes the burden of time
+            prop, log_prob_prop, target_log_prob_prop = naive_temp(p, gen[:idx], temp=temp, seq_len=t)
+            s = len(prop)
+            total_tokens_gen += s
             assert(len(log_prob_prop) == s - idx)
             assert(len(target_log_prob_prop) == s - idx)
             log_prob_cur = log_probs_norm.copy()[idx-c:s-c]
@@ -178,10 +239,11 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
             log_probs_norm = log_probs_norm[:eos_idx + 1]
             log_probs_unnorm = log_probs_unnorm[:eos_idx + 1]
             acceptance_ratio = acceptances/attempts
-            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio
+            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
 
     acceptance_ratio = acceptances/attempts
-    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio
+    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+
 
 def format_prompt(question, model, tokenizer, cot=True):
     if model == "qwen":
@@ -261,7 +323,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", action = "store", default = 0.5, type = float, dest = "temperature")
     parser.add_argument("--dataset", action = "store", default = "MATH", type = str)
     parser.add_argument("--cot", action = "store", type = bool, default = True)
-    parser.add_argument("--mcmc_steps", action = "store", type = int, default = 10)
+    parser.add_argument("--mcmc_steps", action = "store", type = int, default = 20)
     parser.add_argument("--device", action = "store", type = str, dest = "device", default = "cuda" if torch.cuda.is_available() else 'cpu')
     parser.add_argument("--batch_idx", action = "store", type = int, default = 0)
     parser.add_argument("--seed", action = "store", type = int, default = 0)
@@ -274,7 +336,8 @@ if __name__ == "__main__":
     device = args.device
     dataset_name = args.dataset
     cot = args.cot
-    temp = args.temperature
+    #temp = args.temperature
+    temp = 0.25
     mcmc_steps = args.mcmc_steps
 
     save_str = os.path.join(args.save_str, model)
@@ -298,6 +361,8 @@ if __name__ == "__main__":
         model_str = "allenai/Llama-3.1-Tulu-3-8B-DPO"
     elif model == "gptoss_high":
         model_str= "openai/gpt-oss-20b"
+    elif model == "qwen3_32":
+        model_str = "Qwen/Qwen3-32B-AWQ"
 
     if dataset_name == "MATH":
         # dataset_str = "EleutherAI/hendrycks_math"
@@ -323,9 +388,17 @@ if __name__ == "__main__":
 
     print("loaded models")
     results = []
-
+    
+    # Define the output file path
+    output_file = os.path.join(
+        save_str,
+        model + "_base_power_samp_results_" + str(mcmc_steps) + "_" + str(temp) + "_" + str(args.batch_idx) + "_" + str(args.seed) + " " + time.strftime("%Y-%m-%d_%H-%M-%S") + ".csv"
+    )
+    #open the output file
+    output_file_handle = open(output_file, "w")
     start = 100*args.batch_idx
     end = 100*(args.batch_idx+1)
+    
     # start = 0
     # end = len(dataset)
     # start = 0
@@ -333,80 +406,78 @@ if __name__ == "__main__":
 
 
     for idx, x in tqdm(enumerate(dataset), desc = "Benchmark on MATH"):
-        # Only try the first question of the MATH Dataset Benchmar
-        if(idx == 1):
-            break
+        # Only try the first question of the MATH Dataset Benchmark
 
-        print(x)
         question = x["problem"]
-        print(question)
         answer = x["answer"]
-        print(answer)
 
         input_text = format_prompt(question, model, tokenizer, cot)
         input_ids = tokenizer.encode(input_text, return_tensors="pt").to(device)
         prefx = [idx.item() for idx in input_ids[0]]
 
-        # naive_temp_output = hf_model.generate(input_ids, max_new_tokens=3072, 
-        #                         return_dict_in_generate=True, output_scores=True, temperature = temp)
-        
-        # print(tokenizer.decode(naive_temp_output[0][:, len(input_ids[0]):].squeeze().to("cpu"), skip_special_tokens=True))
-        # print("naive done")
-        
-        
-        # std_output = hf_model.generate(input_ids, max_new_tokens=3072, 
-        #                         return_dict_in_generate=True, output_scores=True, do_sample = True)
-        
-        # print(tokenizer.decode(std_output[0][:, len(input_ids[0]):].squeeze().to("cpu"), skip_special_tokens=True))
-        # print("std done")
-
-        # mcmc_temp_output, _, _, acceptance_ratio = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, sliding_window=0)
-        mcmc_temp_output_sliding, _, _, acceptance_ratio_sliding = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, sliding_window=1)
-
-        # print(len(std_output))
-        # print(len(naive_temp_output))
-        # print(len(mcmc_temp_output))
-        # print(tokenizer.decode(torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu"), skip_special_tokens=True))
-        print(len(mcmc_temp_output_sliding))
-        print(tokenizer.decode(torch.tensor([mcmc_temp_output_sliding], dtype=torch.long, device=device).squeeze().to("cpu"), skip_special_tokens=True))
-        print("mcmc done")
-
+        # # Time naive_temp_output
+        # naive_start = time.time()
+        # naive_temp_output = hf_model.generate(input_ids, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, temperature = temp)
+        # naive_time = time.time() - naive_start
         # naive_generated_ids = naive_temp_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
-        # std_generated_ids = std_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
-        # mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
-        mcmc_temp_ids_sliding = torch.tensor([mcmc_temp_output_sliding], dtype=torch.long, device=device).squeeze().to("cpu")
-
         # naive_completion = tokenizer.decode(naive_generated_ids, skip_special_tokens=True)
-        # std_completion = tokenizer.decode(std_generated_ids, skip_special_tokens=True)
-        # mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
-        mcmc_completion_sliding = tokenizer.decode(mcmc_temp_ids_sliding, skip_special_tokens=True)
-
         # naive_answer = parse_answer(naive_completion)
+
+        # # Time std_output
+        # std_start = time.time()
+        # std_output = hf_model.generate(input_ids, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, do_sample = True)
+        # std_time = time.time() - std_start
+        # std_generated_ids = std_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
+        # std_completion = tokenizer.decode(std_generated_ids, skip_special_tokens=True)
         # std_answer = parse_answer(std_completion)
-        # mcmc_answer = parse_answer(mcmc_completion)
-        mcmc_answer_sliding = parse_answer(mcmc_completion_sliding)
 
-        # print(naive_answer)
-        # print(std_answer)
-        # print(mcmc_answer)
-        print(mcmc_answer_sliding)
-        print(acceptance_ratio_sliding)
-        # print(f'Acceptance: {acceptance_ratio}')
+        # Time mcmc_temp_output
+        mcmc_steps = 10
+        temp = 0.25
+        block_num = 16
+        mcmc_start = time.time()
+        mcmc_temp_output, _, _, acceptance_ratio, mcmc_tokens = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, block_num=block_num)
+        mcmc_time = time.time() - mcmc_start
+        mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
+        mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
+        mcmc_answer = parse_answer(mcmc_completion)
 
+        # Time mcmc_temp_output_sliding
+        # mcmc_steps_sliding = 4
+        # mcmc_sliding_start = time.time()
+        # mcmc_temp_output_sliding, _, _, acceptance_ratio_sliding, mcmc_tokens_sliding = mcmc_temp_sliding(autoreg_sampler, prefx, temp, mcmc_steps_sliding, max_new_tokens=3072, sliding_window=1)
+        # mcmc_sliding_time = time.time() - mcmc_sliding_start
+        # mcmc_temp_ids_sliding = torch.tensor([mcmc_temp_output_sliding], dtype=torch.long, device=device).squeeze().to("cpu")
+        # mcmc_completion_sliding = tokenizer.decode(mcmc_temp_ids_sliding, skip_special_tokens=True)
+        # mcmc_answer_sliding = parse_answer(mcmc_completion_sliding)
 
-        results.append({
+        # Append the results for this sample to the results list
+        result_row = {
             "question": question,
             "correct_answer": answer,
             # "naive_completion": naive_completion,
             # "naive_answer": naive_answer,
+            # "naive_tokens": len(naive_completion),
+            # "naive_time": naive_time,
             # "std_completion": std_completion,
             # "std_answer": std_answer,
-            # "mcmc_completion": mcmc_completion,
-            # "mcmc_answer": mcmc_answer,
-            "mcmc_completion_sliding": mcmc_completion_sliding,
-            "mcmc_answer_sliding": mcmc_answer_sliding
-        })
-
-    
-    df = pd.DataFrame(results)
-    df.to_csv(os.path.join(save_str, model+"_base_power_samp_results_" + str(mcmc_steps) + "_" + str(temp) + "_" + str(args.batch_idx)  + "_" + str(args.seed) + " " + str(time.time()) + ".csv"), index=False)
+            # "std_tokens": len(std_completion),
+            # "std_time": std_time,
+            "mcmc_completion": mcmc_completion,
+            "mcmc_answer": mcmc_answer,
+            "mcmc_tokens": mcmc_tokens,
+            "mcmc_time": mcmc_time,
+            "mcmc_acceptance_ratio": acceptance_ratio,
+            # "mcmc_completion_sliding": mcmc_completion_sliding,
+            # "mcmc_answer_sliding": mcmc_answer_sliding,
+            # "mcmc_tokens_sliding": mcmc_tokens_sliding,
+            # "mcmc_sliding_time": mcmc_sliding_time,
+            # "mcmc_acceptance_ratio_sliding": acceptance_ratio_sliding
+        }
+        results.append(result_row)
+        
+        # Write to CSV after each iteration, only write header for first row
+        df = pd.DataFrame([result_row])
+        df.to_csv(output_file_handle, index=False, header=(idx==0))
+        output_file_handle.flush()
+        os.fsync(output_file_handle.fileno())
