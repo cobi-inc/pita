@@ -130,6 +130,7 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
         gen = context.copy()
     log_probs_norm = []
     log_probs_unnorm = []
+    block_mcmc_acceptances = []
 
 
     print(max_new_tokens)
@@ -145,6 +146,7 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
         log_probs_norm.extend(lp_norm)
         log_probs_unnorm.extend(lp_unnorm)
         total_tokens_gen += len(lp_norm)
+        block_acceptances = 0
         for _ in tqdm(range(mcmc_steps)):
             attempts+=1
             t = len(gen)
@@ -166,6 +168,7 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
             
             if np.random.rand() < np.exp(log_r):
                 acceptances+=1
+                block_acceptances += 1
                 gen = prop.copy()
                 log_probs_norm[idx-c:] = log_prob_prop.copy()
                 log_probs_unnorm[idx-c:] = target_log_prob_prop.copy()
@@ -174,6 +177,8 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
                 del log_prob_prop
                 del target_log_prob_cur
 
+        block_mcmc_acceptances.append(block_acceptances)
+
         if p.tokenizer.eos_token_id in gen:
             print("End token found")
             eos_idx = gen.index(p.tokenizer.eos_token_id)
@@ -181,10 +186,10 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
             log_probs_norm = log_probs_norm[:eos_idx + 1]
             log_probs_unnorm = log_probs_unnorm[:eos_idx + 1]
             acceptance_ratio = acceptances/attempts
-            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen, block_mcmc_acceptances
 
     acceptance_ratio = acceptances/attempts
-    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen, block_mcmc_acceptances
 
 def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_tokens, block_num=16):
     c = len(context)
@@ -194,6 +199,7 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
         gen = context.copy()
     log_probs_norm = []
     log_probs_unnorm = []
+    block_mcmc_acceptances = []
 
 
     print(max_new_tokens)
@@ -209,6 +215,8 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
         log_probs_norm.extend(lp_norm)
         log_probs_unnorm.extend(lp_unnorm)
         total_tokens_gen += len(lp_norm)
+        block_acceptances = 0
+
         for _ in tqdm(range(mcmc_steps)):
             attempts+=1
             t = len(gen)
@@ -225,6 +233,7 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
 
             if np.random.rand() < np.exp(log_r):
                 acceptances+=1
+                block_acceptances += 1
                 gen = prop.copy()
                 log_probs_norm[idx-c:] = log_prob_prop.copy()
                 log_probs_unnorm[idx-c:] = target_log_prob_prop.copy()
@@ -233,17 +242,18 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
                 del log_prob_prop
                 del target_log_prob_cur
 
+        block_mcmc_acceptances.append(block_acceptances)
+
         if p.tokenizer.eos_token_id in gen:
             eos_idx = gen.index(p.tokenizer.eos_token_id)
             gen = gen[:eos_idx + 1]
             log_probs_norm = log_probs_norm[:eos_idx + 1]
             log_probs_unnorm = log_probs_unnorm[:eos_idx + 1]
             acceptance_ratio = acceptances/attempts
-            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
+            return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen, block_mcmc_acceptances
 
     acceptance_ratio = acceptances/attempts
-    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen
-
+    return gen, log_probs_norm, log_probs_unnorm, acceptance_ratio, total_tokens_gen, block_mcmc_acceptances
 
 def format_prompt(question, model, tokenizer, cot=True):
     if model == "qwen":
@@ -407,7 +417,9 @@ if __name__ == "__main__":
 
     for idx, x in tqdm(enumerate(dataset), desc = "Benchmark on MATH"):
         # Only try the first question of the MATH Dataset Benchmark
-
+        # if idx >= 1:
+        #     break
+        
         question = x["problem"]
         answer = x["answer"]
 
@@ -432,24 +444,24 @@ if __name__ == "__main__":
         # std_answer = parse_answer(std_completion)
 
         # Time mcmc_temp_output
-        mcmc_steps = 10
-        temp = 0.25
-        block_num = 16
-        mcmc_start = time.time()
-        mcmc_temp_output, _, _, acceptance_ratio, mcmc_tokens = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, block_num=block_num)
-        mcmc_time = time.time() - mcmc_start
-        mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
-        mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
-        mcmc_answer = parse_answer(mcmc_completion)
+        # mcmc_steps = 10
+        # temp = 0.25
+        # block_num = 16
+        # mcmc_start = time.time()
+        # mcmc_temp_output, _, _, acceptance_ratio, mcmc_tokens, block_mcmc_acceptances = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, block_num=block_num)
+        # mcmc_time = time.time() - mcmc_start
+        # mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
+        # mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
+        # mcmc_answer = parse_answer(mcmc_completion)
 
         # Time mcmc_temp_output_sliding
-        # mcmc_steps_sliding = 4
-        # mcmc_sliding_start = time.time()
-        # mcmc_temp_output_sliding, _, _, acceptance_ratio_sliding, mcmc_tokens_sliding = mcmc_temp_sliding(autoreg_sampler, prefx, temp, mcmc_steps_sliding, max_new_tokens=3072, sliding_window=1)
-        # mcmc_sliding_time = time.time() - mcmc_sliding_start
-        # mcmc_temp_ids_sliding = torch.tensor([mcmc_temp_output_sliding], dtype=torch.long, device=device).squeeze().to("cpu")
-        # mcmc_completion_sliding = tokenizer.decode(mcmc_temp_ids_sliding, skip_special_tokens=True)
-        # mcmc_answer_sliding = parse_answer(mcmc_completion_sliding)
+        mcmc_steps_sliding = 20
+        mcmc_sliding_start = time.time()
+        mcmc_temp_output_sliding, _, _, acceptance_ratio_sliding, mcmc_tokens_sliding , block_mcmc_acceptances_sliding = mcmc_temp_sliding(autoreg_sampler, prefx, temp, mcmc_steps_sliding, max_new_tokens=7872, sliding_window=1)
+        mcmc_sliding_time = time.time() - mcmc_sliding_start
+        mcmc_temp_ids_sliding = torch.tensor([mcmc_temp_output_sliding], dtype=torch.long, device=device).squeeze().to("cpu")
+        mcmc_completion_sliding = tokenizer.decode(mcmc_temp_ids_sliding, skip_special_tokens=True)
+        mcmc_answer_sliding = parse_answer(mcmc_completion_sliding)
 
         # Append the results for this sample to the results list
         result_row = {
@@ -463,16 +475,19 @@ if __name__ == "__main__":
             # "std_answer": std_answer,
             # "std_tokens": len(std_completion),
             # "std_time": std_time,
-            "mcmc_completion": mcmc_completion,
-            "mcmc_answer": mcmc_answer,
-            "mcmc_tokens": mcmc_tokens,
-            "mcmc_time": mcmc_time,
-            "mcmc_acceptance_ratio": acceptance_ratio,
-            # "mcmc_completion_sliding": mcmc_completion_sliding,
-            # "mcmc_answer_sliding": mcmc_answer_sliding,
-            # "mcmc_tokens_sliding": mcmc_tokens_sliding,
-            # "mcmc_sliding_time": mcmc_sliding_time,
-            # "mcmc_acceptance_ratio_sliding": acceptance_ratio_sliding
+            # "mcmc_completion": mcmc_completion,
+            # "mcmc_answer": mcmc_answer,
+            # "mcmc_tokens": mcmc_tokens,
+            # "mcmc_time": mcmc_time,
+            # "mcmc_acceptance_ratio": acceptance_ratio,
+            # "mcmc_block_acceptances": block_mcmc_acceptances
+            "mcmc_completion_sliding": mcmc_completion_sliding,
+            "mcmc_answer_sliding": mcmc_answer_sliding,
+            "mcmc_tokens_sliding": mcmc_tokens_sliding,
+            "mcmc_sliding_time": mcmc_sliding_time,
+            "mcmc_acceptance_ratio_sliding": acceptance_ratio_sliding,
+            "mcmc_block_acceptances_sliding": block_mcmc_acceptances_sliding
+
         }
         results.append(result_row)
         
