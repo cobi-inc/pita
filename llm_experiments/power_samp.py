@@ -1,5 +1,5 @@
 import os
-
+import regex
 from contextlib import nullcontext
 from glob import glob
 import json
@@ -15,7 +15,7 @@ from torch.distributed import init_process_group, destroy_process_group
 from torch.utils.data import Dataset, DataLoader
 from dataclasses import dataclass
 from datasets import Dataset, load_dataset, concatenate_datasets
-
+from transformers import GPTQConfig
 
 import torch
 import torch.nn as nn
@@ -38,9 +38,9 @@ def parse_answer(text):
     import re
     
     # Look for \boxed{...} pattern
-    boxed_pattern = r'\\boxed\{([^}]+)\}'
-    matches = re.findall(boxed_pattern, text)
-    
+    boxed_pattern = r'\\boxed\{((?:[^{}]+|(?R))*)\}'
+    matches = regex.findall(boxed_pattern, text)
+
     if matches:
         # Return the last boxed answer found (in case there are multiple)
         return matches[-1].strip()
@@ -93,8 +93,10 @@ def naive_temp(p : AutoregressiveSampler, context, temp, seq_len):
     device = p.device
     tokenizer = p.tokenizer
     input_ids = torch.tensor([context], dtype=torch.long, device=device)
+    attention_mask = torch.ones_like(input_ids, dtype=torch.long, device=device)
     output = p.model.generate(
         input_ids=input_ids,
+        attention_mask=attention_mask,
         max_new_tokens=seq_len - c,
         do_sample=True,
         temperature=temp,
@@ -123,7 +125,7 @@ def naive_temp(p : AutoregressiveSampler, context, temp, seq_len):
 
 def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_tokens, block_num=16, sliding_window=0):
     total_tokens_gen = 0
-    c = len(context)
+    context_length = len(context)
     print(f'Temp: {temp}')
     gen = []
     if context is not None:
@@ -136,13 +138,15 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
     print(max_new_tokens)
     assert max_new_tokens % block_num == 0
     jump_size = int(max_new_tokens // block_num)
-    print(jump_size)
+    print("Jump_size: " + str(jump_size))
     attempts = 0
     acceptances = 0
 
 
     for block_count in tqdm(range(block_num)):
         gen, lp_norm, lp_unnorm = naive_temp(p, gen, temp=temp, seq_len=jump_size+len(gen))
+        print("Last 10 token IDs:", gen[-10:])
+        print("Decoded last 10 tokens:", tokenizer.decode(gen[-10:], skip_special_tokens=True))
         log_probs_norm.extend(lp_norm)
         log_probs_unnorm.extend(lp_unnorm)
         total_tokens_gen += len(lp_norm)
@@ -150,9 +154,14 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
         for _ in tqdm(range(mcmc_steps)):
             attempts+=1
             t = len(gen)
-            context_start = c + block_count * jump_size * sliding_window
+            context_start = context_length + block_count * jump_size * sliding_window
+            print("Context Length: " + str(context_length))
+            print("Context Start: " + str(context_start))
+            print("t-1: " + str(t-1))
             if(context_start >= t-jump_size):
                 context_start = t-jump_size
+                if(context_start < context_length):
+                    context_start = context_length
 
             print(f"Sampling index in range ({context_start}, {t-1})")
             idx = random.randint(context_start,t-1)
@@ -162,16 +171,18 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
             s = len(prop)
             assert(len(log_prob_prop) == s - idx)
             assert(len(target_log_prob_prop) == s - idx)
-            log_prob_cur = log_probs_norm.copy()[idx-c:s-c]
-            target_log_prob_cur = log_probs_unnorm.copy()[idx-c:s-c]
+            log_prob_cur = log_probs_norm.copy()[idx-context_length:s-context_length]
+            target_log_prob_cur = log_probs_unnorm.copy()[idx-context_length:s-context_length]
             log_r = sum(target_log_prob_prop) + sum(log_prob_cur) - sum(target_log_prob_cur) - sum(log_prob_prop)
             
             if np.random.rand() < np.exp(log_r):
+                print("Last 10 token IDs:", gen[-50:])
+                print("Decoded last 10 tokens:", tokenizer.decode(gen[-50:], skip_special_tokens=True))
                 acceptances+=1
                 block_acceptances += 1
                 gen = prop.copy()
-                log_probs_norm[idx-c:] = log_prob_prop.copy()
-                log_probs_unnorm[idx-c:] = target_log_prob_prop.copy()
+                log_probs_norm[idx-context_length:] = log_prob_prop.copy()
+                log_probs_unnorm[idx-context_length:] = target_log_prob_prop.copy()
 
                 del prop
                 del log_prob_prop
@@ -179,8 +190,10 @@ def mcmc_temp_sliding(p : AutoregressiveSampler, context, temp, mcmc_steps, max_
 
         block_mcmc_acceptances.append(block_acceptances)
 
+        print("EOS token Id:", p.tokenizer.eos_token_id)
+
+        # Check for \boxed in the last 50 tokens or for eos token
         if p.tokenizer.eos_token_id in gen:
-            print("End token found")
             eos_idx = gen.index(p.tokenizer.eos_token_id)
             gen = gen[:eos_idx + 1]
             log_probs_norm = log_probs_norm[:eos_idx + 1]
@@ -257,6 +270,13 @@ def mcmc_temp(p : AutoregressiveSampler, context, temp, mcmc_steps, max_new_toke
 
 def format_prompt(question, model, tokenizer, cot=True):
     if model == "qwen":
+        format_str = PROMPT + question
+        if cot:
+            format_str+=COT
+        else:
+            format_str+=BASE
+
+    if model == "qwen3_32":
         format_str = PROMPT + question
         if cot:
             format_str+=COT
@@ -343,8 +363,10 @@ if __name__ == "__main__":
 
 
     model = args.model
+    model = "qwen3_32"
     device = args.device
     dataset_name = args.dataset
+    dataset_name = "MATH"
     cot = args.cot
     #temp = args.temperature
     temp = 0.25
@@ -372,7 +394,7 @@ if __name__ == "__main__":
     elif model == "gptoss_high":
         model_str= "openai/gpt-oss-20b"
     elif model == "qwen3_32":
-        model_str = "Qwen/Qwen3-32B-AWQ"
+        model_str = "Qwen/Qwen3-30B-A3B-GPTQ-Int4"
 
     if dataset_name == "MATH":
         # dataset_str = "EleutherAI/hendrycks_math"
@@ -380,8 +402,20 @@ if __name__ == "__main__":
         ##dataset = json.load(open(json_file, "r"))
         # random.seed(0)
         # random.shuffle(dataset)
+        # ds = datasets.load_dataset("MathArena/AIME_2025")["train"]
+        ds = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
+        #convert names to lower case
+        ds = ds.map(lambda x: {k.lower(): v for k, v in x.items()})
+        # convert answer to string type
+        dataset = ds.cast_column('answer', datasets.Value('string'))
+
+    if dataset_name == "AIME":
+        # dataset_str = "EleutherAI/hendrycks_math"
+        ##json_file = 'MATH-TTT.json'
+        ##dataset = json.load(open(json_file, "r"))
+        # random.seed(0)
+        # random.shuffle(dataset)
         ds = datasets.load_dataset("MathArena/AIME_2025")["train"]
-        old_column_names = ds.column_names
         ds = ds.map(lambda x: {k.lower(): v for k, v in x.items()})
         # use existing id as unique_id
         ds = ds.rename_column('problem_idx', 'unique_id')
@@ -389,11 +423,23 @@ if __name__ == "__main__":
         dataset = ds.cast_column('answer', datasets.Value('string'))
 
 
-
     print("dataset done")
+    print(f"Loading tokenizer from {model_str}...")
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_str, trust_remote_code = True)
+    print(f"Loading model from {model_str}...")
+    print(f"Note: GPTQ MoE models with 128 experts take 10-20 minutes to initialize.")
+    print(f"The process will appear stalled but is working. GPU memory will increase once complete.")
+    
+
+    gptq_config = GPTQConfig(bits=4, use_exllama=True, exllama_config={"version": 2})
+    
     # hf_model = transformers.AutoModelForCausalLM.from_pretrained(model_str, torch_dtype=torch.float32, trust_remote_code = True).to(device)
-    hf_model = transformers.AutoModelForCausalLM.from_pretrained(model_str, torch_dtype="auto", device_map="auto", trust_remote_code = True)
+    hf_model = transformers.AutoModelForCausalLM.from_pretrained(
+        model_str, 
+        device_map="auto", 
+        trust_remote_code=True,
+        quantization_config=gptq_config,
+    )
     autoreg_sampler = AutoregressiveSampler(hf_model, tokenizer, device)
 
     print("loaded models")
@@ -414,45 +460,55 @@ if __name__ == "__main__":
     # start = 0
     # end = 1
 
+    problem_count = 0
 
     for idx, x in tqdm(enumerate(dataset), desc = "Benchmark on MATH"):
-        # Only try the first question of the MATH Dataset Benchmark
-        # if idx >= 1:
-        #     break
-        
+        # Only try 100 random questions of the MATH Dataset Benchmark
+        # Randomly generate a number between 0 and 1
+        if problem_count == 100 or random.random() > 0.19:
+            continue
+
+        problem_count += 1
         question = x["problem"]
         answer = x["answer"]
 
+
         input_text = format_prompt(question, model, tokenizer, cot)
+        print(input_text)
+        print(answer)
         input_ids = tokenizer.encode(input_text, return_tensors="pt").to(device)
         prefx = [idx.item() for idx in input_ids[0]]
 
+        #Attention Mask
+        attention_mask = torch.ones_like(input_ids, dtype=torch.long, device=device)
+
+
         # # Time naive_temp_output
-        # naive_start = time.time()
-        # naive_temp_output = hf_model.generate(input_ids, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, temperature = temp)
-        # naive_time = time.time() - naive_start
-        # naive_generated_ids = naive_temp_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
-        # naive_completion = tokenizer.decode(naive_generated_ids, skip_special_tokens=True)
-        # naive_answer = parse_answer(naive_completion)
+        naive_start = time.time()
+        naive_temp_output = hf_model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, temperature = temp)
+        naive_time = time.time() - naive_start
+        naive_generated_ids = naive_temp_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
+        naive_completion = tokenizer.decode(naive_generated_ids, skip_special_tokens=True)
+        naive_answer = parse_answer(naive_completion)
 
         # # Time std_output
-        # std_start = time.time()
-        # std_output = hf_model.generate(input_ids, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, do_sample = True)
-        # std_time = time.time() - std_start
-        # std_generated_ids = std_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
-        # std_completion = tokenizer.decode(std_generated_ids, skip_special_tokens=True)
-        # std_answer = parse_answer(std_completion)
+        std_start = time.time()
+        std_output = hf_model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=3072, return_dict_in_generate=True, output_scores=True, do_sample = True)
+        std_time = time.time() - std_start
+        std_generated_ids = std_output[0][:, len(input_ids[0]):].squeeze().to("cpu")
+        std_completion = tokenizer.decode(std_generated_ids, skip_special_tokens=True)
+        std_answer = parse_answer(std_completion)
 
         # Time mcmc_temp_output
-        # mcmc_steps = 10
-        # temp = 0.25
-        # block_num = 16
-        # mcmc_start = time.time()
-        # mcmc_temp_output, _, _, acceptance_ratio, mcmc_tokens, block_mcmc_acceptances = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, block_num=block_num)
-        # mcmc_time = time.time() - mcmc_start
-        # mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
-        # mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
-        # mcmc_answer = parse_answer(mcmc_completion)
+        mcmc_steps = 10
+        temp = 0.25
+        block_num = 16
+        mcmc_start = time.time()
+        mcmc_temp_output, _, _, acceptance_ratio, mcmc_tokens, block_mcmc_acceptances = mcmc_temp(autoreg_sampler, prefx, temp, mcmc_steps, max_new_tokens=3072, block_num=block_num)
+        mcmc_time = time.time() - mcmc_start
+        mcmc_temp_ids = torch.tensor([mcmc_temp_output], dtype=torch.long, device=device).squeeze().to("cpu")
+        mcmc_completion = tokenizer.decode(mcmc_temp_ids, skip_special_tokens=True)
+        mcmc_answer = parse_answer(mcmc_completion)
 
         # Time mcmc_temp_output_sliding
         mcmc_steps_sliding = 20
@@ -467,20 +523,20 @@ if __name__ == "__main__":
         result_row = {
             "question": question,
             "correct_answer": answer,
-            # "naive_completion": naive_completion,
-            # "naive_answer": naive_answer,
-            # "naive_tokens": len(naive_completion),
-            # "naive_time": naive_time,
-            # "std_completion": std_completion,
-            # "std_answer": std_answer,
-            # "std_tokens": len(std_completion),
-            # "std_time": std_time,
-            # "mcmc_completion": mcmc_completion,
-            # "mcmc_answer": mcmc_answer,
-            # "mcmc_tokens": mcmc_tokens,
-            # "mcmc_time": mcmc_time,
-            # "mcmc_acceptance_ratio": acceptance_ratio,
-            # "mcmc_block_acceptances": block_mcmc_acceptances
+            "naive_completion": naive_completion,
+            "naive_answer": naive_answer,
+            "naive_tokens": len(naive_completion),
+            "naive_time": naive_time,
+            "std_completion": std_completion,
+            "std_answer": std_answer,
+            "std_tokens": len(std_completion),
+            "std_time": std_time,
+            "mcmc_completion": mcmc_completion,
+            "mcmc_answer": mcmc_answer,
+            "mcmc_tokens": mcmc_tokens,
+            "mcmc_time": mcmc_time,
+            "mcmc_acceptance_ratio": acceptance_ratio,
+            "mcmc_block_acceptances": block_mcmc_acceptances,
             "mcmc_completion_sliding": mcmc_completion_sliding,
             "mcmc_answer_sliding": mcmc_answer_sliding,
             "mcmc_tokens_sliding": mcmc_tokens_sliding,

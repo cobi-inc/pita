@@ -1,1 +1,3 @@
 /llm_experiments/results/*
+*.pyc
+__pycache__/
