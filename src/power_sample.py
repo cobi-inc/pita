@@ -1,11 +1,31 @@
+# Standard Libraries
+import os
 import random
+import time
+# Math Libraries
 import numpy as np
+import pandas as pd
+
+# Helper Library
 from tqdm import tqdm
+# Inference Library
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
 from transformers import AutoTokenizer
+# Pytorch Library
 import torch
 from torch.nn import functional as F
+# Benchmarking library
+import datasets
+# Parsing Library
+import regex
+
+# Prompting constants and templates
+PROMPT = "Can you solve the following math problem? "
+BASE = " Put your final answer within \\boxed{{}}."
+COT = " Please reason step by step, and put your final answer within \\boxed{{}}."
+COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution, and present your final answer within \\boxed{{}}."
+
 
 class AutoregressiveSampler:
     def __init__(self, llm, tokenizer, power_sampling_temperature=1.0, logprobs=100, detokenize=False, token_count=1000, block_size=50, MCMC_steps=5):
@@ -19,6 +39,7 @@ class AutoregressiveSampler:
         self.block_num = token_count // block_size
 
     def sample(self, context, max_new_tokens):
+        # Prepare the context as a TokensPrompt if it's a list of token IDs
         if isinstance(context, list):
             context = TokensPrompt(prompt_token_ids=context)
         # Set the sampling parameters of the LLM
@@ -26,6 +47,59 @@ class AutoregressiveSampler:
         # Generate a new response from the LLM
         llm_output = self.llm.generate(context, sampling_params=sample_params)
         return llm_output
+
+def parse_answer(text):
+    """
+    Parse the final answer from generated text.
+    Looks for answers in \\boxed{} format and extracts the content.
+    
+    Args:
+        text (str): The generated text containing the answer
+        
+    Returns:
+        str: The extracted answer, or "No answer found" if no boxed answer is found
+    """
+    import re
+    
+    # Look for \boxed{...} pattern
+    boxed_pattern = r'\\boxed\{((?:[^{}]+|(?R))*)\}'
+    matches = regex.findall(boxed_pattern, text)
+
+    if matches:
+        # Return the last boxed answer found (in case there are multiple)
+        return matches[-1].strip()
+    
+    # If no boxed answer found, look for other common answer patterns
+    # Look for "The answer is ..." or "Answer: ..." patterns
+    answer_patterns = [
+        r'(?:The answer is|Answer:)\s*([^\n.]+)',
+        r'(?:Final answer|Final result):\s*([^\n.]+)',
+        r'(?:Therefore|So),?\s*([^\n.]+)',
+    ]
+    
+    for pattern in answer_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        if matches:
+            return matches[-1].strip()
+    
+    # If still no answer found, try to extract the last line that looks like an answer
+    lines = text.strip().split('\n')
+    for line in reversed(lines):
+        line = line.strip()
+        if line and not line.startswith(('Step', 'First', 'Next', 'Then', 'Finally', 'Therefore', 'So')):
+            # Check if it looks like a mathematical answer
+            if any(char.isdigit() or char in '+-*/=()[]{}' for char in line):
+                return line
+    
+    return "No answer found"
+
+def format_prompt(question, cot=True):
+    format_str = PROMPT + question
+    if cot:
+        format_str+=COT
+    else:
+        format_str+=BASE
+    return format_str
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 def logprobs(output, sampler):
@@ -45,16 +119,28 @@ def logprobs(output, sampler):
     # Scale the raw logits by the temperature
     scaled_logits = logits / sampler.power_sampling_temperature
 
-    # Compute logsumexp (normalization constant) for each position
+    # Compute logsumexp (normalization constant) for each position sum over vocab of exponetiated logits
     log_Z = torch.logsumexp(logits, dim=-1)  # Shape: (num_tokens,)
     log_Z_scaled = torch.logsumexp(scaled_logits, dim=-1)  # Shape: (num_tokens,)
     
+
     # Extract log probs for only the generated tokens
     indices = torch.arange(len(token_ids))
+    # log_probs is the power sampled version = log(softmax(logit_selected)^(1/T)) = (1/T)(logits - log_Z)
     log_probs = (1/sampler.power_sampling_temperature) * (logits[indices, token_ids] - log_Z)
     log_probs_temp_scaled = scaled_logits[indices, token_ids] - log_Z_scaled
 
+    #Print out the selected token probabilites
+    print("Selected Token IDs:", token_ids)
+    print("Logits for selected tokens:", logits[indices, token_ids])
+    print("Scaled Logits for selected tokens:", scaled_logits[indices, token_ids])
+
+    # Print out the log_z and log_z_scaled
+    print("Log Z values:", log_Z)
+    print("Log Z Scaled values:", log_Z_scaled)
+
     # Print out the token
+    print("Log Probs for generated tokens:", log_probs, "\nLog Probs for generated tokens (Temp Scaled):", log_probs_temp_scaled)
 
     return log_probs, log_probs_temp_scaled
 
@@ -91,7 +177,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
         for _ in tqdm(range(sampler.MCMC_steps)):
             #Find a new point to start a proposal from. Generate idx tokens for the step
             idx = random.randint(0,sampler.block_size -1)
-
+            
             #Set the new context for the proposed block
             context_proposed = context[:-(sampler.block_size-idx)]
             #Generate proposed block of tokens
@@ -101,7 +187,8 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
             proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_output, sampler)
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
-            log_acceptance_ratio = sum(proposed_logprob) + sum(proposed_logprob_temp_scaled) - sum(logprob[-idx:]) - sum(logprob_temp_scaled[-idx:])
+            log_acceptance_ratio = sum(proposed_logprob) + sum(proposed_logprob_temp_scaled) - sum(logprob[idx:]) - sum(logprob_temp_scaled[idx:])
+
             # Accept or reject the proposed block based on the acceptance ratio
             if np.random.rand() < np.exp(log_acceptance_ratio):
                 # Ensure the context is updated with the accepted proposal
@@ -124,8 +211,6 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
 
     # EOS never found, just return the full generated context
     return sampler.tokenizer.decode(context, skip_special_tokens=True), acceptances, block_acceptances
-
-
 
 def vllm_test(sampler, prompt = "Once upon a time"):
     # User Initial Prompt
@@ -160,15 +245,97 @@ def vllm_test(sampler, prompt = "Once upon a time"):
     print("Log Probs for generated tokens:", log_probs, log_probs_temp_scaled)
     print("Logprobs tensor size:", logits.size())
 
+def math500_benchmark_sampling(sampler, power_sampling = False, low_temp_sampling = False, naive_sampling = False, question_max = 0, seed = 0, output_file_name = "results/math500_power_sampling_results.csv", verbose = 0):
+    # Load the Math500 dataset
+    dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
+    # Convert all keys to lowercase
+    dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
+    # convert answers to a string
+    dataset = dataset.cast_column('answer', datasets.Value('string'))
+
+    # Store results
+    results = []    
+    os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
+    output_file = open(output_file_name, "w")
+
+    # Track number of questions asked
+    question_count = 0
+
+    # Iterate over the dataset
+    for question_index, question_data in tqdm(enumerate(dataset), desc = "Benchmark on MATH"):
+        
+        if(question_max == question_count and question_max != 0):
+            break
+
+        question = question_data["problem"]
+        answer = question_data["answer"]
+        formatted_prompt = format_prompt(question, cot=True)
+
+        result_row = {
+            "question": question,
+            "correct_answer": answer
+        }
+
+        # Generate a response using the sampler
+        if(power_sampling):
+            power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances = sliding_window_power_sample(sampler, prompt=formatted_prompt, temperature=sampler.power_sampling_temperature, power=1.0, token_count=sampler.token_count, seed=random.randint(0, 10000))
+            power_sampling_answer = parse_answer(power_sampling_output)
+            result_row["power_sampling_output"] = power_sampling_output
+            result_row["power_sampling_answer"] = power_sampling_answer
+            result_row["power_sampling_total_acceptances"] = power_sampling_total_acceptances
+            result_row["power_sampling_block_acceptances"] = power_sampling_block_acceptances
+
+            if(verbose == 3):
+                # Log detailed output for debugging
+                # Log the MCMC Block, Index, Proposed Probability, Current Probability, Acceptance Ratio, Random Number Generated, Accepted/Rejected
+                pass
+
+        # Generate a response with just low temperature sampling
+        if(low_temp_sampling):
+            # Prompt the LLM and get the output/answer``
+            low_temp_output = sampler.sample(sampler.tokenizer.encode(formatted_prompt), sampler.token_count)
+            low_temp_sampling_output = sampler.tokenizer.decode(low_temp_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            low_temp_sampling_answer = parse_answer(low_temp_sampling_output)
+            # Save the results
+            result_row["low_temp_sampling_output"] = low_temp_sampling_output
+            result_row["low_temp_sampling_answer"] = low_temp_sampling_answer
+
+        if(naive_sampling):
+            # Save and change the temperature to 1.0 for naive sampling
+            saved_temperature = sampler.power_sampling_temperature
+            sampler.power_sampling_temperature = 1.0
+            # Prompt the LLM and get the output/answer
+            print("Formatted Prompt: ", formatted_prompt)
+            print("Tokenized Prompt: ", sampler.tokenizer.encode(formatted_prompt))
+            naive_output = sampler.sample(sampler.tokenizer.encode(formatted_prompt), sampler.token_count)
+            naive_sampling_output = sampler.tokenizer.decode(naive_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            naive_sampling_answer = parse_answer(naive_sampling_output)
+            # Save the results
+            result_row["naive_sampling_output"] = naive_sampling_output
+            result_row["naive_sampling_answer"] = naive_sampling_answer
+            # Set the temperature back to original
+            sampler.power_sampling_temperature = saved_temperature
+
+        # Write the question and final answer to the output file
+        results.append(result_row)
+        # Write to CSV after each iteration, only write header for first row
+        df = pd.DataFrame([result_row])
+        df.to_csv(output_file, index=False, header=(question_index==0))
+        output_file.flush()
+        os.fsync(output_file.fileno())
+
+        #Increment the question count
+        question_count += 1
+
 if __name__ == "__main__":
     # Initialize the random number generator
     seed = 42
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    token_count = 200
-    block_size = 50
-    MCMC_steps = 5
+    token_count = 2000 #total tokens for response
+    block_size = 50 # tokens per block. Number of blocks = token_count / block_size
+    MCMC_steps = 5 
 
     # LLM parameters
     model = "Qwen/Qwen3-4B-AWQ"
@@ -188,7 +355,7 @@ if __name__ == "__main__":
               logprobs_mode='raw_logits')
 
     #Sampling parameters for vLLM
-    temperature = 0.25
+    temperature = 0.5
     detokenize = False
 
     #Initalize Autogressive Sampler
@@ -201,12 +368,14 @@ if __name__ == "__main__":
                                     MCMC_steps=MCMC_steps
                                     )
 
+    # Test MATH500 Benchmark
+    math500_benchmark_sampling(sampler, power_sampling = False, low_temp_sampling = False, naive_sampling = True, question_max = 1, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
 
     # Test vLLM sampling
     #vllm_test(sampler)
 
     # Call the power_sample function
-    prompt_response, total_acceptances, block_acceptances = sliding_window_power_sample(sampler, prompt="Once upon a time", temperature=temperature, power=1.0, token_count=token_count, seed=seed)
-    print("Generated Text:", prompt_response)
-    print("Total Acceptances:", total_acceptances)
-    print("Block Acceptances:", block_acceptances)
+    # prompt_response, total_acceptances, block_acceptances = sliding_window_power_sample(sampler, prompt="Once upon a time", temperature=temperature, power=1.0, token_count=token_count, seed=seed)
+    # print("Generated Text:", prompt_response)
+    # print("Total Acceptances:", total_acceptances)
+    # print("Block Acceptances:", block_acceptances)
