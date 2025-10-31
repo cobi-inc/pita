@@ -11,7 +11,10 @@ from tqdm import tqdm
 # Inference Library
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
+from vllm.outputs import RequestOutput, CompletionOutput
 from transformers import AutoTokenizer
+import requests 
+
 # Pytorch Library
 import torch
 from torch.nn import functional as F
@@ -28,7 +31,8 @@ COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution
 
 
 class AutoregressiveSampler:
-    def __init__(self, llm, tokenizer, power_sampling_temperature=1.0, logprobs=100, detokenize=False, token_count=1000, block_size=50, MCMC_steps=5):
+    def __init__(self, api, llm, tokenizer, power_sampling_temperature=1.0, logprobs=100, detokenize=False, token_count=1000, block_size=50, MCMC_steps=5):
+        self.api = api
         self.llm = llm
         self.tokenizer = tokenizer
         self.power_sampling_temperature = power_sampling_temperature
@@ -37,16 +41,52 @@ class AutoregressiveSampler:
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps
         self.block_num = token_count // block_size
+        self.api_url = "http://localhost:8000/v1/completions"
 
     def sample(self, context, max_new_tokens):
-        # Prepare the context as a TokensPrompt if it's a list of token IDs
-        if isinstance(context, list):
-            context = TokensPrompt(prompt_token_ids=context)
-        # Set the sampling parameters of the LLM
-        sample_params = SamplingParams(temperature=self.power_sampling_temperature, max_tokens=max_new_tokens, logprobs=-1, detokenize=self.detokenize)
-        # Generate a new response from the LLM
-        llm_output = self.llm.generate(context, sampling_params=sample_params)
-        return llm_output
+        if(self.api == True):
+            # Use the vLLM API to generate a response
+            # Create payload
+            payload = {
+                "model": "Qwen/Qwen3-4B-AWQ",
+                "prompt": context,
+                "max_tokens": max_new_tokens,
+                "temperature": self.power_sampling_temperature,
+                "logprobs": 0,  # Number of logprobs to return per token
+                "stop": None
+            }
+
+            # Send the request to the API server
+            response = requests.post(self.api_url, json=payload)
+            response.raise_for_status()  # Raise an error for bad status codes
+            result = response.json()
+
+            print("API Response:", result)
+
+            # Extract text and logprobs from the OpenAI-compatible response
+            choice = result["choices"][0]
+            text = choice["text"]
+            logprobs = choice.get("logprobs") # Use .get for safety
+
+            print("Text:", text)
+            print("Logprobs:", logprobs)
+
+            # This part needs to be properly implemented to handle the API response
+            # and make it compatible with the rest of your script.
+            # Returning a placeholder to avoid an immediate crash.
+            return [RequestOutput("mock_request_id", text, [], [], [CompletionOutput(0, text, [], 0, None, None)], True)]
+
+
+        else:
+            # Prepare the context as a TokensPrompt if it's a list of token IDs
+            if isinstance(context, list):
+                context = TokensPrompt(prompt_token_ids=context)
+            # Set the sampling parameters of the LLM
+            sample_params = SamplingParams(temperature=self.power_sampling_temperature, max_tokens=max_new_tokens, logprobs=-1, detokenize=self.detokenize)
+            # Generate a new response from the LLM
+            llm_output = self.llm.generate(context, sampling_params=sample_params)
+
+            return llm_output
 
 def parse_answer(text):
     """
@@ -155,7 +195,10 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
     proposed_logprob_temp_scaled = [] # Proposed list of tokens probabilites individually scaled by temperature. Length of max_new_tokens
 
     # Tokenized prompt + output token sequence
-    context = sampler.tokenizer.encode(prompt)
+    if(sampler.skip_tokenizer_init == True):
+        context = sampler.tokenizer.encode(prompt)
+    else:
+        context = prompt
     prompt_length = len(context)
     
     print(context)
@@ -167,9 +210,14 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
     for block_idx in tqdm(range(sampler.block_num)):
         # Block Acceptances Ratio 
         block_acceptance = 0
+
         # Generate next block of tokens as baseline
+        # If the programmatical LLM is being used
         output = sampler.sample(context, sampler.block_size)
         
+        # If an API is used
+
+
         # Calculate the inital logprobabilities for the generated block
         logprob, logprob_temp_scaled = logprobs(output, sampler)
         context.extend(output[0].outputs[0].token_ids)
@@ -267,10 +315,14 @@ def math500_benchmark_sampling(sampler, power_sampling = False, low_temp_samplin
         if(question_max == question_count and question_max != 0):
             break
 
+        #Extract the problem and question from the dataset
         question = question_data["problem"]
         answer = question_data["answer"]
+        
+        # Format the prompt with prompt engineering
         formatted_prompt = format_prompt(question, cot=True)
 
+        # Store the prompt and answers in the results csv
         result_row = {
             "question": question,
             "correct_answer": answer
@@ -278,8 +330,11 @@ def math500_benchmark_sampling(sampler, power_sampling = False, low_temp_samplin
 
         # Generate a response using the sampler
         if(power_sampling):
+            # Send the prompt to the sliding window power sampling function
             power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances = sliding_window_power_sample(sampler, prompt=formatted_prompt, temperature=sampler.power_sampling_temperature, power=1.0, token_count=sampler.token_count, seed=random.randint(0, 10000))
+            # Parse the answer
             power_sampling_answer = parse_answer(power_sampling_output)
+            # Save the results
             result_row["power_sampling_output"] = power_sampling_output
             result_row["power_sampling_answer"] = power_sampling_answer
             result_row["power_sampling_total_acceptances"] = power_sampling_total_acceptances
@@ -292,10 +347,22 @@ def math500_benchmark_sampling(sampler, power_sampling = False, low_temp_samplin
 
         # Generate a response with just low temperature sampling
         if(low_temp_sampling):
-            # Prompt the LLM and get the output/answer``
-            low_temp_output = sampler.sample(sampler.tokenizer.encode(formatted_prompt), sampler.token_count)
-            low_temp_sampling_output = sampler.tokenizer.decode(low_temp_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            # Prompt the LLM and get the output/answer
+            # Use the raw tokens or text depending on if the tokenizer is skipped
+            if(sampler.skip_special_tokens == True):
+                context = sampler.tokenizer.encode(formatted_prompt)
+            else:
+                context = formatted_prompt
+            low_temp_output = sampler.sample(context, sampler.token_count)
+            # Decode the output if the tokenizer was skipped
+            if(sampler.skip_tokenizer_init == True):
+                low_temp_sampling_output = sampler.tokenizer.decode(low_temp_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            else:
+                low_temp_sampling_output = low_temp_output[0].outputs[0].text
+
+            # Parse the answer
             low_temp_sampling_answer = parse_answer(low_temp_sampling_output)
+
             # Save the results
             result_row["low_temp_sampling_output"] = low_temp_sampling_output
             result_row["low_temp_sampling_answer"] = low_temp_sampling_answer
@@ -304,11 +371,22 @@ def math500_benchmark_sampling(sampler, power_sampling = False, low_temp_samplin
             # Save and change the temperature to 1.0 for naive sampling
             saved_temperature = sampler.power_sampling_temperature
             sampler.power_sampling_temperature = 1.0
+            
+            # Use the raw tokens or text depending on if the tokenizer is skipped
+            if(sampler.skip_special_tokens == True):
+                context = sampler.tokenizer.encode(formatted_prompt)
+            else:
+                context = formatted_prompt
             # Prompt the LLM and get the output/answer
-            print("Formatted Prompt: ", formatted_prompt)
-            print("Tokenized Prompt: ", sampler.tokenizer.encode(formatted_prompt))
-            naive_output = sampler.sample(sampler.tokenizer.encode(formatted_prompt), sampler.token_count)
-            naive_sampling_output = sampler.tokenizer.decode(naive_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            naive_output = sampler.sample(context, sampler.token_count)
+
+            # Decode the output if the tokenizer was skipped
+            if(sampler.skip_tokenizer_init == True):
+                naive_sampling_output = sampler.tokenizer.decode(naive_output[0].outputs[0].token_ids, skip_special_tokens=True)
+            else:
+                naive_sampling_output = naive_output[0].outputs[0].text
+
+            # Parse the answer
             naive_sampling_answer = parse_answer(naive_sampling_output)
             # Save the results
             result_row["naive_sampling_output"] = naive_sampling_output
@@ -337,6 +415,13 @@ if __name__ == "__main__":
     block_size = 50 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 5 
 
+    # Set wether to use the API server or programmatical LLM
+    api_condition = True
+
+    #Sampling parameters for the LLM
+    temperature = 0.5
+    detokenize = False
+    
     # LLM parameters
     model = "Qwen/Qwen3-4B-AWQ"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
@@ -345,21 +430,25 @@ if __name__ == "__main__":
     quantization = None
     gpu_memory_utilization = 0.9
 
-    # Initalize model
-    llm = LLM(model=model, 
-              skip_tokenizer_init=skip_tokenizer_init, 
-              dtype=dtype, 
-              quantization=quantization, 
-              gpu_memory_utilization=gpu_memory_utilization,
-              max_logprobs= tokenizer.vocab_size + token_count + 1000,
-              logprobs_mode='raw_logits')
+    # If not using an API
+    if(api_condition == False):
+        # Initalize model
+        llm = LLM(model=model, 
+                skip_tokenizer_init=skip_tokenizer_init, 
+                dtype=dtype, 
+                quantization=quantization, 
+                gpu_memory_utilization=gpu_memory_utilization,
+                max_logprobs=tokenizer.vocab_size + token_count + 1000,
+                logprobs_mode='raw_logits')
+    # If you are using an API endpoint
+    else: 
+        llm = None
 
-    #Sampling parameters for vLLM
-    temperature = 0.5
-    detokenize = False
+
 
     #Initalize Autogressive Sampler
-    sampler = AutoregressiveSampler(llm, 
+    sampler = AutoregressiveSampler(api_condition,
+                                    llm, 
                                     tokenizer,
                                     power_sampling_temperature=temperature,
                                     detokenize=detokenize,
@@ -368,8 +457,11 @@ if __name__ == "__main__":
                                     MCMC_steps=MCMC_steps
                                     )
 
+    # Test API
+    sampler.sample("Once upon a time", max_new_tokens=1000)
+
     # Test MATH500 Benchmark
-    math500_benchmark_sampling(sampler, power_sampling = False, low_temp_sampling = False, naive_sampling = True, question_max = 1, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
+    #math500_benchmark_sampling(sampler, power_sampling = False, low_temp_sampling = False, naive_sampling = True, question_max = 1, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
 
     # Test vLLM sampling
     #vllm_test(sampler)

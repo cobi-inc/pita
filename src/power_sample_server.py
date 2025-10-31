@@ -13,10 +13,12 @@ def start_vllm_server(model_name, quantization_type, gpu_mem_util):
     # These are the command-line arguments for vllm.entrypoints.api_server
     cmd = [
         sys.executable,  # Gets the current Python interpreter
-        "-m", "vllm.entrypoints.api_server",
+        "-m", "vllm.entrypoints.openai.api_server",
         "--model", model_name,
-        "--dtype", quantization_type,
-        "--gpu-memory-utilization", str(gpu_mem_util)
+        "--dtype", "auto",
+        "--gpu-memory-utilization", str(gpu_mem_util),
+        "--logprobs-mode", "raw_logits",
+        "--max_logprobs", "200000",
     ]
 
     # Add quantization if it's specified
@@ -39,6 +41,6 @@ def start_vllm_server(model_name, quantization_type, gpu_mem_util):
 
 if __name__ == "__main__":
     model_name = "Qwen/Qwen3-4B-AWQ"
-    quantization_type = "auto"
+    quantization_type = "awq"
     gpu_mem_util = 0.90
     start_vllm_server(model_name, quantization_type, gpu_mem_util)
