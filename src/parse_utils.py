@@ -18,7 +18,7 @@ def last_boxed_only(sample):
     """
     q, a = sample
     a = last_boxed_only_string(a)
-    if a == None:
+    if a is None:
         return None
     return (q, a)
 
