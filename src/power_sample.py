@@ -55,7 +55,7 @@ class AutoregressiveSampler:
             # Use the vLLM API to generate a response
             # Create payload
             payload = {
-                "model": "Qwen/Qwen3-4B-AWQ",
+                "model": "Qwen/Qwen3-4B-Instruct-2507",
                 "prompt": context,
                 "max_tokens": max_new_tokens,
                 "temperature": self.power_sampling_temperature,
@@ -327,7 +327,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling =
             end_time = time.time()
 
             # Parse the answer
-            power_sampling_answer = parse_answer(power_sampling_output)
+            power_sampling_answer = parse_answer(power_sampling_output, answer)
             # print("Parsed Sampling Answer:", power_sampling_answer)
 
             # Save the results
@@ -357,7 +357,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling =
 
             # Parse the answer
             sampler.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False)
-            low_temp_sampling_answer = parse_answer(sampler.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False))
+            low_temp_sampling_answer = parse_answer(sampler.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False), answer)
 
             # Save the results
             result_row["low_temp_sampling_output"] = sampler.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False)
@@ -380,7 +380,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling =
             end_time = time.time()
 
             # Parse the answer
-            naive_sampling_answer = parse_answer(sampler.tokenizer.decode(naive_tokens_list, skip_special_tokens=False))
+            naive_sampling_answer = parse_answer(sampler.tokenizer.decode(naive_tokens_list, skip_special_tokens=False), answer)
             # Save the results
             result_row["naive_sampling_output"] = sampler.tokenizer.decode(naive_tokens_list, skip_special_tokens=False)
             result_row["naive_sampling_output_token_count"] = len(naive_tokens_list)
@@ -431,7 +431,7 @@ if __name__ == "__main__":
     skip_tokenizer_init = False
     dtype = "auto"
     quantization = None
-    gpu_memory_utilization = 0.7
+    gpu_memory_utilization = 0.8
 
     # If not using an API
     if(api_condition == False):
@@ -464,7 +464,7 @@ if __name__ == "__main__":
     power_sampling_on = True
     low_temp_sampling_on = True
     naive_sampling_on = True
-    chain_of_thought = False
+    chain_of_thought = True
     for temp in [0.25, 0.5, 0.75]:
         sampler.power_sampling_temperature = temp
         benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 30, output_file_name = f"results/math500_power_sampling_results_temp_{temp}.csv", seed=seed)
