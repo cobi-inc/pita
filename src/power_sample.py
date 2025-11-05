@@ -28,6 +28,7 @@ import regex
 
 # Prompting constants and templates
 PROMPT = "Can you solve the following math problem? "
+AIME = "The solution to this math problem is an integer between 0 and 999."
 BASE = " Put your last and final answer within \\boxed{{}}."
 COT = " Please reason step by step, and put your last and final answer within \\boxed{{}}."
 COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution, and present your last and final answer within \\boxed{{}}."
@@ -100,12 +101,19 @@ class AutoregressiveSampler:
 
 # Creates a question that can be inserted into the LLM
 # It is a prompt template that adds chain of thought prompting if cot=True
-def format_prompt(question, cot=True):
+def format_prompt(dataset_name, question, cot=True):
     format_str = PROMPT + question
+
+    # Let the LLM know that AIME answers can only be between 0 and 999
+    if dataset_name == "AIME":
+        format_str += AIME
+
+    # Enable chain of thought prompting
     if cot:
-        format_str+=COT
+        format_str += COT
     else:
-        format_str+=BASE
+        format_str += BASE
+
     return format_str
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
@@ -251,26 +259,47 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
     # EOS never found, just return the full generated context
     return prompt, acceptances, block_acceptances
 
+def benchmark_preprocessing(dataset_name):
+    if(dataset_name == "MATH500"):
+        # Load the Math500 dataset
+        dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
+        # Convert all keys to lowercase
+        dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
+        # convert answers to a string
+        dataset = dataset.cast_column('answer', datasets.Value('string'))
+        return dataset
+
+    elif(dataset_name == "AIME"):
+        #Load both parts of the AIME tests and concatenate them
+        dataset = datasets.concatenate_datasets([datasets.load_dataset("opencompass/AIME2025", "AIME2025-I")["test"], 
+                                                datasets.load_dataset("opencompass/AIME2025", "AIME2025-II")["test"]])
+        # Convert all keys to lowercase
+        dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
+        # convert answers to a string
+        dataset = dataset.cast_column('answer', datasets.Value('string'))
+        # convert the question column name to "problem"
+        dataset = dataset.rename_column("question", "problem")
+        return dataset
+
+    else: 
+        print("Unknown dataset:", dataset_name)
+        return None
+
 # Benchmark the Math500 dataset with different sampling methods
-def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False, low_temp_sampling = False, naive_sampling = False, question_max = 0, seed = 0, output_file_name = "results/math500_power_sampling_results.csv", verbose = 0):
-    # Load the Math500 dataset
-    dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
-    # Convert all keys to lowercase
-    dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
-    # convert answers to a string
-    dataset = dataset.cast_column('answer', datasets.Value('string'))
+def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling = False, low_temp_sampling = False, naive_sampling = False, question_max = 0, seed = 0, output_file_name = "results/math500_power_sampling_results.csv", verbose = 0):
+    # Load dataset
+    dataset = benchmark_preprocessing(dataset_name)
 
     # Store results
     results = []    
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     output_file = open(output_file_name, "w")
 
-
     # Track number of questions asked
     question_count = 0
 
     # Iterate over the dataset
-    for question_index, question_data in tqdm(enumerate(dataset), desc = "Benchmark on MATH", disable=True):
+    for question_index, question_data in tqdm(enumerate(dataset), desc = "Benchmark on " + dataset_name, disable=True):
         
         if(question_max == question_count and question_max != 0):
             break
@@ -280,7 +309,7 @@ def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False
         answer = question_data["answer"]
         
         # Format the prompt with prompt engineering
-        formatted_prompt = format_prompt(question, cot=chain_of_thought)
+        formatted_prompt = format_prompt(dataset_name, question, cot=chain_of_thought)
 
         # Store the prompt and answers in the results csv
         result_row = {
@@ -301,7 +330,8 @@ def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False
 
             # Parse the answer
             power_sampling_answer = parse_answer(power_sampling_output)
-            print("Parsed Sampling Answer:", power_sampling_answer)
+            # print("Parsed Sampling Answer:", power_sampling_answer)
+
             # Save the results
             result_row["power_sampling_output"] = power_sampling_output
             result_row["power_sampling_output_token_count"] = len(sampler.tokenizer.encode(power_sampling_output))
@@ -310,6 +340,7 @@ def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False
             result_row["power_sampling_total_acceptances"] = power_sampling_total_acceptances
             result_row["power_sampling_block_acceptances"] = power_sampling_block_acceptances
 
+            # TODO: Implement more verbose logging
             if(verbose == 3):
                 # Log detailed output for debugging
                 # Log the MCMC Block, Index, Proposed Probability, Current Probability, Acceptance Ratio, Random Number Generated, Accepted/Rejected
@@ -385,7 +416,7 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    token_count = 2000 #total tokens for response
+    token_count = 3000 #total tokens for response
     block_size = 200 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 5 
 
@@ -431,11 +462,14 @@ if __name__ == "__main__":
                                     )
 
     # Test MATH500 Benchmark
+    dataset_name = "AIME"
     power_sampling_on = True
     low_temp_sampling_on = True
     naive_sampling_on = True
     chain_of_thought = False
-    math500_benchmark_sampling(sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 100, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
+    for temp in [0.25, 0.5, 0.75]:
+        sampler.power_sampling_temperature = temp
+        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 30, output_file_name = f"results/math500_power_sampling_results_temp_{temp}.csv", seed=seed)
 
 
     # Call the power_sample function
