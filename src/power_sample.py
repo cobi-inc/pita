@@ -35,7 +35,7 @@ COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution
 
 # Autoregressive Sampler Class
 # Stores parameters concerning the LLM, autoregressive sampling, and power sampling
-# Includes Functions"
+# Includes Functions:
 # sample() - Samples from the LLM given a context and max new tokens using either the API or programmatical LLM
 class AutoregressiveSampler:
     def __init__(self, api, llm, tokenizer, power_sampling_temperature=1.0, top_k = -1, logprobs=100, token_count=1000, block_size=50, MCMC_steps=5):
