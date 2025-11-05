@@ -117,7 +117,7 @@ def naive_temp(p : AutoregressiveSampler, context, temp, seq_len):
     idx = tokens.view(unscaled_logits.shape[0], 1, 1)
 
     log_probs_unnorm = (1/temp * torch.gather(F.log_softmax(unscaled_logits, dim=-1), -1, idx)).view(-1).tolist()
-    log_probs_norm = torch.gather(F.log_softmax(scaled_logits, dim=-1), -1, idx).view(-1).tolist()
+    log_probs_norm = torch.gather(F.log_softmax(scaled_logits, dim=-1), -1, idx).view(-1).tolist() #log probability of each generated token
 
     assert len(tokens) == len(log_probs_unnorm) == len(log_probs_norm)
 
@@ -397,7 +397,8 @@ if __name__ == "__main__":
         model_str = "Qwen/Qwen3-30B-A3B-GPTQ-Int4"
 
     if dataset_name == "MATH":
-        # dataset_str = "EleutherAI/hendrycks_math"
+        # dataset_str = "EleutherAI/hendrycks_math"    save_str = os.path.join(args.save_str, model)
+    os.makedirs(save_str, exist_ok=True)
         ##json_file = 'MATH-TTT.json'
         ##dataset = json.load(open(json_file, "r"))
         # random.seed(0)

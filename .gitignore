@@ -1,3 +1,5 @@
-/llm_experiments/results/*
+/llm_experiments/*
 *.pyc
 __pycache__/
+*.log
+/results/
