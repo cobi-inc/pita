@@ -83,7 +83,11 @@ class AutoregressiveSampler:
                 context = TokensPrompt(prompt_token_ids=context)
             
             # Set the sampling parameters of the LLM
-            sample_params = SamplingParams(temperature=self.power_sampling_temperature, top_k=self.top_k, max_tokens=max_new_tokens, logprobs=5, stop_token_ids =[self.tokenizer.eos_token_id])
+            sample_params = SamplingParams( temperature=self.power_sampling_temperature, 
+                                            top_k=self.top_k, 
+                                            max_tokens=max_new_tokens, 
+                                            logprobs=self.top_k, 
+                                            stop_token_ids =[self.tokenizer.eos_token_id])
 
             # Generate a new response from the LLM
             llm_output = self.llm.generate(context, sampling_params=sample_params)
@@ -169,64 +173,66 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
         # Block Acceptances Ratio 
         block_acceptance = 0
 
+        # print("Input Prompt:", prompt + '\n')
 
         # Generate next block of tokens as baseline
         # If the programmatical LLM is being used
-        tokens_list, token_logprob_list, logprobs_list = sampler.sample(prompt +  sampler.tokenizer.decode(context), sampler.block_size)
+        tokens_list, token_logprob_list, logprobs_list = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.block_size)
 
         # Calculate the initial logprobabilities for the generated block
         logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler)
         # Extend the context with the newly generated tokens
         context = tokens_list
-        print("\nCurrent Context Length:", len(context))
-        print("\nLog Probabilities Length:", len(logprob))
-        print("Context:", sampler.tokenizer.decode(context, skip_special_tokens=True))
+
+        # print("Proposed Response:", sampler.tokenizer.decode(context, skip_special_tokens=True))
 
         #Iterate over the number of MCMC steps
         for _ in tqdm(range(sampler.MCMC_steps), disable=True):
             # print("\n\nCurrent Block and MCMC Step:", block_idx, _)
 
             #Find a new point to start a proposal from. Generate idx tokens for the step
-            idx = random.randint(0,sampler.block_size -1)
+            idx = random.randint(0,len(context) -1)
             
             #Set the new context for the proposed block
-            context_proposed = context[:-(sampler.block_size-idx)]
+            context_proposed = context[:-(len(context)-idx)]
 
-            print("Context Token Length for Proposal:", len(context_proposed))
-            print("Tokens to generate:", sampler.block_size - idx)
+            # print("Context Token Length for Proposal:", len(context_proposed))
+            # print("Tokens to generate:", len(context) - idx)
+            # print("Input Prompt:\n", prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=True) + '\n')
 
             #Generate proposed block of tokens
-            proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), sampler.block_size-idx)
+            proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
             
             # Print out the current block, MCMC step, proposed context, tokens to generate, and proposed tokens
 
-            print("Proposed context:", sampler.tokenizer.decode(context_proposed, skip_special_tokens=True))
-
+            # print("Proposed Response:\n", sampler.tokenizer.decode(proposed_tokens_list, skip_special_tokens=True))
+            # assert(len(proposed_tokens_list + context_proposed ) == len(context))
             # print("Tokens generated:", len(proposed_tokens_list))
 
             # Find the log probabilities of the generated tokens
             proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler)
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
-            log_acceptance_ratio = sum(proposed_logprob) + sum(logprob_temp_scaled[idx:]) - sum(logprob[idx:]) - sum(proposed_logprob_temp_scaled)
-            
-            print("Proposed Logprob Sum:", sum(proposed_logprob))
-            print("Current Logprob Temp Scaled Sum:", sum(logprob_temp_scaled[idx:]))
-            print("Current Logprob Sum:", sum(logprob[idx:]))
-            print("Proposed Logprob Temp Scaled Sum:", sum(proposed_logprob_temp_scaled))
-            print("Log Acceptance Ratio:", np.exp(log_acceptance_ratio))
+            log_acceptance_ratio = sum(proposed_logprob) + sum(logprob_temp_scaled[idx:idx+len(proposed_tokens_list)]) - sum(logprob[idx:idx+len(proposed_tokens_list)]) - sum(proposed_logprob_temp_scaled)
+
+            # Check to make sure we are comparing the correct number of elements
+            assert(len(proposed_logprob) == len(logprob_temp_scaled[idx:idx+len(proposed_tokens_list)]) == len(logprob[idx:idx+len(proposed_tokens_list)]) == len(proposed_logprob_temp_scaled))
+
+            # print("Proposed Logprob Sum:", sum(proposed_logprob))
+            # print("Current Logprob Temp Scaled Sum:", sum(logprob_temp_scaled[idx:idx+len(proposed_tokens_list)]))
+            # print("Current Logprob Sum:", sum(logprob[idx:idx+len(proposed_tokens_list)]))
+            # print("Proposed Logprob Temp Scaled Sum:", sum(proposed_logprob_temp_scaled))
+            # print("Log Acceptance Ratio:", np.exp(log_acceptance_ratio))
 
             # Accept or reject the proposed block based on the acceptance ratio
             if np.random.rand() < np.exp(log_acceptance_ratio):
                 # print("Accepted Proposal at index", idx)
                 # Ensure the context is updated with the accepted proposal
-                context[idx:] = proposed_tokens_list
+                context = context_proposed + proposed_tokens_list
 
                 # Update the logprob lists with the accepted proposal's log probabilities
-                print("Length of the context being kept:", len(logprob[idx:]))
-                print("Proposed Logprob Length:", len(proposed_logprob))
-                logprob[idx:] = proposed_logprob
-                logprob_temp_scaled[idx:] = proposed_logprob_temp_scaled
+                logprob = torch.cat([logprob[:idx], proposed_logprob], dim=0)
+                logprob_temp_scaled = torch.cat([logprob_temp_scaled[:idx], proposed_logprob_temp_scaled], dim=0)
 
                 # Collected data about the acceptance ratio for overall run and block
                 acceptances += 1
@@ -235,9 +241,10 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
         block_acceptances.append(block_acceptance)
 
         prompt = prompt + sampler.tokenizer.decode(context, skip_special_tokens=False)
-
+        # print("EOS Token ID:", sampler.tokenizer.eos_token_id)
+        # print("Current Context:\n", context)
         # Check if an EOS token has been generated and end the process if so
-        if(sampler.tokenizer.eos_token in context[-1:]):
+        if(sampler.tokenizer.eos_token_id in context[-1:]):
             return prompt, acceptances, block_acceptances
 
 
@@ -294,6 +301,7 @@ def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False
 
             # Parse the answer
             power_sampling_answer = parse_answer(power_sampling_output)
+            print("Parsed Sampling Answer:", power_sampling_answer)
             # Save the results
             result_row["power_sampling_output"] = power_sampling_output
             result_row["power_sampling_output_token_count"] = len(sampler.tokenizer.encode(power_sampling_output))
@@ -343,7 +351,6 @@ def math500_benchmark_sampling(sampler, chain_of_thought, power_sampling = False
             end_time = time.time()
 
             # Parse the answer
-            
             naive_sampling_answer = parse_answer(sampler.tokenizer.decode(naive_tokens_list, skip_special_tokens=False))
             # Save the results
             result_row["naive_sampling_output"] = sampler.tokenizer.decode(naive_tokens_list, skip_special_tokens=False)
@@ -379,14 +386,14 @@ if __name__ == "__main__":
 
     # Power Sampling Hyperparameters
     token_count = 2000 #total tokens for response
-    block_size = 250 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_steps = 10 
+    block_size = 200 # tokens per block. Number of blocks = token_count / block_size
+    MCMC_steps = 5 
 
     # Set wether to use the API server or programmatical LLM
     api_condition = False
 
     #Sampling parameters for the LLM
-    temperature = 2.0
+    temperature = 1.1
     top_k = 100 # Consider all tokens when -1 or N tokens when N > 0
 
     # LLM parameters
@@ -395,7 +402,7 @@ if __name__ == "__main__":
     skip_tokenizer_init = False
     dtype = "auto"
     quantization = None
-    gpu_memory_utilization = 0.5
+    gpu_memory_utilization = 0.7
 
     # If not using an API
     if(api_condition == False):
@@ -425,10 +432,10 @@ if __name__ == "__main__":
 
     # Test MATH500 Benchmark
     power_sampling_on = True
-    low_temp_sampling_on = False
-    naive_sampling_on = False
-    chain_of_thought = True
-    math500_benchmark_sampling(sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 1, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
+    low_temp_sampling_on = True
+    naive_sampling_on = True
+    chain_of_thought = False
+    math500_benchmark_sampling(sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 100, output_file_name = "results/math500_power_sampling_results.csv", seed=seed)
 
 
     # Call the power_sample function

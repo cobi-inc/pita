@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pandas as pd
 
 def remove_boxed(s):
     left = "\\boxed{"
@@ -28,6 +29,7 @@ def last_boxed_only_string(string):
         idx = string.rfind("\\fbox")
         if idx < 0:
             return None
+        
 
     i = idx
     right_brace_idx = None
@@ -49,6 +51,6 @@ def last_boxed_only_string(string):
     
     return retval
 
-
 def parse_answer(input_str):
 	return remove_boxed(last_boxed_only_string(input_str))
+
