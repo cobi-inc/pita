@@ -2,7 +2,6 @@
 import os
 import random
 import time
-import re
 
 # Math Libraries
 import numpy as np
