@@ -61,7 +61,7 @@ class AutoregressiveSampler:
                 "prompt": context,
                 "max_tokens": max_new_tokens,
                 "temperature": self.power_sampling_temperature,
-                "logprobs": 5,  #  size of self.tokenizer.vocab_size crashes server due to memory leack  # Number of logprobs to return per token
+                "logprobs": 5,  #  size of self.tokenizer.vocab_size crashes server due to memory leak  # Number of logprobs to return per token
                 "stop": None
             }
 
