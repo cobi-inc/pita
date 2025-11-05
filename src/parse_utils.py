@@ -1,4 +1,3 @@
-import json
 
 def remove_boxed(s):
     left = "\\boxed{"
