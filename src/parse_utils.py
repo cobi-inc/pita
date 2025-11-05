@@ -48,6 +48,26 @@ def last_boxed_only_string(string):
     
     return retval
 
-def parse_answer(input_str):
-	return remove_boxed(last_boxed_only_string(input_str))
+def extract_sentence(input_str, substring):
+    """
+    Extracts the entire sentence containing the given substring from the input string.
+    Returns the sentence if found, otherwise None.
+    """
+    import re
+    # Split the input string into sentences based on punctuation followed by whitespace
+    sentences = re.split(r'(?<=[.!?])\s+', input_str)
+    for sentence in sentences:
+        if substring in sentence:
+            return sentence.strip()
+    return None
 
+def parse_answer(input_str, answer_string):
+    # Try finding the boxed answer first 
+	boxed_answer = remove_boxed(last_boxed_only_string(input_str))
+
+    # If the LLM didn't provide a boxed answer, try to see if it mentioned the correct answer
+    if(boxed_answer == "{}" or boxed_answer is None):
+        context_answer = extract_sentence(input_str, answer_string)
+        return context_answer
+
+    return boxed_answer
