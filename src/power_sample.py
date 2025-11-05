@@ -20,7 +20,6 @@ import requests
 
 # Pytorch Library
 import torch
-from torch.nn import functional as F
 # Benchmarking library
 import datasets
 # Parsing Library
