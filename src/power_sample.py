@@ -50,7 +50,7 @@ class AutoregressiveSampler:
         self.block_num = token_count // block_size
         self.api_url = "http://localhost:8000/v1/completions"
 
-    # Take in the context (string) an max_new_tokens (int)
+    # Take in the context (string) and max_new_tokens (int)
     # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
     def sample(self, context, max_new_tokens):
         if(self.api == True):
