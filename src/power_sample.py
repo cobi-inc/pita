@@ -420,7 +420,7 @@ if __name__ == "__main__":
     block_size = 200 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 5 
 
-    # Set wether to use the API server or programmatical LLM
+    # Set whether to use the API server or programmatical LLM
     api_condition = False
 
     #Sampling parameters for the LLM
