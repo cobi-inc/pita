@@ -437,7 +437,7 @@ if __name__ == "__main__":
 
     # If not using an API
     if(api_condition == False):
-        # Initalize model
+        # Initialize model
         llm = LLM(model=model, 
                 skip_tokenizer_init=skip_tokenizer_init, 
                 dtype=dtype, 
