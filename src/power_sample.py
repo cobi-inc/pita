@@ -450,7 +450,7 @@ if __name__ == "__main__":
     else: 
         llm = None
 
-    #Initalize Autogressive Sampler
+    #Initialize Autoregressive Sampler
     sampler = AutoregressiveSampler(api_condition,
                                     llm, 
                                     tokenizer,
