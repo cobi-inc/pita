@@ -426,12 +426,13 @@ if __name__ == "__main__":
     top_k = 100 # Consider all tokens when -1 or N tokens when N > 0
 
     # LLM parameters
-    model = "Qwen/Qwen3-4B-AWQ"
+    model = "Qwen/Qwen3-4B-Instruct-2507"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
     skip_tokenizer_init = False
     dtype = "auto"
     quantization = None
     gpu_memory_utilization = 0.8
+    max_model_len = 32768
 
     # If not using an API
     if(api_condition == False):
@@ -441,6 +442,7 @@ if __name__ == "__main__":
                 dtype=dtype, 
                 quantization=quantization, 
                 gpu_memory_utilization=gpu_memory_utilization,
+                max_model_len=max_model_len,
                 #max_logprobs=tokenizer.vocab_size + token_count + 1000,
                 max_logprobs = top_k,
                 logprobs_mode='raw_logits')
@@ -464,10 +466,10 @@ if __name__ == "__main__":
     power_sampling_on = True
     low_temp_sampling_on = True
     naive_sampling_on = True
-    chain_of_thought = True
+    chain_of_thought = False
     for temp in [0.25, 0.5, 0.75]:
         sampler.power_sampling_temperature = temp
-        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 30, output_file_name = f"results/math500_power_sampling_results_temp_{temp}.csv", seed=seed)
+        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, low_temp_sampling_on, naive_sampling_on, question_max = 30, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)
 
 
     # Call the power_sample function

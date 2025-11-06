@@ -63,7 +63,7 @@ def extract_sentence(input_str, substring):
 
 def parse_answer(input_str, answer_string):
     # Try finding the boxed answer first 
-	boxed_answer = remove_boxed(last_boxed_only_string(input_str))
+    boxed_answer = remove_boxed(last_boxed_only_string(input_str))
 
     # If the LLM didn't provide a boxed answer, try to see if it mentioned the correct answer
     if(boxed_answer == "{}" or boxed_answer is None):
