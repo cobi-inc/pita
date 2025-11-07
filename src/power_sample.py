@@ -276,7 +276,6 @@ def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, t
     # Iterate over the number of blocks to be generated
     for block_idx in tqdm(range(sampler.block_num), disable=True):
         # Block Acceptances Ratio 
-        block_acceptance = 0
 
         # print("Input Prompt:", prompt + '\n')
 
