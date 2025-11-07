@@ -301,7 +301,7 @@ def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, t
             # print("\n\nCurrent Block and MCMC Step:", block_idx, _)
 
             #Find a new point to start a proposal from. Generate idx tokens for the step
-            idx = random.randint(0,len(context) -1)
+            idx = random.randint(1, len(context) - 1)
             
             #Set the new context for the proposed block
             context_proposed = context[:idx]
