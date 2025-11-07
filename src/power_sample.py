@@ -288,8 +288,8 @@ def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, t
         logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler)
 
         # Extend the initial log probabilities
-        logprob = [*logprob, *logprob_initial]
-        logprob_temp_scaled = [*logprob_temp_scaled, *logprob_temp_scaled_initial]
+        logprob = [*logprob, *logprob_initial.tolist()]
+        logprob_temp_scaled = [*logprob_temp_scaled, *logprob_temp_scaled_initial.tolist()]
 
         # Extend the context with the newly generated tokens
         context.extend(tokens_list)
