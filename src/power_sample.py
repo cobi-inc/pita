@@ -120,6 +120,50 @@ def format_prompt(dataset_name, question, cot=True):
 
     return format_str
 
+# Use the tokenizer.apply_chat_template_prompt to format messages for chat models
+def tokenizer_chat_template_prompt(tokenizer, dataset_name, question, boost_confidence, enable_cot, enable_thinking):
+    # Create messages for the chat template
+    if(dataset_name == "AIME"):
+        system_message = PROMPT + AIME 
+    else:
+        system_message = PROMPT
+
+    # Enable chain of thought prompting
+    if(enable_cot):
+        system_message = COT
+    else:
+        system_message = BASE
+
+    # Enable a confidence boost
+    if boost_confidence:
+        system_message = CONFIDENCE_BOOSTER + system_message
+
+    system_message = CONFIDENCE_BOOSTER + system_message
+
+    # Create the message format for apply_chat_template function
+    messages = [
+        {
+            "role": "system",
+            # Crucial for benchmarks: explicitly ask for reasoning and boxed format
+            "content": system_message
+        },
+        {
+            "role": "user",
+            "content": question
+        }
+    ]
+
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize = False,
+        add_generation_prompt = True,
+        enable_thinking = enable_thinking
+    )
+
+    print(prompt)
+
+    return prompt
+
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # lopprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
@@ -386,7 +430,10 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
         answer = question_data["answer"]
         
         # Format the prompt with prompt engineering
-        formatted_prompt = format_prompt(dataset_name, question, cot=chain_of_thought)
+        # formatted_prompt = format_prompt(dataset_name, question, cot=chain_of_thought)
+
+        # Format the prompt with the tokenizer chat template
+        formatted_prompt = tokenizer_chat_template_prompt(sampler.tokenizer, dataset_name, question, False, False, chain_of_thought)
 
         # Store the prompt and answers in the results csv
         result_row = {
