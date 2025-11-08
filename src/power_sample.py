@@ -168,8 +168,9 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
     acceptances = 0
     block_acceptances = []
 
-    # New Context Window to be changed
+    # New Context Window to be changed and token history to keep track of all accepted tokens
     context = []
+    token_history = ""
 
     # Iterate over the number of blocks to be generated
     for block_idx in tqdm(range(sampler.block_num), disable=True):
@@ -178,7 +179,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
 
         # Generate next block of tokens as baseline
         # If the programmatical LLM is being used
-        tokens_list, token_logprob_list, logprobs_list = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.block_size)
+        tokens_list, token_logprob_list, logprobs_list = sampler.sample(prompt + token_history + sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.block_size)
         
         # Record how many tokens have been generated
         total_tokens_generated += len(tokens_list)
@@ -197,7 +198,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
             context_proposed = context[:-(len(context)-idx)]
 
             #Generate proposed block of tokens
-            proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
+            proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + token_history + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
             
             # Record how many tokens have been generated
             total_tokens_generated += len(proposed_tokens_list)
@@ -230,15 +231,15 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
         block_acceptances.append(block_acceptance)
 
         # Update the prompt with the newly generated/accepted context
-        prompt = prompt + sampler.tokenizer.decode(context, skip_special_tokens=False)
+        token_history = token_history + sampler.tokenizer.decode(context, skip_special_tokens=False)
 
         # Check if an EOS token has been generated and end the process if so
         if(sampler.tokenizer.eos_token_id in context):
-            return prompt, acceptances, block_acceptances, total_tokens_generated
+            return token_history, acceptances, block_acceptances, total_tokens_generated
 
 
     # EOS never found, just return the full generated context
-    return prompt, acceptances, block_acceptances, total_tokens_generated
+    return token_history, acceptances, block_acceptances, total_tokens_generated
 
 def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, token_count, seed):
     # Set random seed
