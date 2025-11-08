@@ -10,3 +10,6 @@ dependencies:
   - cxx-compiler      # Use conda-forge's cxx-compiler for a modern GCC
   - pip:
     - vllm==0.11.0    # This will pull in torch and all other necessary libs
+    - pandas==2.3.3
+    - datasets==4.3.0
+    - regex==2025.9.18
