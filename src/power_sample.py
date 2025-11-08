@@ -25,6 +25,7 @@ import datasets
 import regex
 
 # Prompting constants and templates
+CONFIDENCE_BOOSTER = "You are very knowledgeable. An expert. Think and respond with confidence. "
 PROMPT = "Can you solve the following math problem? "
 AIME = "The solution to this math problem is an integer between 0 and 999."
 BASE = " Put your last and final answer within \\boxed{{}}."
@@ -111,6 +112,11 @@ def format_prompt(dataset_name, question, cot=True):
         format_str += COT
     else:
         format_str += BASE
+    
+    # Enable a confidence boost
+    confidence = True
+    if confidence:
+        format_str = CONFIDENCE_BOOSTER + format_str
 
     return format_str
 
