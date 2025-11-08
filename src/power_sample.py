@@ -388,7 +388,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
         }
 
         # Generate a response using the sampler
-        if(power_sampling):
+        if(power_sampling_on):
             #Time how long it takes to get a response
             start_time = time.time()
 
@@ -517,7 +517,7 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    token_count = 2000 #total tokens for response
+    token_count = 8192 #total tokens for response
     block_size = 400 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 10 
 
@@ -530,13 +530,13 @@ if __name__ == "__main__":
 
 
     # LLM parameters
-    model = "Qwen/Qwen2.5-Math-7B"
+    model = "Qwen/Qwen3-4B-AWQ"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
     skip_tokenizer_init = False
     dtype = "auto"
     quantization = None
     gpu_memory_utilization = 0.8
-    max_model_len = 4096
+    max_model_len = 8192
 
     # If not using an API
     if(api_condition == False):
@@ -567,12 +567,12 @@ if __name__ == "__main__":
 
     # Test MATH500 Benchmark
     dataset_name = "MATH500"
-    power_sampling_on = True
-    power_sampling_windowed_on = True
-    low_temp_sampling_on = True
+    power_sampling_on = False
+    power_sampling_windowed_on = False
+    low_temp_sampling_on = False
     naive_sampling_on = True
     chain_of_thought = False
     #for temp in [0.25, 0.5, 0.75]:
-    for temp in [0.25]:
+    for temp in [1]:
         sampler.power_sampling_temperature = temp
-        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 100, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)
+        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 10, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)
