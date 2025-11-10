@@ -17,14 +17,15 @@ from parse_utils import parse_answer
 # Prompting constants and templates
 CONFIDENCE_BOOSTER = "You are very knowledgeable. An expert. Think and respond with confidence. "
 PROMPT = "Can you solve the following math problem? "
-AIME = "The solution to this math problem is an integer between 0 and 999."
-BASE = " Put your last and final answer within \\boxed{{}}."
-COT = " Please reason step by step, and put your last and final answer within \\boxed{{}}."
-COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution, and present your last and final answer within \\boxed{{}}."
+AIME = "The solution to this math problem is an integer between 0 and 999. "
+BASE = "Put your last and final answer within \\boxed{{}}. "
+COT = "Please reason step by step, and put your last and final answer within \\boxed{{}}. "
+COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution, and present your last and final answer within \\boxed{{}}. "
 
 class Benchmarking:
     def __init__(self, dataset_name, 
-                sampler, 
+                sampler,
+                enable_thinking=False,
                 chain_of_thought=False, 
                 power_sampling_on=False, 
                 power_sampling_windowed_on=False, 
@@ -47,7 +48,7 @@ class Benchmarking:
         self.output_file_name = output_file_name
         self.verbose = verbose
 
-def benchmark_preprocessing(dataset_name):
+def load_dataset(dataset_name):
         if(dataset_name == "MATH500"):
             # Load the Math500 dataset
             dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
@@ -142,7 +143,7 @@ def tokenizer_chat_template_prompt(tokenizer, dataset_name, question, boost_conf
 # Benchmark the Math500 dataset with different sampling methods
 def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on = False, power_sampling_windowed_on = False, low_temp_sampling_on = False, naive_sampling_on = False, question_max = 0, seed = 0, output_file_name = "results/math500_power_sampling_results.csv", verbose = 0):
     # Load dataset
-    dataset = benchmark_preprocessing(dataset_name)
+    dataset = load_dataset(dataset_name)
 
     # Store results
     results = []    
@@ -166,7 +167,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
         # formatted_prompt = format_prompt(dataset_name, question, cot=chain_of_thought)
 
         # Format the prompt with the tokenizer chat template
-        formatted_prompt = tokenizer_chat_template_prompt(sampler.tokenizer, dataset_name, question, False, False, chain_of_thought)
+        formatted_prompt = tokenizer_chat_template_prompt(sampler.tokenizer, dataset_name, question, False, False, False)
 
         # Store the prompt and answers in the results csv
         result_row = {
