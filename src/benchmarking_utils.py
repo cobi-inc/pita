@@ -74,7 +74,7 @@ def load_dataset(dataset_name):
             print("Unknown dataset:", dataset_name)
             return None
 
-# Creates a question that can be inserted into the LLM
+# Manual prompt creation from a question that can be inserted into the LLM
 # It is a prompt template that adds chain of thought prompting if cot=True
 def format_prompt(dataset_name, question, cot=True):
     format_str = PROMPT + question
