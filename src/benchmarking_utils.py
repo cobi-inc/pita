@@ -114,8 +114,6 @@ def tokenizer_chat_template_prompt(tokenizer, dataset_name, question, boost_conf
     if boost_confidence:
         system_message = CONFIDENCE_BOOSTER + system_message
 
-    system_message = CONFIDENCE_BOOSTER + system_message
-
     # Create the message format for apply_chat_template function
     messages = [
         {
@@ -181,7 +179,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
             start_time = time.time()
 
             # Send the prompt to the sliding window power sampling function
-            power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances, power_sampling_total_token_count = power_sampling(sampler, prompt=formatted_prompt, temperature=sampler.power_sampling_temperature, power=1.0, token_count=sampler.token_count, seed=random.randint(0, 10000))
+            power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances, power_sampling_total_token_count = power_sampling(sampler, prompt=formatted_prompt)
             
             # Find the end time of the power sampling
             end_time = time.time()
@@ -211,7 +209,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
             start_time = time.time()
 
             # Send the prompt to the sliding window power sampling function
-            power_sampling_windowed_output, power_sampling_windowed_total_acceptances, power_sampling_windowed_block_acceptances, power_sampling_windowed_total_token_count = sliding_window_power_sample(sampler, prompt=formatted_prompt, temperature=sampler.power_sampling_temperature, power=1.0, token_count=sampler.token_count, seed=random.randint(0, 10000))
+            power_sampling_windowed_output, power_sampling_windowed_total_acceptances, power_sampling_windowed_block_acceptances, power_sampling_windowed_total_token_count = sliding_window_power_sample(sampler, prompt=formatted_prompt)
             
             # Find the end time of the power sampling
             end_time = time.time()

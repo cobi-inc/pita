@@ -32,10 +32,11 @@ from benchmarking_utils import benchmark_sampling
 # Includes Functions:
 # sample() - Samples from the LLM given a context and max new tokens using either the API or programmatical LLM
 class AutoregressiveSampler:
-    def __init__(self, api, llm, tokenizer, power_sampling_temperature=1.0, top_k = -1, logprobs=100, token_count=1000, block_size=50, MCMC_steps=5):
+    def __init__(self, api, llm, tokenizer, enable_thinking=False, power_sampling_temperature=1.0, top_k = -1, logprobs=100, token_count=1000, block_size=50, MCMC_steps=5):
         self.api = api
         self.llm = llm
         self.tokenizer = tokenizer
+        self.enable_thinking = enable_thinking
         self.power_sampling_temperature = power_sampling_temperature
         self.top_k = top_k
         self.token_count = token_count
@@ -125,10 +126,7 @@ def logprobs(token_ids, token_logprob, logprobs_list, sampler):
 # Increases the speed of getting a prompt response
 # Input is the sampler object, prompt string, temperature, power, total token count to generate, and random seed
 # Output is the generated string, total acceptances, and block acceptances
-def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperature, power, token_count, seed):
-    # Set random seed
-    random.seed(seed)
-
+def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
     # Log Probabilites
     logprob = [] # Current list of unscaled log probabilites of the new sample. Length of block_size
     logprob_temp_scaled = [] # Current list of tokens probabilites individually scaled by temperature. Length of block_size
@@ -214,10 +212,10 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt, temperat
     # EOS never found, just return the full generated context
     return token_history, acceptances, block_acceptances, total_tokens_generated
 
-def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, token_count, seed):
-    # Set random seed
-    random.seed(seed)
-
+def power_sampling(
+                sampler: AutoregressiveSampler, 
+                prompt
+                ):
     # Statistic Collection
     total_tokens_generated = 0
     acceptances = 0
@@ -232,8 +230,9 @@ def power_sampling(sampler: AutoregressiveSampler, prompt, temperature, power, t
     # New Context Window to be changed
     context = []
 
+    block_count = sampler.token_count // sampler.block_size
     # Iterate over the number of blocks to be generated
-    for block_idx in tqdm(range(sampler.block_num), disable=True):
+    for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio 
         block_acceptance = 0
 
@@ -363,13 +362,14 @@ if __name__ == "__main__":
     sampler = AutoregressiveSampler(api_condition,
                                     llm, 
                                     tokenizer,
+                                    enable_thinking=False,
                                     power_sampling_temperature=temperature,
                                     top_k=top_k,
                                     token_count=token_count,
                                     block_size=block_size,
                                     MCMC_steps=MCMC_steps
                                     )
-
+    
     # Test MATH500 Benchmark
     dataset_name = "MATH500"
     power_sampling_on = False

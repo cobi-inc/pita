@@ -69,8 +69,8 @@ def math_results(fnames):
     }
 
 if __name__ == "__main__":
-    # read in a csv file named MATH500_power_sampling_results_temp_0.25_fixed_power_sampling.csv
-    df = pd.read_csv('MATH500_power_sampling_results_temp_0.25_fixed_power_sampling.csv')
+    # read in a csv file
+    df = pd.read_csv('AIME_power_sampling_results_temp_0.25_11_12_qwen2_5_MATH_7b.csv')
 
     # parse columns of the CSV file
     for col in df.columns:
