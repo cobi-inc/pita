@@ -12,7 +12,7 @@ from transformers import AutoTokenizer
 import datasets
 
 #Import Custom Libraries
-from parse_utils import parse_answer
+from src.utils.parse_utils import parse_answer
 
 # Prompting constants and templates
 CONFIDENCE_BOOSTER = "You are very knowledgeable. An expert. Think and respond with confidence. "

@@ -1,3 +1,14 @@
+# Custom Software
+from src.api.api_template import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionChoice,
+    ChatCompletionMessage,
+    ChatMessageRole,
+    Usage,
+)
+from src.power_sampling.power_sample import AutoregressiveSampler, sliding_window_power_sample, power_sampling
+
 import time
 import uuid
 from typing import Optional, List, Union, Dict, Any
@@ -10,23 +21,11 @@ from vllm import LLM
 
 # Import from your existing power_sample.py
 # Adjust the import path if necessary based on where you place this script
-from power_sample import AutoregressiveSampler, sliding_window_power_sample, power_sampling
 
 app = FastAPI(title="Power Sampling API")
 
 # --- Global Sampler State ---
 SERVER_STATE = {"sampler": None}
-
-# --- AI Scientist API ---
-class CompletionRequest(BaseModel):
-    model: str
-    messages: Union[str, List[str], List[Dict[str, Any]]]  # Accept chat format too
-    temperature: float = 1.0
-    max_tokens: int = 1024
-    n: int = 1
-
-class CompletionResponse(BaseModel):
-    content: str
 
 # --- Initialization on Startup ---
 @app.on_event("startup")
@@ -66,17 +65,21 @@ async def startup_event():
     print("Power Sampling Server Ready.")
 
 # --- API Endpoint ---
-@app.post("/power_sample", response_model=CompletionResponse)
-async def create_completion(request: CompletionRequest):
+@app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
+async def create_completion(request: ChatCompletionRequest):
+    # Check if the server is online
     if SERVER_STATE["sampler"] is None:
         raise HTTPException(status_code=503, detail="Model not initialized")
     
     # Grab the Sampler from the Server State
     sampler = SERVER_STATE["sampler"]
-    
-    # Ensure token_count matches max_tokens if possible, or clamp it
-    sampler.token_count = request.max_tokens
-    
+
+    # Check the max tokens the user want to generate
+    if request.max_tokens > sampler.tokenizer.model_max_length:
+        raise HTTPException(status_code=400, detail=f"Requested {request.max_tokens}. {sampler.llm.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
+    sampler.token_count = request.max_tokens # Set the token count if check passes
+
+
     # Format the message into the chat template
     prompt = sampler.tokenizer.apply_chat_template(
         request.messages,
@@ -96,9 +99,41 @@ async def create_completion(request: CompletionRequest):
         generated_text, _, _ = sampler.sample(prompt, sampler.token_count)
         generated_text = sampler.tokenizer.decode(generated_text, skip_special_tokens=False)
 
+    # TO DO
+    # Create message ID
+    message_id = "0"
+
+    # TO DO:Indicate the reason for finishing
+    finish_reason = "NA"
+
+    # Create ChatCompletionChoice   
+    chat_completion_choice = ChatCompletionChoice(
+        index=0,
+        message=ChatCompletionMessage(
+            role=ChatMessageRole.Assistant,
+            content=generated_text
+        ),
+        finish_reason=finish_reason
+    )
+
+    # Create Usage object
+    prompt_token_count = len(sampler.tokenizer.encode(prompt))
+    completion_token_count = len(sampler.tokenizer.encode(generated_text))
+    total_token_count = prompt_token_count + completion_token_count
+    usage = Usage(
+        prompt_tokens=prompt_token_count,
+        completion_tokens=completion_token_count,
+        total_tokens=total_token_count
+    )
+
     # Return just the generated text to the AI Scientist client
-    return CompletionResponse(
-        content=generated_text
+    return ChatCompletionResponse(
+        id=message_id,
+        object="chat.completion",
+        created=int(time.time()),
+        model=request.model,
+        choices=[chat_completion_choice],
+        usage=usage
     )
 
 

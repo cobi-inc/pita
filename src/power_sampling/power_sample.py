@@ -9,7 +9,7 @@ import pandas as pd
 
 # Helper Library
 from tqdm import tqdm
-from parse_utils import parse_answer
+from src.utils.parse_utils import parse_answer
 # Inference Library
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
@@ -25,7 +25,7 @@ import datasets
 import regex
 
 # User Files
-from benchmarking_utils import benchmark_sampling
+from src.utils.benchmarking_utils import benchmark_sampling
 
 # Autoregressive Sampler Class
 # Stores parameters concerning the LLM, autoregressive sampling, and power sampling

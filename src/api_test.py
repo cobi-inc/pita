@@ -1,4 +1,10 @@
 import requests
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8001/v1",
+    api_key="not-needed-for-local"  # API key is often not required for local models
+)
 
 messages = [
     {"role": "system", "content": "You are a personal assistant."},
@@ -8,15 +14,25 @@ messages = [
 
 ]
 
-response = requests.post(
-    "http://localhost:8001/power_sample",
-    json={
-        "model": "Qwen/Qwen3-4B-AWQ",
-        "messages": messages,
-        "temperature": 0.25,
-        "max_tokens": 1024,
-        "n": 1
-    }
+# Send the message with the OpenAI client
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-4B-AWQ",
+    messages=messages,
+    temperature= 0.25,
+    max_tokens=1024,
+    n=1
 )
 
-print(response.json()["content"])
+# Without using the openAI client
+# response = requests.post(
+#     "http://localhost:8001//v1/chat/completions",
+#     json={
+#         "model": "Qwen/Qwen3-4B-AWQ",
+#         "messages": messages,
+#         "temperature": 0.25,
+#         "max_tokens": 1024,
+#         "n": 1
+#     }
+# )
+
+print(response.choices[0].message.content)
