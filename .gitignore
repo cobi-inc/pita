@@ -5,3 +5,4 @@ __pycache__/
 /results/
 *.csv
 /src/training_free_reasoning.egg-info
+/build/*
