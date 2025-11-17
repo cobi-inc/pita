@@ -42,7 +42,6 @@ class AutoregressiveSampler:
         self.token_count = token_count
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps
-        self.block_num = token_count // block_size
         self.api_url = "http://localhost:8000/v1/completions"
 
     # Take in the context (string) and max_new_tokens (int)
@@ -144,8 +143,9 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
     token_history = ""
 
     # Iterate over the number of blocks to be generated
-    for block_idx in tqdm(range(sampler.block_num), disable=True):
-        # Block Acceptances Ratio 
+    block_count = sampler.token_count // sampler.block_size
+    for block_idx in tqdm(range(block_count), disable=True):
+        # Block Acceptances Ratio
         block_acceptance = 0
 
         # Generate next block of tokens as baseline

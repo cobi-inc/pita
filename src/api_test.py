@@ -20,24 +20,30 @@ messages = [
 ]
 
 # Send the message with the OpenAI client
-response = client.chat.completions.create(
-    model="Qwen/Qwen3-4B-AWQ",
-    messages=messages,
-    temperature= 0.25,
-    max_tokens=1024,
-    n=1
-)
+# response = client.chat.completions.create(
+#     model="Qwen/Qwen3-4B-AWQ",
+#     messages=messages,
+#     temperature= 0.25,
+#     max_tokens=1024,
+#     n=1,
+#     MCMC_steps=10,
+#     block_size=400
+# )
+# print(response.choices[0].message.content)
 
 # Without using the openAI client
-# response = requests.post(
-#     "http://localhost:8001//v1/chat/completions",
-#     json={
-#         "model": "Qwen/Qwen3-4B-AWQ",
-#         "messages": messages,
-#         "temperature": 0.25,
-#         "max_tokens": 1024,
-#         "n": 1
-#     }
-# )
+response = requests.post(
+    "http://localhost:8001//v1/chat/completions",
+    json={
+        "model": "Qwen/Qwen3-4B-AWQ",
+        "messages": messages,
+        "temperature": 0.25,
+        "max_tokens": 200,
+        "n": 1,
+        "MCMC_steps": 3,
+        "block_size": 50
+    }
+)
 
-print(response.choices[0].message.content)
+response_data = response.json()
+print(response_data["choices"][0]["message"]["content"])

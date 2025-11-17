@@ -67,6 +67,9 @@ async def startup_event():
 # --- API Endpoint ---
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 async def create_completion(request: ChatCompletionRequest):
+    # New Request
+    print(f"New chat completion request: {time.time()}")
+
     # Check if the server is online
     if SERVER_STATE["sampler"] is None:
         raise HTTPException(status_code=503, detail="Model not initialized")
@@ -74,10 +77,10 @@ async def create_completion(request: ChatCompletionRequest):
     # Grab the Sampler from the Server State
     sampler = SERVER_STATE["sampler"]
 
-    # Handle optional max_tokens (default to sampler's token_count if None)
-    max_tokens = request.max_tokens if request.max_tokens is not None else sampler.token_count
 
     # Check the max tokens the user want to generate
+    # Handle optional max_tokens (default to sampler's token_count if None)
+    max_tokens = request.max_tokens if request.max_tokens is not None else sampler.token_count
     if max_tokens > sampler.tokenizer.model_max_length:
         raise HTTPException(status_code=400, detail=f"Requested {request.max_tokens}. {sampler.llm.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
     sampler.token_count = max_tokens 
@@ -91,10 +94,19 @@ async def create_completion(request: ChatCompletionRequest):
     )
     
     temperature = request.temperature if request.temperature is not None else 1
+    print("Power Sampling with the following parameters:")
+    print(f" - Tokens: {max_tokens}")
+    print(f" - MCMC Steps: {request.MCMC_steps}")
+    print(f" - Block Size: {request.block_size}")
 
     # Call the power sampling function
     # Note: sliding_window_power_sample returns (text, acceptances, block_acceptances, total_tokens)
-    if(float(temperature) != 1):
+    if(request.MCMC_steps != None and request.block_size != None):
+        # Set the power sampling parameters
+        sampler.MCMC_steps = request.MCMC_steps
+        sampler.block_size = request.block_size
+
+        # Call the power sampling function
         generated_text, _, _, total_generated = power_sampling(
             sampler=sampler,
             prompt=prompt
