@@ -1,6 +1,11 @@
 import requests
 from openai import OpenAI
 
+'''
+Start the server before running this file with:
+python -m src.api.serve_power_sampling.py
+'''
+
 client = OpenAI(
     base_url="http://localhost:8001/v1",
     api_key="not-needed-for-local"  # API key is often not required for local models
