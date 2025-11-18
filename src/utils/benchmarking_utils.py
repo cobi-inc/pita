@@ -13,6 +13,7 @@ import datasets
 
 #Import Custom Libraries
 from src.utils.parse_utils import parse_answer
+from src.sampling.power_sample import power_sampling, sliding_window_power_sample
 
 # Prompting constants and templates
 CONFIDENCE_BOOSTER = "You are very knowledgeable. An expert. Think and respond with confidence. "
@@ -179,7 +180,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
             start_time = time.time()
 
             # Send the prompt to the sliding window power sampling function
-            power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances, power_sampling_total_token_count = power_sampling(sampler, prompt=formatted_prompt)
+            power_sampling_output, power_sampling_total_acceptances, power_sampling_block_acceptances, power_sampling_index_proposals, power_sampling_total_token_count = power_sampling(sampler, prompt=formatted_prompt)
             
             # Find the end time of the power sampling
             end_time = time.time()
@@ -196,7 +197,8 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
             result_row["power_sampling_answer"] = power_sampling_answer
             result_row["power_sampling_total_acceptances"] = power_sampling_total_acceptances
             result_row["power_sampling_block_acceptances"] = power_sampling_block_acceptances
-            
+            result_row["power_sampling_index_proposals"] = power_sampling_index_proposals
+
             # TODO: Implement more verbose logging
             if(verbose == 3):
                 # Log detailed output for debugging

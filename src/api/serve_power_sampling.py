@@ -7,7 +7,7 @@ from src.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from src.power_sampling.power_sample import AutoregressiveSampler, sliding_window_power_sample, power_sampling
+from src.sampling.power_sample import AutoregressiveSampler, sliding_window_power_sample, power_sampling
 
 import time
 import uuid
@@ -107,7 +107,7 @@ async def create_completion(request: ChatCompletionRequest):
         sampler.block_size = request.block_size
 
         # Call the power sampling function
-        generated_text, _, _, total_generated = power_sampling(
+        generated_text, _, _, _, total_generated = power_sampling(
             sampler=sampler,
             prompt=prompt
         )

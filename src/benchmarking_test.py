@@ -1,5 +1,5 @@
 # Training Free Reasoning Libraries
-from src.power_sampling.power_sample import AutoregressiveSampler
+from src.sampling.power_sample import AutoregressiveSampler
 from src.utils.benchmarking_utils import benchmark_sampling
 
 # Pytorch Library
@@ -75,13 +75,13 @@ if __name__ == "__main__":
                                     )
     
     # Test MATH500 Benchmark
-    dataset_name = "MATH500"
-    power_sampling_on = False
+    dataset_name = "AIME"
+    power_sampling_on = True
     power_sampling_windowed_on = False
     low_temp_sampling_on = False
-    naive_sampling_on = True
+    naive_sampling_on = False
     chain_of_thought = False
     #for temp in [0.25, 0.5, 0.75]:
     for temp in [1]:
         sampler.power_sampling_temperature = temp
-        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 10, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)
+        benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 1, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)

@@ -25,7 +25,7 @@ import datasets
 import regex
 
 # User Files
-from src.utils.benchmarking_utils import benchmark_sampling
+# NOTE: Avoid importing benchmark_utils here to prevent circular imports
 
 # Autoregressive Sampler Class
 # Stores parameters concerning the LLM, autoregressive sampling, and power sampling
@@ -47,51 +47,25 @@ class AutoregressiveSampler:
     # Take in the context (string) and max_new_tokens (int)
     # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
     def sample(self, context, max_new_tokens):
-        if(self.api == True):
-            # Use the vLLM API to generate a response
-            # Create payload
-            payload = {
-                "model": "Qwen/Qwen3-4B-Instruct-2507",
-                "prompt": context,
-                "max_tokens": max_new_tokens,
-                "temperature": self.power_sampling_temperature,
-                "logprobs": 5,  #  size of self.tokenizer.vocab_size crashes server due to memory leak  # Number of logprobs to return per token
-                "stop": None
-            }
+        # Prepare the context as a TokensPrompt if it's a list of token IDs
+        if isinstance(context, list):
+            context = TokensPrompt(prompt_token_ids=context)
+        
+        # Set the sampling parameters of the LLM
+        sample_params = SamplingParams( temperature=self.power_sampling_temperature, 
+                                        top_k=self.top_k, 
+                                        max_tokens=max_new_tokens, 
+                                        logprobs=self.top_k, 
+                                        stop_token_ids =[self.tokenizer.eos_token_id])
 
-            # Send the request to the API server
-            response = requests.post(self.api_url, json=payload)
-            response.raise_for_status()  # Raise an error for bad status codes
-            result = response.json()
+        # Generate a new response from the LLM
+        llm_output = self.llm.generate(context, sampling_params=sample_params)
+        tokens = llm_output[0].outputs[0].token_ids
 
-            # Extract text and logprobs from the OpenAI-compatible response
-            output = result["choices"][0].get("logprobs")
-            tokens = output["tokens"]
-            token_logprobs = output["token_logprobs"] # could be used later to speed up computations
-            logprobs = [[list(logprobs[i].values())] for i in range(len(output["top_logprobs"]))]
+        logprobs = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
+        token_logprobs = [llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))]
 
-            return tokens, token_logprobs, logprobs
-
-        else:
-            # Prepare the context as a TokensPrompt if it's a list of token IDs
-            if isinstance(context, list):
-                context = TokensPrompt(prompt_token_ids=context)
-            
-            # Set the sampling parameters of the LLM
-            sample_params = SamplingParams( temperature=self.power_sampling_temperature, 
-                                            top_k=self.top_k, 
-                                            max_tokens=max_new_tokens, 
-                                            logprobs=self.top_k, 
-                                            stop_token_ids =[self.tokenizer.eos_token_id])
-
-            # Generate a new response from the LLM
-            llm_output = self.llm.generate(context, sampling_params=sample_params)
-            tokens = llm_output[0].outputs[0].token_ids
-
-            logprobs = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
-            token_logprobs = [llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))]
-
-            return tokens, token_logprobs, logprobs
+        return tokens, token_logprobs, logprobs
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
@@ -220,7 +194,7 @@ def power_sampling(
     total_tokens_generated = 0
     acceptances = 0
     block_acceptances = []
-
+    index_proposals = []
     # Log Probabilites
     logprob = [] # Current list of unscaled log probabilites of the new sample. Length of block_size
     logprob_temp_scaled = [] # Current list of tokens probabilites individually scaled by temperature. Length of block_size
@@ -235,6 +209,7 @@ def power_sampling(
     for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio 
         block_acceptance = 0
+        index_proposal_block = []
 
         # Generate next block of tokens as baseline
         # If the programmatical LLM is being used
@@ -255,11 +230,10 @@ def power_sampling(
 
         #Iterate over the number of MCMC steps
         for _ in tqdm(range(sampler.MCMC_steps), disable=True):
-            # print("\n\nCurrent Block and MCMC Step:", block_idx, _)
 
             #Find a new point to start a proposal from. Generate idx tokens for the step
             idx = random.randint(1, len(context) - 1)
-            
+            index_proposal_block.append(idx)
             #Set the new context for the proposed block
             context_proposed = context[:idx]
 
@@ -299,12 +273,12 @@ def power_sampling(
 
         #record block acceptances
         block_acceptances.append(block_acceptance)
+        index_proposals.append(index_proposal_block)
 
         # Check if an EOS token has been generated and end the process if so
         if(sampler.tokenizer.eos_token_id in context):
-            return sampler.tokenizer.decode(context, skip_special_tokens=False), acceptances, block_acceptances, total_tokens_generated
+            return sampler.tokenizer.decode(context, skip_special_tokens=False), acceptances, block_acceptances, index_proposals, total_tokens_generated
 
 
     # EOS never found, just return the full generated context
-    return sampler.tokenizer.decode(context, skip_special_tokens=False), acceptances, block_acceptances, total_tokens_generated
-
+    return sampler.tokenizer.decode(context, skip_special_tokens=False), acceptances, block_acceptances, index_proposals, total_tokens_generated
