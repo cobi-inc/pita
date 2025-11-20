@@ -9,7 +9,7 @@ def sample(self, context, max_new_tokens):
         context = TokensPrompt(prompt_token_ids=context)
     
     # Set the sampling parameters of the LLM
-    if(self.sampling_params.engine_params == None):
+    if(self.sampling_params.engine_params is None):
         self.sampling_params.engine_params = SamplingParams( temperature=self.sampling_params.temperature, 
                                     top_k=self.sampling_params.top_k, 
                                     max_tokens=max_new_tokens, 
