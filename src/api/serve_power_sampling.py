@@ -7,17 +7,15 @@ from src.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from src.sampling.power_sample import AutoregressiveSampler, sliding_window_power_sample, power_sampling
+from src.sampling.power_sample import power_sampling
+from src.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from src.api.test_time_coding import decode
 
+# Standard Libraries
 import time
-import uuid
 from typing import Optional, List, Union, Dict, Any
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 import uvicorn
-import torch
-from transformers import AutoTokenizer
-from vllm import LLM
 
 # Import from your existing power_sample.py
 # Adjust the import path if necessary based on where you place this script
@@ -31,35 +29,21 @@ SERVER_STATE = {"sampler": None}
 @app.on_event("startup")
 async def startup_event():
     # Configuration hardcoded; ideally load from config/env vars
+    ENGINE = "vllm"
     MODEL_NAME = "Qwen/Qwen3-4B-AWQ" # Example model from paper
-    TOKEN_COUNT = 18000 # Default max buffer for generation
-    BLOCK_SIZE = 400 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_STEPS = 10 
+    DTYPE = "auto" # Let the engine decide
+    GPU_MEMORY_UTILIZATION = 0.85
+    CONTEXT_LENGTH = 8192 # Default max buffer for generation
+    MAX_LOGPROBS = 100
 
     print(f"Loading model {MODEL_NAME}...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-    
-    # Initialize VLLM locally for performance (as done in power_sample.py main)
-    llm = LLM(model=MODEL_NAME,
-              dtype="auto",
-              gpu_memory_utilization=0.85,
-              max_model_len=TOKEN_COUNT,
-              max_logprobs=100, # needed for MCMC
-              logprobs_mode='raw_logits',
-              trust_remote_code=True)
 
-    # Initialize the sampler with defaults; these might be overridden per request
-    sampler = AutoregressiveSampler(
-        api=False,
-        llm=llm,
-        tokenizer=tokenizer,
-        enable_thinking=False,
-        power_sampling_temperature=0.25, # Default, can be overridden by request
-        top_k=100,
-        token_count=TOKEN_COUNT,
-        block_size=BLOCK_SIZE,
-        MCMC_steps=MCMC_STEPS
-    )
+    sampler = create_autoregressive_sampler(ENGINE, 
+                                MODEL_NAME, 
+                                dtype=DTYPE, 
+                                gpu_memory_utilization=GPU_MEMORY_UTILIZATION, 
+                                max_model_len=CONTEXT_LENGTH, 
+                                max_logprobs = MAX_LOGPROBS)
 
     SERVER_STATE["sampler"] = sampler
     print("Power Sampling Server Ready.")
@@ -85,26 +69,32 @@ async def create_completion(request: ChatCompletionRequest):
         raise HTTPException(status_code=400, detail=f"Requested {request.max_tokens}. {sampler.llm.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
     sampler.token_count = max_tokens 
 
+    # Check the message in the system prompt for inference scaling sampling parameters
+    # Example system prompt: "PS_1000_250_3 SMC_ You are a personal..." Means perform PS with 1000 total tokens, block size 250, 3 MCMC steps
+    ps_params, smc_params, best_of_params = None, None, None
+    if len(request.messages) > 0 and request.messages[0].role == ChatMessageRole.System:
+        system_content = request.messages[0].content
+        if system_content.startswith("ITS"):
+            # Decode the parameters from the system prompt
+            ps_params, smc_params, best_of_params = decode(system_content)
+
+            # Remove the parameter encoding from the system prompt
+            request.messages[0].content = " ".join(system_content.split(" ")[1:])
+
+
     # Format the message into the chat template
     prompt = sampler.tokenizer.apply_chat_template(
         request.messages,
         tokenize = False,
         add_generation_prompt = True,
-        enable_thinking = sampler.enable_thinking
+        enable_thinking = sampler.sampling_params.enable_thinking
     )
     
-    temperature = request.temperature if request.temperature is not None else 1
-    print("Power Sampling with the following parameters:")
-    print(f" - Tokens: {max_tokens}")
-    print(f" - MCMC Steps: {request.MCMC_steps}")
-    print(f" - Block Size: {request.block_size}")
-
     # Call the power sampling function
-    # Note: sliding_window_power_sample returns (text, acceptances, block_acceptances, total_tokens)
-    if(request.MCMC_steps != None and request.block_size != None):
+    # Note: power_sampling returns (text, acceptances, block_acceptances, index_proposals, total_tokens)
+    if(ps_params is not None):
         # Set the power sampling parameters
-        sampler.MCMC_steps = request.MCMC_steps
-        sampler.block_size = request.block_size
+        sampler.power_sampling_params = ps_params
 
         # Call the power sampling function
         generated_text, _, _, _, total_generated = power_sampling(
