@@ -7,7 +7,7 @@ from src.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from src.sampling.power_sample import sliding_window_power_sample, power_sampling
+from src.sampling.power_sample import power_sampling
 from src.inference.autoregressive_sampler_backend import create_autoregressive_sampler
 from src.api.test_time_coding import decode
 
