@@ -64,7 +64,7 @@ def decode(system_string):
             if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
                 raise ValueError(f"Invalid parameters for Best Of Sampling: expected 2 integers after 'BO', got '{parts[i+1]}', '{parts[i+2]}'.")
 
-            # If valide, create the Best_of_Sampling_Params object
+            # If valid, create the Best_of_Sampling_Params object
             best_of_params = Best_of_Sampling_Params(
                 best_of=int(parts[i+1]),
                 n=int(parts[i+2])
