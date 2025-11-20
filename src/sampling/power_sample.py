@@ -74,7 +74,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler.power_sampling_temperature)
+        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler.sampling_params.temperature)
         # Extend the context with the newly generated tokens
         context = tokens_list
 
