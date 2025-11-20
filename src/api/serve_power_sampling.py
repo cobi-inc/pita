@@ -13,7 +13,6 @@ from src.api.test_time_coding import decode
 
 # Standard Libraries
 import time
-import uuid
 from typing import Optional, List, Union, Dict, Any
 from fastapi import FastAPI, HTTPException
 import uvicorn
