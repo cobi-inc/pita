@@ -1,6 +1,20 @@
-Working Models:
+Tested Models:
+
+transformers:
+
+llama.cpp:
+
+vLLM:
 Qwen/Qwen3-4B-AWQ
 Qwen/Qwen3-4B-Instruct-2507
+Qwen/Qwen2.5-Math-7B
+Qwen/Qwen2.5-7B
+
+DeepSpeed:
+
+TensorRT-LLM:
+
+OpenLLM:
 
 WIP Models:
 google/gemma-3n-E2B

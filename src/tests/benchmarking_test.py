@@ -1,6 +1,6 @@
 # Training Free Reasoning Libraries
-from src.sampling.power_sample import AutoregressiveSampler
 from src.utils.benchmarking_utils import benchmark_sampling
+from src.inference.autoregressive_sampler_backend import create_autoregressive_sampler, enable_power_sampling
 
 # Pytorch Library
 import torch
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    token_count = 8192 #total tokens for response
+    total_output_tokens = 8192 #total tokens for response
     block_size = 400 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 10 
 
@@ -38,6 +38,7 @@ if __name__ == "__main__":
 
 
     # LLM parameters
+    engine = "vllm"
     model = "Qwen/Qwen3-4B-AWQ"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
     skip_tokenizer_init = False
@@ -46,34 +47,21 @@ if __name__ == "__main__":
     gpu_memory_utilization = 0.8
     max_model_len = 8192
 
-    # If not using an API
-    if(api_condition == False):
-        # Initialize model
-        llm = LLM(model=model, 
-                skip_tokenizer_init=skip_tokenizer_init, 
-                dtype=dtype, 
-                quantization=quantization, 
-                gpu_memory_utilization=gpu_memory_utilization,
-                max_model_len=max_model_len,
-                #max_logprobs=tokenizer.vocab_size + token_count + 1000,
-                max_logprobs = top_k,
-                logprobs_mode='raw_logits')
-    # If you are using an API endpoint
-    else: 
-        llm = None
-
     #Initialize Autoregressive Sampler
-    sampler = AutoregressiveSampler(api_condition,
-                                    llm, 
-                                    tokenizer,
-                                    enable_thinking=False,
-                                    power_sampling_temperature=temperature,
-                                    top_k=top_k,
-                                    token_count=token_count,
-                                    block_size=block_size,
-                                    MCMC_steps=MCMC_steps
-                                    )
+    sampler = create_autoregressive_sampler(engine, 
+                                model, 
+                                dtype="auto", 
+                                gpu_memory_utilization=gpu_memory_utilization, 
+                                max_model_len=max_model_len, 
+                                enable_thinking=False, 
+                                max_logprobs = 100)
     
+    # Set the sampling parameters
+    sampler.sampling_params.top_k = top_k
+    
+    # Create the power sampling parameters to use
+    enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps)
+
     # Test MATH500 Benchmark
     dataset_name = "AIME"
     power_sampling_on = True
@@ -82,6 +70,6 @@ if __name__ == "__main__":
     naive_sampling_on = False
     chain_of_thought = False
     #for temp in [0.25, 0.5, 0.75]:
-    for temp in [1]:
+    for temp in [0.25]:
         sampler.power_sampling_temperature = temp
         benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 1, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)

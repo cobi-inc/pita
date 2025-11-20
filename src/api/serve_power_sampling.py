@@ -13,9 +13,7 @@ import time
 import uuid
 from typing import Optional, List, Union, Dict, Any
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 import uvicorn
-import torch
 from transformers import AutoTokenizer
 from vllm import LLM
 
@@ -50,7 +48,6 @@ async def startup_event():
 
     # Initialize the sampler with defaults; these might be overridden per request
     sampler = AutoregressiveSampler(
-        api=False,
         llm=llm,
         tokenizer=tokenizer,
         enable_thinking=False,

@@ -16,7 +16,6 @@ messages = [
     {"role": "user", "content": "Hello! How are you today? Is my message still incomplete? What is 2+2?"},
     {"role": "assistant", "content": "Hello! I'm doing well, thank you for asking. Your message seems complete. To answer your question, 2 + 2 equals 4. Let me know if there's anything else I can assist you with!<|im_end|>"},
     {"role": "user", "content": "What is 1+1+1+1+2? Write a story about it."}
-
 ]
 
 # Send the message with the OpenAI client

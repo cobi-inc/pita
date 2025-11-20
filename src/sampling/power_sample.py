@@ -1,86 +1,30 @@
 # Standard Libraries
 import os
 import random
-import time
 
 # Math Libraries
 import numpy as np
-import pandas as pd
+import torch
 
 # Helper Library
 from tqdm import tqdm
-from src.utils.parse_utils import parse_answer
-# Inference Library
-from vllm import LLM, SamplingParams
-from vllm.inputs import TokensPrompt
-from vllm.outputs import RequestOutput, CompletionOutput
-from transformers import AutoTokenizer
-import requests 
 
-# Pytorch Library
-import torch
-# Benchmarking library
-import datasets
-# Parsing Library
-import regex
-
-# User Files
-# NOTE: Avoid importing benchmark_utils here to prevent circular imports
-
-# Autoregressive Sampler Class
-# Stores parameters concerning the LLM, autoregressive sampling, and power sampling
-# Includes Functions:
-# sample() - Samples from the LLM given a context and max new tokens using either the API or programmatical LLM
-class AutoregressiveSampler:
-    def __init__(self, api, llm, tokenizer, enable_thinking=False, power_sampling_temperature=1.0, top_k = -1, logprobs=100, token_count=1000, block_size=50, MCMC_steps=5):
-        self.api = api
-        self.llm = llm
-        self.tokenizer = tokenizer
-        self.enable_thinking = enable_thinking
-        self.power_sampling_temperature = power_sampling_temperature
-        self.top_k = top_k
-        self.token_count = token_count
-        self.block_size = block_size
-        self.MCMC_steps = MCMC_steps
-        self.api_url = "http://localhost:8000/v1/completions"
-
-    # Take in the context (string) and max_new_tokens (int)
-    # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
-    def sample(self, context, max_new_tokens):
-        # Prepare the context as a TokensPrompt if it's a list of token IDs
-        if isinstance(context, list):
-            context = TokensPrompt(prompt_token_ids=context)
-        
-        # Set the sampling parameters of the LLM
-        sample_params = SamplingParams( temperature=self.power_sampling_temperature, 
-                                        top_k=self.top_k, 
-                                        max_tokens=max_new_tokens, 
-                                        logprobs=self.top_k, 
-                                        stop_token_ids =[self.tokenizer.eos_token_id])
-
-        # Generate a new response from the LLM
-        llm_output = self.llm.generate(context, sampling_params=sample_params)
-        tokens = llm_output[0].outputs[0].token_ids
-
-        logprobs = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
-        token_logprobs = [llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))]
-
-        return tokens, token_logprobs, logprobs
+# Custom Libraries
+from src.inference.autoregressive_sampler_backend import AutoregressiveSampler
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # lopprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
-def logprobs(token_ids, token_logprob, logprobs_list, sampler):
+def logprobs(token_ids, token_logit, top_k_logits_list, power_sampling_temperature):
     # Initialize normalization tensors with -inf (shape: num_tokens)
     log_Z = torch.empty(len(token_ids))
     log_Z_scaled = torch.empty(len(token_ids))
-    token_logprob_tensor = torch.FloatTensor(token_logprob)
-
+    token_logit_tensor = torch.FloatTensor(token_logit)
     # Calculate the normalization terms from the logprob dictionaries
-    for i in range(len(logprobs_list)):
-        current_token_logits = torch.FloatTensor(logprobs_list[i])
+    for i in range(len(top_k_logits_list)):
+        current_token_logits = torch.FloatTensor(top_k_logits_list[i])
         log_Z[i] = torch.logsumexp(current_token_logits, dim=0)
-        log_Z_scaled[i] = torch.logsumexp(current_token_logits / sampler.power_sampling_temperature, dim=0)
+        log_Z_scaled[i] = torch.logsumexp(current_token_logits / power_sampling_temperature, dim=0)
 
     # log_probs is the power sampled version =
     # log(softmax(logit_selected)^(1/T)) = 
@@ -89,8 +33,8 @@ def logprobs(token_ids, token_logprob, logprobs_list, sampler):
     # The scaled version uses already temperature scaled logits
     # Scaled = log(softmax(logit_selected / T)) =
     # 1/T * logit_selected - log(sum(e^(all_logits / T)))
-    log_probs = (1/sampler.power_sampling_temperature) * (token_logprob_tensor - log_Z)
-    log_probs_temp_scaled = (1/sampler.power_sampling_temperature) * token_logprob_tensor - log_Z_scaled
+    log_probs = (1/power_sampling_temperature) * (token_logit_tensor - log_Z)
+    log_probs_temp_scaled = (1/power_sampling_temperature) * token_logit_tensor - log_Z_scaled
 
     return log_probs, log_probs_temp_scaled
 
@@ -117,7 +61,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
     token_history = ""
 
     # Iterate over the number of blocks to be generated
-    block_count = sampler.token_count // sampler.block_size
+    block_count = sampler.power_sampling_params.total_output_tokens // sampler.power_sampling_params.block_size
     for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio
         block_acceptance = 0
@@ -130,7 +74,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler)
+        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler.power_sampling_temperature)
         # Extend the context with the newly generated tokens
         context = tokens_list
 
@@ -149,7 +93,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
             total_tokens_generated += len(proposed_tokens_list)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler.power_sampling_temperature)
            
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
@@ -186,6 +130,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
     # EOS never found, just return the full generated context
     return token_history, acceptances, block_acceptances, total_tokens_generated
 
+# Performs power sampling on the given prompt
 def power_sampling(
                 sampler: AutoregressiveSampler, 
                 prompt
@@ -204,7 +149,7 @@ def power_sampling(
     # New Context Window to be changed
     context = []
 
-    block_count = sampler.token_count // sampler.block_size
+    block_count = sampler.power_sampling_params.total_output_tokens // sampler.power_sampling_params.block_size
     # Iterate over the number of blocks to be generated
     for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio 
@@ -213,13 +158,13 @@ def power_sampling(
 
         # Generate next block of tokens as baseline
         # If the programmatical LLM is being used
-        tokens_list, token_logprob_list, logprobs_list = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.block_size)
+        tokens_list, chosen_token_logit_list, top_k_logits_list = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.power_sampling_params.block_size)
 
         # Record how many tokens have been generated
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler)
+        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, chosen_token_logit_list, top_k_logits_list, sampler.power_sampling_temperature)
 
         # Extend the initial log probabilities
         logprob = [*logprob, *logprob_initial.tolist()]
@@ -229,7 +174,7 @@ def power_sampling(
         context.extend(tokens_list)
 
         #Iterate over the number of MCMC steps
-        for _ in tqdm(range(sampler.MCMC_steps), disable=True):
+        for _ in tqdm(range(sampler.power_sampling_params.MCMC_steps), disable=True):
 
             #Find a new point to start a proposal from. Generate idx tokens for the step
             idx = random.randint(1, len(context) - 1)
@@ -242,13 +187,13 @@ def power_sampling(
             #print("Input Prompt:\n", prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=True) + '\n')
 
             #Generate proposed block of tokens
-            proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
+            proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
             
             # Record how many tokens have been generated
             total_tokens_generated += len(proposed_tokens_list)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list, sampler.power_sampling_temperature)
             
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
