@@ -93,7 +93,7 @@ async def create_completion(request: ChatCompletionRequest):
     )
     
     # Call the power sampling function
-    # Note: sliding_window_power_sample returns (text, acceptances, block_acceptances, total_tokens)
+    # Note: power_sampling returns (text, acceptances, block_acceptances, index_proposals, total_tokens)
     if(ps_params is not None):
         # Set the power sampling parameters
         sampler.power_sampling_params = ps_params
