@@ -37,8 +37,6 @@ async def startup_event():
     GPU_MEMORY_UTILIZATION = 0.85
     CONTEXT_LENGTH = 8192 # Default max buffer for generation
     MAX_LOGPROBS = 100
-    BLOCK_SIZE = 400 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_STEPS = 10 
 
     print(f"Loading model {MODEL_NAME}...")
 
