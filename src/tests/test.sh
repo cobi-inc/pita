@@ -7,6 +7,14 @@ python -m src.tests.benchmarking_test
 python -m src.api.serve_power_sampling &
 SERVER_PID=$!
 
+# Wait for the server to be ready (listening on localhost:8000)
+for i in {1..30}; do
+    if curl -s http://127.0.0.1:8000/ > /dev/null; then
+        echo "Server is up!"
+        break
+    fi
+    sleep 1
+done
 # Run api_test.py
 python -m src.tests.api_test
 
