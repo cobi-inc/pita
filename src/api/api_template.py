@@ -32,8 +32,6 @@ class ChatCompletionRequest(BaseModel):
     frequency_penalty: Optional[float] = Field(None, alias="frequency_penalty") # Frequency penalty
     logit_bias: Optional[Dict[str, int]] = Field(None, alias="logit_bias") # Logit bias
     user: Optional[str] = Field(None, alias="user") # User identifier
-    MCMC_steps: Optional[int] = Field(None, alias="MCMC_steps") # Number of MCMC steps
-    block_size: Optional[int] = Field(None, alias="block_size") # Block size for power sampling
 
 class ChatCompletionChoice(BaseModel):
     index: int

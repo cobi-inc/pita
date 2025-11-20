@@ -43,7 +43,6 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
     skip_tokenizer_init = False
     dtype = "auto"
-    quantization = None
     gpu_memory_utilization = 0.8
     max_model_len = 8192
 
@@ -53,7 +52,6 @@ if __name__ == "__main__":
                                 dtype="auto", 
                                 gpu_memory_utilization=gpu_memory_utilization, 
                                 max_model_len=max_model_len, 
-                                enable_thinking=False, 
                                 max_logprobs = 100)
     
     # Set the sampling parameters

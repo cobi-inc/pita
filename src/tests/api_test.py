@@ -1,3 +1,7 @@
+#Library Code
+from src.inference.autoregressive_sampler_backend import Power_Sampling_Params
+from src.api.test_time_coding import encode
+# Standard Libraries
 import requests
 from openai import OpenAI
 
@@ -11,8 +15,16 @@ client = OpenAI(
     api_key="not-needed-for-local"  # API key is often not required for local models
 )
 
+its_params = encode(
+    Power_Sampling_Params = Power_Sampling_Params(
+        total_output_tokens=1000,
+        block_size=250,
+        MCMC_steps=1
+    )
+)
+
 messages = [
-    {"role": "system", "content": "You are a personal assistant."},
+    {"role": "system", "content": f"{its_params} You are a personal assistant."},
     {"role": "user", "content": "Hello! How are you today? Is my message still incomplete? What is 2+2?"},
     {"role": "assistant", "content": "Hello! I'm doing well, thank you for asking. Your message seems complete. To answer your question, 2 + 2 equals 4. Let me know if there's anything else I can assist you with!<|im_end|>"},
     {"role": "user", "content": "What is 1+1+1+1+2? Write a story about it."}
@@ -38,9 +50,7 @@ response = requests.post(
         "messages": messages,
         "temperature": 0.25,
         "max_tokens": 200,
-        "n": 1,
-        "MCMC_steps": 3,
-        "block_size": 50
+        "n": 1
     }
 )
 
