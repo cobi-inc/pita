@@ -56,7 +56,7 @@ class Sampling_Params:
         self.enable_thinking = enable_thinking
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self.top_p= top_p
+        self.top_p = top_p
         self.top_k = top_k
         self.logprobs = logprobs
         self.presence_penalty = presence_penalty
