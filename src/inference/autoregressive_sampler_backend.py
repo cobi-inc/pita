@@ -17,7 +17,8 @@ class AutoregressiveSampler:
         sample_fn, # Function to use for sampling from the autoregressive model
         sampling_params, # Parameters to use for standard sampling
         power_sampling_params = None, # Parameters to use for power sampling
-        smc_sampling_params = None # Parameters to use for SMC sampling
+        smc_sampling_params = None, # Parameters to use for SMC sampling
+        best_of_sampling_params = None # Parameters to use for best-of sampling
     ):
         self.model = model
         self.llm = llm
@@ -26,7 +27,7 @@ class AutoregressiveSampler:
         self.sampling_params = sampling_params
         self.power_sampling_params = power_sampling_params
         self.smc_sampling_params = smc_sampling_params
-
+        self.best_of_sampling_params = best_of_sampling_params
     def sample(self, context, max_new_tokens):
         return self.sample_fn(self, context, max_new_tokens)
 
@@ -35,58 +36,39 @@ class Sampling_Params:
     def __init__(
         self,
         engine_params = None, # Engine specific parameter Class (vLLM: SamplingParams, Add more as needed)
-        n = 1, # Number of outputs to return for the given prompt request
-        best_of = None, # The top `best_of` sequences generated. best_of must be greater than or equal to n
-        _real_n = None,
-        presence_penalty = 0.0, # Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
-        frequency_penalty = 0.0, # Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
-        repetition_penalty = 1.0, # Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats
+        enable_thinking = False,
+        max_tokens = 16, # Max Number of tokens to generate per sequence
         temperature = 1.0, # Controls randomness of sampling. Lower is more deterministic, higher is more random
         top_p = 1.0, # Controls tokens to consider based on cumulative probability. Must be in (0, 1]
         top_k = 0, # Controls number of top tokens to consider. 0 or -1 is considers all tokens
+        logprobs = None, # Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities
+        presence_penalty = 0.0, # Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
+        frequency_penalty = 0.0, # Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
+        repetition_penalty = 1.0, # Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats
         min_p = 0.0, # Represents the minimum probability for a token to be considered. 0 disables
         seed = None, # Random seed
         stop = None, # Strings that stop token generation. Returned output excludes stop strings
         stop_token_ids = None, # Token IDs that stop token generation. Returned output excludes stop tokens
         ignore_eos = False, # Continues generating tokens after EOS token is generated.
-        max_tokens = 16, # Max Number of tokens to generate per sequence
         min_tokens = 0, # Minimum Number of tokens to generate per sequence before EOS or stop is considered
-        logprobs = None, # Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities
-        prompt_logprobs = None, # Number of logits/logprobs to return per prompt token. When set to -1, return all vocab_size log probabilities
-        flat_logprobs = False, # Return logits/logprobs in flatten format for better performance
-        detokenize = True, # Whether to detokenize the output
-        skip_special_tokens = True, # Whether to skip special tokens in the output
-        spaces_between_special_tokens = True, # Whether to add spaces between special tokens in the output
-        logits_processors = None, # Functions that modify logits based on previously generated tokens, and optionally prompt tokens as a first argument.
-        include_stop_str_in_output = False, # Whether to include the stop strings in output text.
-        truncate_prompt_tokens = None, #If set to -1, will use the truncation size supported by the model. If set to an integer k, will use only the last k tokens from the prompt (i.e., left truncation). If set to `None`, truncation is disabled.
     ):
         self.engine_params = engine_params
-        self.n = n
-        self.best_of = best_of
-        self._real_n = _real_n
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.repetition_penalty = repetition_penalty
+        self.enable_thinking = enable_thinking
+        self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p= top_p
         self.top_k = top_k
+        self.logprobs = logprobs
+        self.presence_penalty = presence_penalty
+        self.frequency_penalty = frequency_penalty
+        self.repetition_penalty = repetition_penalty
         self.min_p = min_p
         self.seed = seed
         self.stop = stop
         self.stop_token_ids = stop_token_ids
         self.ignore_eos = ignore_eos
-        self.max_tokens = max_tokens
         self.min_tokens = min_tokens
-        self.logprobs = logprobs
-        self.prompt_logprobs = prompt_logprobs
-        self.flat_logprobs = flat_logprobs
-        self.detokenize = detokenize
-        self.skip_special_tokens = skip_special_tokens
-        self.spaces_between_special_tokens = spaces_between_special_tokens
-        self.logits_processors = logits_processors
-        self.include_stop_str_in_output = include_stop_str_in_output
-        self.truncate_prompt_tokens = truncate_prompt_tokens
+
 
 class Power_Sampling_Params:
     def __init__(
@@ -111,16 +93,24 @@ class SMC_Sampling_Params:
         self.particle_length = particle_length
         self.resample_interval = resample_interval
 
+class Best_of_Sampling_Params:
+    def __init__(
+        self,
+        n = 1, # Number of outputs to return for the given prompt request
+        best_of = 5, # The top `best_of` sequences generated. best_of must be greater than or equal to n
+    ):
+        self.n = n
+        self.best_of = best_of
+
 # Create an AutogressiveSampler object given the engine, engine parameters, and model name
 def create_autoregressive_sampler(
-    engine, 
-    model, 
-    dtype="auto", 
-    gpu_memory_utilization=0.85, 
-    max_model_len=2048, 
-    enable_thinking=False, 
-    max_logprobs = 100, 
-    sampling_params=None
+    engine, # Engine to use for autoregressive sampling. Currently only "vllm" is supported
+    model, # Model to load 
+    dtype="auto", # Data type to use when loading the model. "auto" lets the engine decide
+    gpu_memory_utilization=0.85, # GPU memory utilization to use 
+    max_model_len=2048, # Max model context length
+    max_logprobs = 100, # Number of logits/logprobs to store per output token
+    sampling_params=None # General sampling parameters to use (Sampling_Params Class)
 ):
                                 
     print(f"Loading model {model} with {engine}...")
@@ -147,7 +137,7 @@ def create_autoregressive_sampler(
         llm=llm,
         tokenizer=tokenizer,
         sample_fn=autoregressive_sampler,
-        sampling_params= Sampling_Params() if sampling_params is None else sampling_params
+        sampling_params= Sampling_Params(logprobs = max_logprobs) if sampling_params is None else sampling_params
     )
 
     print("Model loaded successfully. Sampling parameters set to default values.")
@@ -159,7 +149,7 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     if(sampler is None):
         raise ValueError("Sampler must be initialized before enabling power sampling.")
     
-    # Check to make sure the LLM engine is outputing logits/logprobs
+    # Check to make sure the vLLM engine is outputing logits/logprobs
     if(sampler.sampling_params.top_k <= 0):
         raise ValueError("LLM engine top_k must be set to a positive integer to enable power sampling.")
     
@@ -171,4 +161,21 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     )
 
     print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
+
+def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
+    # Check if the sampler is initialized
+    if(sampler is None):
+        raise ValueError("Sampler must be initialized before enabling SMC sampling.")
     
+    # Check to make sure the LLM engine is outputing logits/logprobs
+    if(sampler.sampling_params.top_k <= 0):
+        raise ValueError("LLM engine top_k must be set to a positive integer to enable SMC sampling.")
+    
+    # Set the SMC sampling parameters
+    sampler.smc_sampling_params = SMC_Sampling_Params(
+        particles=particles,
+        particle_length=particle_length,
+        resample_interval=resample_interval
+    )
+
+    print(f"SMC Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Particles = {particles}, Particle Length = {particle_length}, Resample Interval = {resample_interval}, Temperature = {sampler.sampling_params.temperature}")

@@ -164,7 +164,7 @@ def power_sampling(
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, chosen_token_logit_list, top_k_logits_list, sampler.power_sampling_temperature)
+        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, chosen_token_logit_list, top_k_logits_list, sampler.sampling_params.temperature)
 
         # Extend the initial log probabilities
         logprob = [*logprob, *logprob_initial.tolist()]
@@ -193,7 +193,7 @@ def power_sampling(
             total_tokens_generated += len(proposed_tokens_list)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list, sampler.power_sampling_temperature)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list, sampler.sampling_params.temperature)
             
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
