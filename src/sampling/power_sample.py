@@ -14,7 +14,7 @@ from src.inference.autoregressive_sampler_backend import AutoregressiveSampler
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
-# lopprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
+# logprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
 def logprobs(token_ids, token_logit, top_k_logits_list, power_sampling_temperature):
     # Initialize normalization tensors with -inf (shape: num_tokens)
     log_Z = torch.empty(len(token_ids))
