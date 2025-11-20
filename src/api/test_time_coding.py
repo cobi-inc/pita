@@ -4,15 +4,15 @@ from src.inference.autoregressive_sampler_backend import Power_Sampling_Params, 
 def encode(Power_Sampling_Params = None, SMC_Sampling_Params = None, Best_of_Sampling_Params = None):
     system_string =""
 
-    if(Power_Sampling_Params != None):
+    if(Power_Sampling_Params is not None):
         system_string += f"ITS_PS_{Power_Sampling_Params.total_output_tokens}_{Power_Sampling_Params.block_size}_{Power_Sampling_Params.MCMC_steps}"
     
-    if(SMC_Sampling_Params != None):
+    if(SMC_Sampling_Params is not None):
         if(system_string == ""):
             system_string += "ITS"
         system_string += f"_SMC_{SMC_Sampling_Params.particles}_{SMC_Sampling_Params.particle_length}_{SMC_Sampling_Params.resample_interval}"
     
-    if(Best_of_Sampling_Params != None):
+    if(Best_of_Sampling_Params is not None):
         if(system_string == ""):
             system_string += "ITS"
         system_string += f"_BO_{Best_of_Sampling_Params.best_of}_{Best_of_Sampling_Params.n}"
