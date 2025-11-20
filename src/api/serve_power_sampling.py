@@ -17,7 +17,6 @@ import uuid
 from typing import Optional, List, Union, Dict, Any
 from fastapi import FastAPI, HTTPException
 import uvicorn
-from transformers import AutoTokenizer
 
 # Import from your existing power_sample.py
 # Adjust the import path if necessary based on where you place this script
