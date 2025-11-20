@@ -73,7 +73,7 @@ class Sampling_Params:
 class Power_Sampling_Params:
     def __init__(
         self, 
-        total_output_tokens=1000, # Max sequence lenght in tokens to generate when power sampling
+        total_output_tokens=1000, # Max sequence length in tokens to generate when power sampling
         block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
         MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
     ):
