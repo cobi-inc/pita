@@ -110,7 +110,10 @@ def create_autoregressive_sampler(
     gpu_memory_utilization=0.85, # GPU memory utilization to use 
     max_model_len=2048, # Max model context length
     max_logprobs = 100, # Number of logits/logprobs to store per output token
-    sampling_params=None # General sampling parameters to use (Sampling_Params Class)
+    logprobs_mode='raw_logits', # Mode for logprobs: 'raw_logits' or 'normalized'
+    trust_remote_code=True, # Whether to trust remote code when loading the model
+    sampling_params=None, # General sampling parameters to use (Sampling_Params Class)
+    **kwargs
 ):
                                 
     print(f"Loading model {model} with {engine}...")
@@ -121,7 +124,10 @@ def create_autoregressive_sampler(
             dtype=dtype,
             gpu_memory_utilization=gpu_memory_utilization,
             max_model_len=max_model_len,
-            max_logprobs=max_logprobs
+            max_logprobs=max_logprobs,
+            logprobs_mode=logprobs_mode,
+            trust_remote_code=trust_remote_code,
+            **kwargs
         )
         # Set the autoregressive sampler function
         autoregressive_sampler = vllm_backend.sample

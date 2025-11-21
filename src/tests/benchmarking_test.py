@@ -52,7 +52,9 @@ if __name__ == "__main__":
                                 dtype="auto", 
                                 gpu_memory_utilization=gpu_memory_utilization, 
                                 max_model_len=max_model_len, 
-                                max_logprobs = 100)
+                                max_logprobs = 100,
+                                logprobs_mode='raw_logits',
+                                trust_remote_code=True)
     
     # Set the sampling parameters
     sampler.sampling_params.top_k = top_k
@@ -68,6 +70,6 @@ if __name__ == "__main__":
     naive_sampling_on = False
     chain_of_thought = False
     #for temp in [0.25, 0.5, 0.75]:
-    for temp in [0.25]:
+    for temp in [0.5]:
         sampler.power_sampling_temperature = temp
         benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 1, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)

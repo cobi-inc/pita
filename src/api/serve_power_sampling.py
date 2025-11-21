@@ -43,7 +43,9 @@ async def startup_event():
                                 dtype=DTYPE, 
                                 gpu_memory_utilization=GPU_MEMORY_UTILIZATION, 
                                 max_model_len=CONTEXT_LENGTH, 
-                                max_logprobs = MAX_LOGPROBS)
+                                max_logprobs = MAX_LOGPROBS,
+                                logprobs_mode='raw_logits',
+                                trust_remote_code=True)
 
     SERVER_STATE["sampler"] = sampler
     print("Power Sampling Server Ready.")

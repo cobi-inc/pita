@@ -32,14 +32,15 @@ def sample(self, context, max_new_tokens):
     return tokens, chosen_token_logit, top_k_logits
 
 # Create the LLM object given the model name and engine parameters
-def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max_model_len=2048, max_logprobs=100):
+def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max_model_len=2048, max_logprobs=100, logprobs_mode='raw_logits', trust_remote_code=True, **kwargs):
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
               dtype=dtype,
               gpu_memory_utilization=gpu_memory_utilization,
               max_model_len=max_model_len,
               max_logprobs=max_logprobs, # needed for MCMC
-              logprobs_mode='raw_logits',
-              trust_remote_code=True)
+              logprobs_mode=logprobs_mode,
+              trust_remote_code=trust_remote_code,
+              **kwargs)
 
     return llm
