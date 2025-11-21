@@ -258,8 +258,8 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
 
         if(naive_sampling_on):
             # Save and change the temperature to 1.0 for naive sampling
-            saved_temperature = sampler.power_sampling_temperature
-            sampler.power_sampling_temperature = 1.0
+            saved_temperature = sampler.power_sampling_params.power_sampling_temperature
+            sampler.power_sampling_params.power_sampling_temperature = 1.0
             
             #Time how long it takes to get a response
             start_time = time.time()
@@ -279,7 +279,7 @@ def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_o
             result_row["naive_sampling_answer"] = naive_sampling_answer
             
             # Set the temperature back to original
-            sampler.power_sampling_temperature = saved_temperature
+            sampler.power_sampling_params.power_sampling_temperature = saved_temperature
 
         # Write the question and final answer to the output file
         results.append(result_row)

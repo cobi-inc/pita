@@ -74,5 +74,5 @@ if __name__ == "__main__":
     chain_of_thought = False
     #for temp in [0.25, 0.5, 0.75]:
     for temp in [0.5]:
-        sampler.power_sampling_temperature = temp
+        sampler.power_sampling_params.power_sampling_temperature = temp
         benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on, power_sampling_windowed_on, low_temp_sampling_on, naive_sampling_on, question_max = 1, output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", seed=seed)
