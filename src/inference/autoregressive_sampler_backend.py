@@ -19,7 +19,8 @@ class AutoregressiveSampler:
         power_sampling_params = None, # Parameters to use for power sampling
         smc_sampling_params = None, # Parameters to use for SMC sampling
         best_of_sampling_params = None # Parameters to use for best-of sampling
-    ):
+    ):  
+        self.engine = None
         self.model = model
         self.llm = llm
         self.tokenizer = tokenizer
@@ -131,6 +132,8 @@ def create_autoregressive_sampler(
         )
         # Set the autoregressive sampler function
         autoregressive_sampler = vllm_backend.sample
+        # Set the engine name
+        autoregressive_sampler.engine = "vllm"
     else:
         raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Try 'vllm'.")
     
@@ -155,10 +158,12 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     if(sampler is None):
         raise ValueError("Sampler must be initialized before enabling power sampling.")
     
-    # Check to make sure the vLLM engine is outputing logits/logprobs
-    if(sampler.sampling_params.top_k <= 0):
-        raise ValueError("LLM engine top_k must be set to a positive integer to enable power sampling.")
-    
+    # Check the individual engine compatibility for power sampling
+    if sampler.engine == "vllm":
+        vllm_backend.check_vllm_power_sampling_compatibility(sampler)
+    else:
+        print(f"Warning: Engine {sampler.engine} not supported for Power Sampling.")
+
     # Set the power sampling parameters
     sampler.power_sampling_params = Power_Sampling_Params(
         total_output_tokens=total_output_tokens,
