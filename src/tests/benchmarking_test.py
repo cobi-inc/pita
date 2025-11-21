@@ -11,6 +11,7 @@ from transformers import AutoTokenizer
 
 #Standard Libraries
 import random
+import time
 
 # Main function to test power sampling
 if __name__ == "__main__":
@@ -21,7 +22,9 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     # Initialize the random number generator
-    seed = 42
+    #seed = 42
+    seed = time.time_ns() % (2**32 - 1)
+    torch.manual_seed(seed)
     random.seed(seed)
 
     # Power Sampling Hyperparameters
