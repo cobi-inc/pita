@@ -140,7 +140,19 @@ def tokenizer_chat_template_prompt(tokenizer, dataset_name, question, boost_conf
     return prompt
 
 # Benchmark the Math500 dataset with different sampling methods
-def benchmark_sampling(dataset_name, sampler, chain_of_thought, power_sampling_on = False, power_sampling_windowed_on = False, low_temp_sampling_on = False, naive_sampling_on = False, question_max = 0, seed = 0, output_file_name = "results/math500_power_sampling_results.csv", verbose = 0):
+def benchmark_sampling(
+    dataset_name, 
+    sampler, 
+    chain_of_thought, 
+    power_sampling_on = False, 
+    power_sampling_windowed_on = False, 
+    low_temp_sampling_on = False, 
+    naive_sampling_on = False, 
+    question_max = 0, 
+    seed = 0, 
+    output_file_name = "results/math500_power_sampling_results.csv", 
+    verbose = 0
+):
     # Load dataset
     dataset = load_dataset(dataset_name)
 

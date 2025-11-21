@@ -132,9 +132,9 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
 
 # Performs power sampling on the given prompt
 def power_sampling(
-                sampler: AutoregressiveSampler, 
-                prompt
-                ):
+    sampler: AutoregressiveSampler, 
+    prompt
+):
     # Statistic Collection
     total_tokens_generated = 0
     acceptances = 0
