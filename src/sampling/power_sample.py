@@ -15,7 +15,7 @@ from src.inference.autoregressive_sampler_backend import AutoregressiveSampler
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # logprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
-def logprobs(token_ids, token_logit, top_k_logits_list, power_sampling_temperature):
+def logprobs(token_ids, token_logit, top_k_logits_list, power_sampling_temperature, sampling_temperature):
     # Initialize normalization tensors with -inf (shape: num_tokens)
     log_Z = torch.empty(len(token_ids))
     log_Z_scaled = torch.empty(len(token_ids))
@@ -24,17 +24,17 @@ def logprobs(token_ids, token_logit, top_k_logits_list, power_sampling_temperatu
     for i in range(len(top_k_logits_list)):
         current_token_logits = torch.FloatTensor(top_k_logits_list[i])
         log_Z[i] = torch.logsumexp(current_token_logits, dim=0)
-        log_Z_scaled[i] = torch.logsumexp(current_token_logits / power_sampling_temperature, dim=0)
+        log_Z_scaled[i] = torch.logsumexp(current_token_logits / sampling_temperature, dim=0)
 
     # log_probs is the power sampled version =
-    # log(softmax(logit_selected)^(1/T)) = 
-    # (1/T) * log((e^(logit_selected) / sum(e^all_logits)) = 
-    # (1/T)(logit_selected - log(sum(e^all_logits))
-    # The scaled version uses already temperature scaled logits
-    # Scaled = log(softmax(logit_selected / T)) =
-    # 1/T * logit_selected - log(sum(e^(all_logits / T)))
+    # log(softmax(logit_selected)^(1/T_power)) = 
+    # (1/T_power) * log((e^(logit_selected) / sum(e^all_logits)) = 
+    # (1/T_power)(logit_selected - log(sum(e^all_logits))
+    # The scaled version uses already temperature scaled logits from the proposal distribution
+    # Scaled = log(softmax(logit_selected / T_sampling)) =
+    # logit_selected / T_sampling - log(sum(e^(all_logits / T_sampling)))
     log_probs = (1/power_sampling_temperature) * (token_logit_tensor - log_Z)
-    log_probs_temp_scaled = (1/power_sampling_temperature) * token_logit_tensor - log_Z_scaled
+    log_probs_temp_scaled = token_logit_tensor / sampling_temperature - log_Z_scaled
 
     return log_probs, log_probs_temp_scaled
 
@@ -74,7 +74,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler.power_sampling_params.power_sampling_temperature)
+        logprob, logprob_temp_scaled = logprobs(tokens_list, token_logprob_list, logprobs_list, sampler.power_sampling_params.power_sampling_temperature, sampler.sampling_params.temperature)
         # Extend the context with the newly generated tokens
         context = tokens_list
 
@@ -93,7 +93,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
             total_tokens_generated += len(proposed_tokens_list)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler.power_sampling_params.power_sampling_temperature)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list, sampler.power_sampling_params.power_sampling_temperature, sampler.sampling_params.temperature)
            
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
@@ -164,7 +164,7 @@ def power_sampling(
         total_tokens_generated += len(tokens_list)
 
         # Calculate the initial logprobabilities for the generated block
-        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, chosen_token_logit_list, top_k_logits_list, sampler.power_sampling_params.power_sampling_temperature)
+        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, chosen_token_logit_list, top_k_logits_list, sampler.power_sampling_params.power_sampling_temperature, sampler.sampling_params.temperature)
 
         # Extend the initial log probabilities
         logprob = [*logprob, *logprob_initial.tolist()]
@@ -193,7 +193,7 @@ def power_sampling(
             total_tokens_generated += len(proposed_tokens_list)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list, sampler.power_sampling_params.power_sampling_temperature)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list, sampler.power_sampling_params.power_sampling_temperature, sampler.sampling_params.temperature)
             
             # Calculate the Metro-Hastings acceptance ratio
             # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
