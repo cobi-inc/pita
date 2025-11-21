@@ -76,11 +76,13 @@ class Power_Sampling_Params:
         self, 
         total_output_tokens=1000, # Max sequence length in tokens to generate when power sampling
         block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
-        MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
+        MCMC_steps=5, # Number of MCMC steps to perform per block. More steps = better quality but slower
+        power_sampling_temperature=1.0 # Temperature for power sampling (1/alpha in the paper). Controls the acceptance probability
     ):
         self.total_output_tokens = total_output_tokens 
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps
+        self.power_sampling_temperature = power_sampling_temperature
 
 # TO DO once SMC is implemented
 class SMC_Sampling_Params:
@@ -153,7 +155,7 @@ def create_autoregressive_sampler(
 
     return sampler
 
-def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
+def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps, power_sampling_temperature=1.0):
     # Check if the sampler is initialized
     if(sampler is None):
         raise ValueError("Sampler must be initialized before enabling power sampling.")
@@ -168,10 +170,11 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     sampler.power_sampling_params = Power_Sampling_Params(
         total_output_tokens=total_output_tokens,
         block_size=block_size,
-        MCMC_steps=MCMC_steps
+        MCMC_steps=MCMC_steps,
+        power_sampling_temperature=power_sampling_temperature
     )
 
-    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
+    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Sampling Temperature = {sampler.sampling_params.temperature}, Power Sampling Temperature (1/alpha) = {power_sampling_temperature}")
 
 def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
     # Check if the sampler is initialized
