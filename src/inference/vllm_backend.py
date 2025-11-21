@@ -44,3 +44,15 @@ def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max
               **kwargs)
 
     return llm
+
+# Check that the vLLM engine can suppport power sampling with the given configuration
+def check_vllm_power_sampling_compatibility(sampler):
+    # Check to make sure the vLLM engine is outputing logits/logprobs
+    if(sampler.sampling_params.top_k <= 0):
+        raise ValueError("LLM engine top_k must be set to a positive integer to enable power sampling.")
+    
+    if(sampler.llm.max_logprobs is None or sampler.llm.max_logprobs < sampler.sampling_params.top_k):
+        raise ValueError("LLM engine max_logprobs must be set to at least top_k to enable power sampling.")
+    
+    if(sampler.llm.logprobs_mode != 'raw_logits'):
+        raise ValueError("LLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling.")
