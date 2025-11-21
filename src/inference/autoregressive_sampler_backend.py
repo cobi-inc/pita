@@ -4,6 +4,45 @@ from transformers import AutoTokenizer
 #Custom Classes and Constructors
 import src.inference.vllm_backend as vllm_backend
 
+# Engine-specific parameter mappings
+ENGINE_PARAM_MAPS = {
+    'vllm': {
+        'max_tokens': 'max_tokens',
+        'temperature': 'temperature',
+        'top_p': 'top_p',
+        'top_k': 'top_k',
+        'logprobs': 'logprobs',
+        'presence_penalty': 'presence_penalty',
+        'frequency_penalty': 'frequency_penalty',
+        'repetition_penalty': 'repetition_penalty',
+        'min_p': 'min_p',
+        'seed': 'seed',
+        'stop': 'stop',
+        'stop_token_ids': 'stop_token_ids',
+        'ignore_eos': 'ignore_eos',
+        'min_tokens': 'min_tokens',
+    },
+    'transformers': {
+        'max_tokens': 'max_new_tokens',
+        'temperature': 'temperature',
+        'top_p': 'top_p',
+        'top_k': 'top_k',
+        'repetition_penalty': 'repetition_penalty',
+        'stop_token_ids': 'eos_token_id',
+        # transformers uses different names/doesn't support all params
+    },
+    'llama_cpp': {
+        'max_tokens': 'max_tokens',
+        'temperature': 'temp',
+        'top_p': 'top_p',
+        'top_k': 'top_k',
+        'repetition_penalty': 'repeat_penalty',
+        'seed': 'seed',
+        'stop': 'stop',
+    },
+    # Add more engines as needed
+}
+
 # Autoregressive Sampler Class
 # Stores parameters concerning the LLM, autoregressive sampling, and power sampling
 # Includes Functions:
@@ -36,6 +75,7 @@ class AutoregressiveSampler:
 class Sampling_Params:
     def __init__(
         self,
+        engine = None, # Engine name (e.g., "vllm", "transformers", etc.)
         engine_params = None, # Engine specific parameter Class (vLLM: SamplingParams, Add more as needed)
         enable_thinking = False,
         max_tokens = 16, # Max Number of tokens to generate per sequence
@@ -52,23 +92,53 @@ class Sampling_Params:
         stop_token_ids = None, # Token IDs that stop token generation. Returned output excludes stop tokens
         ignore_eos = False, # Continues generating tokens after EOS token is generated.
         min_tokens = 0, # Minimum Number of tokens to generate per sequence before EOS or stop is considered
-    ):
-        self.engine_params = engine_params
-        self.enable_thinking = enable_thinking
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.top_p = top_p
-        self.top_k = top_k
-        self.logprobs = logprobs
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.repetition_penalty = repetition_penalty
-        self.min_p = min_p
-        self.seed = seed
-        self.stop = stop
-        self.stop_token_ids = stop_token_ids
-        self.ignore_eos = ignore_eos
-        self.min_tokens = min_tokens
+    ):  
+        object.__setattr__(self, 'engine', engine)
+        object.__setattr__(self, 'engine_params', engine_params)
+        object.__setattr__(self, 'enable_thinking', enable_thinking)
+        object.__setattr__(self, 'max_tokens', max_tokens)
+        object.__setattr__(self, 'temperature', temperature)
+        object.__setattr__(self, 'top_p', top_p)
+        object.__setattr__(self, 'top_k', top_k)
+        object.__setattr__(self, 'logprobs', logprobs)
+        object.__setattr__(self, 'presence_penalty', presence_penalty)
+        object.__setattr__(self, 'frequency_penalty', frequency_penalty)
+        object.__setattr__(self, 'repetition_penalty', repetition_penalty)
+        object.__setattr__(self, 'min_p', min_p)
+        object.__setattr__(self, 'seed', seed)
+        object.__setattr__(self, 'stop', stop)
+        object.__setattr__(self, 'stop_token_ids', stop_token_ids)
+        object.__setattr__(self, 'ignore_eos', ignore_eos)
+        object.__setattr__(self, 'min_tokens', min_tokens)
+
+        # Sync all parameters to engine_params after initialization
+        if engine is not None and engine_params is not None:
+            for param_name in ['max_tokens', 'temperature', 'top_p', 'top_k', 'logprobs', 
+                               'presence_penalty', 'frequency_penalty', 'repetition_penalty',
+                               'min_p', 'seed', 'stop', 'stop_token_ids', 'ignore_eos', 'min_tokens']:
+                self._sync_param_to_engine(param_name, getattr(self, param_name))
+
+
+    def __setattr__(self, name, value):
+        # Also sync to engine_params if it exists
+        super().__setattr__(name, value)
+        self._sync_param_to_engine(name, value)
+
+
+    def _sync_param_to_engine(self, param_name, value):
+        """Sync a single parameter to engine_params"""
+        if not hasattr(self, 'engine') or self.engine is None:
+            raise ValueError("Engine must be set in Sampling_Params to sync parameters to engine_params.")
+
+        if self.engine_params is None:
+            raise ValueError("engine_params Class must be set in Sampling_Params to sync parameters to engine_params.")
+        
+        # Sync logic here
+        engine_map = ENGINE_PARAM_MAPS.get(self.engine, {})
+        engine_param_name = engine_map.get(param_name)
+        # If the engine supports this parameter, set it
+        if engine_param_name is not None:
+            setattr(self.engine_params, engine_param_name, value)
 
 
 class Power_Sampling_Params:
@@ -127,13 +197,15 @@ def create_autoregressive_sampler(
             max_model_len=max_model_len,
             max_logprobs=max_logprobs,
             logprobs_mode=logprobs_mode,
-            trust_remote_code=trust_remote_code,
             **kwargs
         )
         # Set the autoregressive sampler function
         autoregressive_sampler = vllm_backend.sample
         # Set the engine name
         autoregressive_sampler.engine = "vllm"
+
+        engine_params = vllm_backend.create_vllm_engine_params()
+
     else:
         raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Try 'vllm'.")
     
@@ -146,13 +218,14 @@ def create_autoregressive_sampler(
         llm=llm,
         tokenizer=tokenizer,
         sample_fn=autoregressive_sampler,
-        sampling_params= Sampling_Params(logprobs = max_logprobs) if sampling_params is None else sampling_params
+        sampling_params= Sampling_Params(engine = engine, engine_params=engine_params, top_k = max_logprobs, logprobs = max_logprobs) if sampling_params is None else sampling_params
     )
 
     print("Model loaded successfully. Sampling parameters set to default values.")
 
     return sampler
 
+# Checks that the LLM and parameters are compatible with power sampling and enables power sampling
 def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     # Check if the sampler is initialized
     if(sampler is None):
@@ -173,6 +246,7 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
 
     print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
 
+# TO DO once SMC is implemented
 def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
     # Check if the sampler is initialized
     if(sampler is None):
@@ -190,3 +264,7 @@ def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
     )
 
     print(f"SMC Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Particles = {particles}, Particle Length = {particle_length}, Resample Interval = {resample_interval}, Temperature = {sampler.sampling_params.temperature}")
+
+# TO DO once best-of sampling is implemented
+def enable_best_of_sampling(sampler, n, best_of):
+    pass

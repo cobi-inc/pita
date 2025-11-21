@@ -8,14 +8,7 @@ def sample(self, context, max_new_tokens):
     if isinstance(context, list):
         context = TokensPrompt(prompt_token_ids=context)
     
-    # Set the sampling parameters of the LLM
-    if(self.sampling_params.engine_params is None):
-        self.sampling_params.engine_params = SamplingParams( temperature=self.sampling_params.temperature, 
-                                    top_k=self.sampling_params.top_k, 
-                                    max_tokens=max_new_tokens, 
-                                    logprobs=self.sampling_params.top_k, 
-                                    stop_token_ids =[self.tokenizer.eos_token_id])
-
+    # Update the max tokens if needed
     if(self.sampling_params.engine_params.max_tokens != max_new_tokens):
         self.sampling_params.engine_params.max_tokens = max_new_tokens
 
@@ -32,7 +25,7 @@ def sample(self, context, max_new_tokens):
     return tokens, chosen_token_logit, top_k_logits
 
 # Create the LLM object given the model name and engine parameters
-def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max_model_len=2048, max_logprobs=100, logprobs_mode='raw_logits', trust_remote_code=True, **kwargs):
+def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max_model_len=2048, max_logprobs=100, logprobs_mode='raw_logits', **kwargs):
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
               dtype=dtype,
@@ -40,10 +33,14 @@ def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max
               max_model_len=max_model_len,
               max_logprobs=max_logprobs, # needed for MCMC
               logprobs_mode=logprobs_mode,
-              trust_remote_code=trust_remote_code,
               **kwargs)
 
     return llm
+
+def create_vllm_engine_params():
+    # Create the vLLM SamplingParams object from the common Sampling_Params
+    vllm_params = SamplingParams()
+    return vllm_params
 
 # Check that the vLLM engine can suppport power sampling with the given configuration
 def check_vllm_power_sampling_compatibility(sampler):
