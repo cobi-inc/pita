@@ -6,3 +6,4 @@ __pycache__/
 *.csv
 /src/training_free_reasoning.egg-info
 /build/*
+.vscode/*
