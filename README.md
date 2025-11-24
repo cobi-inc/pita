@@ -2,19 +2,19 @@
 post-training inference without RL
 
 ## Requirements
-The python library requirements are in requirements.txt
+The Python library requirements are in requirements.txt
 Create a conda environment to manage the packages
 ```bash
 conda env create -f power_sampling.yml
 ```
 
 ## Python Installation
-Use the following command to install all the python requirements:
+Use the following command to install all the Python requirements:
 ```bash
 uv pip install -r requirements.txt
 ```
 
-Install training-free-reasoning as an editable library to make sure the depnedcies are correct using:
+Install training-free-reasoning as an editable library to make sure the dependencies are correct using:
 ```bash
 pip install -e .
 ```
@@ -23,6 +23,17 @@ and run files within the directory with the following format
 
 ```bash
 python -m pits.*
+```
+# Regular Library Usage
+After installing the library with
+```bash
+pip install -e .
+```
+
+The library should be usable anywhere (if the conda environment is active) with:
+
+```python
+import pits
 ```
 
 # Software Hierarchy
