@@ -2,7 +2,7 @@
 from transformers import AutoTokenizer
 
 #Custom Classes and Constructors
-import src.inference.vllm_backend as vllm_backend
+import pits.inference.vllm_backend as vllm_backend
 
 # Engine-specific parameter mappings
 ENGINE_PARAM_MAPS = {

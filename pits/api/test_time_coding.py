@@ -1,4 +1,4 @@
-from src.inference.autoregressive_sampler_backend import Power_Sampling_Params, SMC_Sampling_Params, Best_of_Sampling_Params
+from pits.inference.autoregressive_sampler_backend import Power_Sampling_Params, SMC_Sampling_Params, Best_of_Sampling_Params
 
 # Encode the parameters into a single string that can be passed as context (e.g., system prompt) during the API call
 def encode(Power_Sampling_Params = None, SMC_Sampling_Params = None, Best_of_Sampling_Params = None):

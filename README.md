@@ -19,10 +19,10 @@ Install training-free-reasoning as an editable library to make sure the depnedci
 pip install -e .
 ```
 
-and
+and run files within the directory with the following format
 
 ```bash
-python -m src.*
+python -m pits.*
 ```
 
 # Software Hierarchy

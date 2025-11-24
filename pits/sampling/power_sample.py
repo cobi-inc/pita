@@ -10,7 +10,7 @@ import torch
 from tqdm import tqdm
 
 # Custom Libraries
-from src.inference.autoregressive_sampler_backend import AutoregressiveSampler
+from pits.inference.autoregressive_sampler_backend import AutoregressiveSampler
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
