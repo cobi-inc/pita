@@ -5,9 +5,9 @@ from vllm import LLM, SamplingParams, TokensPrompt
 # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
 def sample(
         self, 
-        context, 
-        max_new_tokens, 
-        **kwargs
+        context, # The input context string to generate from
+        max_new_tokens, # The maximum number of new tokens to generate
+        **kwargs # Additional keyword arguments passed to the vLLM generate function
     ):
 
     # Prepare the context as a TokensPrompt if it's a list of token IDs
