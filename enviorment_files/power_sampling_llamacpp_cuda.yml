@@ -16,3 +16,4 @@ dependencies:
     - datasets
     - regex
     - transformers
+    - torch

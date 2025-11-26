@@ -60,7 +60,8 @@ ENGINE_PARAM_MAPS = {
 # sample() - Samples from the LLM given a context and max new tokens programmatical LLM
 class AutoregressiveSampler:
     def __init__(
-        self, 
+        self,
+        engine, 
         model, # LLM Model name
         llm, # LLM object to use for sampling
         tokenizer, # Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer)
@@ -70,7 +71,7 @@ class AutoregressiveSampler:
         smc_sampling_params = None, # Parameters to use for SMC sampling
         best_of_sampling_params = None # Parameters to use for best-of sampling
     ):  
-        self.engine = None
+        self.engine = engine
         self.model = model
         self.llm = llm
         self.tokenizer = tokenizer
@@ -79,6 +80,7 @@ class AutoregressiveSampler:
         self.power_sampling_params = power_sampling_params
         self.smc_sampling_params = smc_sampling_params
         self.best_of_sampling_params = best_of_sampling_params
+        
     def sample(self, context, max_new_tokens):
         return self.sample_fn(self, context, max_new_tokens)
 
@@ -137,6 +139,10 @@ class Sampling_Params:
 
 
     def _sync_param_to_engine(self, param_name, value):
+        # Some engines may not have engine_params
+        if self.engine == "llama_cpp":
+            return
+
         """Sync a single parameter to engine_params"""
         if not hasattr(self, 'engine') or self.engine is None:
             raise ValueError("Engine must be set in Sampling_Params to sync parameters to engine_params.")
@@ -187,7 +193,7 @@ class Best_of_Sampling_Params:
 
 # Create an AutogressiveSampler object given the engine, engine parameters, and model name
 def create_autoregressive_sampler(
-    engine, # Engine to use for autoregressive sampling. Currently only "vllm" is supported
+    engine, # Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported
     model, # Model to load 
     dtype = "auto", # Data type to use when loading the model. "auto" lets the engine decide
     tokenizer_path = None, # Path to tokenizer if different from model path
@@ -219,8 +225,6 @@ def create_autoregressive_sampler(
         )
         # Set the autoregressive sampler function
         autoregressive_sampler = backend.sample
-        # Set the engine name
-        autoregressive_sampler.engine = "vllm"
         # Create the engine parameters used for the completion function in vLLM
         engine_params = backend.create_vllm_engine_params()
     
@@ -238,8 +242,6 @@ def create_autoregressive_sampler(
         )
         # Set the autoregressive sampler function
         autoregressive_sampler = backend.sample
-        # Set the engine name
-        autoregressive_sampler.engine = "llama_cpp"
         # Llama.cpp does not have a separate engine params class
         engine_params = None
 
@@ -254,13 +256,13 @@ def create_autoregressive_sampler(
 
     # Create the Autoregressive Sampler object
     sampler = AutoregressiveSampler(
+        engine=engine,
         model=model,
         llm=llm,
         tokenizer=tokenizer,
         sample_fn=autoregressive_sampler,
-        sampling_params= Sampling_Params(engine = engine, engine_params=engine_params, top_k = max_logprobs, logprobs = max_logprobs) if sampling_params is None else sampling_params
+        sampling_params= Sampling_Params(engine = engine, engine_params = engine_params, logprobs = max_logprobs) if sampling_params is None else sampling_params
     )
-
     print("Model loaded successfully. Sampling parameters set to default values.")
 
     return sampler
@@ -278,10 +280,11 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
 
     elif sampler.engine == "llama_cpp":
         backend = _get_llama_cpp_backend()
-        backend.check_vllm_power_sampling_compatibility(sampler)
+        backend.check_llama_cpp_power_sampling_compatibility(sampler)
+        
 
     else:
-        print(f"Warning: Engine {sampler.engine} not supported for Power Sampling.")
+        raise ValueError(f"Engine {sampler.engine} not supported for Power Sampling.")
 
     # Set the power sampling parameters
     sampler.power_sampling_params = Power_Sampling_Params(

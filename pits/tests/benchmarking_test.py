@@ -5,10 +5,6 @@ from pits.inference.autoregressive_sampler_backend import create_autoregressive_
 # Pytorch Library
 import torch
 
-# Inference Library
-from vllm import LLM
-from transformers import AutoTokenizer
-
 #Standard Libraries
 import random
 import time
@@ -28,9 +24,9 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    total_output_tokens = 8192 #total tokens for response
+    total_output_tokens = 400 #total tokens for response
     block_size = 400 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_steps = 10 
+    MCMC_steps = 2 
 
     # Set whether to use the API server or programmatical LLM
     api_condition = False
@@ -41,22 +37,25 @@ if __name__ == "__main__":
 
 
     # LLM parameters
-    engine = "vllm"
-    model = "Qwen/Qwen3-4B-AWQ"
-    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
-    skip_tokenizer_init = False
-    dtype = "auto"
+    #engine = "vllm"
+    #model = "Qwen/Qwen3-4B-AWQ"
+
+    engine_name = "llama_cpp"
+    model_name = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+
+    dtype = "Q5_K_M"
     gpu_memory_utilization = 0.8
     max_model_len = 8192
 
     #Initialize Autoregressive Sampler
     sampler = create_autoregressive_sampler(
-        engine, 
-        model, 
-        dtype="auto", 
+        engine=engine_name, 
+        model=model_name, 
+        dtype=dtype,
+        tokenizer_path="Qwen/Qwen3-4B-AWQ", 
         gpu_memory_utilization=gpu_memory_utilization, 
         max_model_len=max_model_len, 
-        max_logprobs = 100,
+        max_logprobs = 5,
         logprobs_mode='raw_logits'
     )
 
@@ -85,3 +84,5 @@ if __name__ == "__main__":
             output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", 
             seed=seed
         )
+
+    del sampler
