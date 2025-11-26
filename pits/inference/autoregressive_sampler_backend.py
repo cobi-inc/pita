@@ -1,10 +1,30 @@
 #Tokenizers
 from transformers import AutoTokenizer
 
-#Custom Classes and Constructors
-import pits.inference.vllm_backend as vllm_backend
+# Custom Libraries
+# Lazy imports for backends - will be imported when needed
+vllm_backend = None
+llama_cpp_backend = None
+
+def _get_vllm_backend():
+    global vllm_backend
+    if vllm_backend is None:
+        import pits.inference.vllm_backend as _vllm_backend
+        vllm_backend = _vllm_backend
+    return vllm_backend
+
+def _get_llama_cpp_backend():
+    global llama_cpp_backend
+    if llama_cpp_backend is None:
+        import pits.inference.llama_cpp_backend as _llama_cpp_backend
+        llama_cpp_backend = _llama_cpp_backend
+    return llama_cpp_backend
+
+# Utils
+from pits.utils.system_utils import detect_model_type
 
 # Engine-specific parameter mappings
+# llama_cpp does not have a separate engine_params class, so it is not included here
 ENGINE_PARAM_MAPS = {
     'vllm': {
         'max_tokens': 'max_tokens',
@@ -30,15 +50,6 @@ ENGINE_PARAM_MAPS = {
         'repetition_penalty': 'repetition_penalty',
         'stop_token_ids': 'eos_token_id',
         # transformers uses different names/doesn't support all params
-    },
-    'llama_cpp': {
-        'max_tokens': 'max_tokens',
-        'temperature': 'temp',
-        'top_p': 'top_p',
-        'top_k': 'top_k',
-        'repetition_penalty': 'repeat_penalty',
-        'seed': 'seed',
-        'stop': 'stop',
     },
     # Add more engines as needed
 }
@@ -140,7 +151,7 @@ class Sampling_Params:
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
 
-
+# Power Sampling Parameters
 class Power_Sampling_Params:
     def __init__(
         self, 
@@ -156,14 +167,15 @@ class Power_Sampling_Params:
 class SMC_Sampling_Params:
     def __init__(
         self, 
-        particles=4, 
-        particle_length=50, 
-        resample_interval=50
+        particles = 4, 
+        particle_length = 50, 
+        resample_interval = 50
     ):
         self.particles = particles
         self.particle_length = particle_length
         self.resample_interval = resample_interval
 
+# TO DO once best-of sampling is implemented
 class Best_of_Sampling_Params:
     def __init__(
         self,
@@ -177,40 +189,68 @@ class Best_of_Sampling_Params:
 def create_autoregressive_sampler(
     engine, # Engine to use for autoregressive sampling. Currently only "vllm" is supported
     model, # Model to load 
-    dtype="auto", # Data type to use when loading the model. "auto" lets the engine decide
-    gpu_memory_utilization=0.85, # GPU memory utilization to use 
-    max_model_len=2048, # Max model context length
+    dtype = "auto", # Data type to use when loading the model. "auto" lets the engine decide
+    tokenizer_path = None, # Path to tokenizer if different from model path
+    gpu_memory_utilization = 0.85, # GPU memory utilization to use 
+    max_model_len = 2048, # Max model context length (context window = prompt + generated tokens)
     max_logprobs = 100, # Number of logits/logprobs to store per output token
-    logprobs_mode='raw_logits', # Mode for logprobs: 'raw_logits' or 'normalized'
-    trust_remote_code=True, # Whether to trust remote code when loading the model
-    sampling_params=None, # General sampling parameters to use (Sampling_Params Class)
-    **kwargs
+    logits = True, # Mode to extract logits from the model
+    trust_remote_code = True, # Whether to trust remote code when loading the model
+    sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
+    **kwargs # Additional keyword arguments passed to the backend LLM creation function
 ):
                                 
     print(f"Loading model {model} with {engine}...")
+
+    # Determine Model Type for Hugging Face Repos
+    model_type = detect_model_type(model)
+
     if(engine == "vllm"):
+        backend = _get_vllm_backend()
         # Create the LLM object
-        llm = vllm_backend.create_LLM_object(
-            model_name=model, 
-            dtype=dtype,
-            gpu_memory_utilization=gpu_memory_utilization,
-            max_model_len=max_model_len,
-            max_logprobs=max_logprobs,
-            logprobs_mode=logprobs_mode,
+        llm = backend.create_LLM_object(
+            model_name = model, 
+            dtype = dtype,
+            gpu_memory_utilization = gpu_memory_utilization,
+            max_model_len = max_model_len,
+            max_logprobs = max_logprobs,
+            logits = logits,
             **kwargs
         )
         # Set the autoregressive sampler function
-        autoregressive_sampler = vllm_backend.sample
+        autoregressive_sampler = backend.sample
         # Set the engine name
         autoregressive_sampler.engine = "vllm"
-
-        engine_params = vllm_backend.create_vllm_engine_params()
+        # Create the engine parameters used for the completion function in vLLM
+        engine_params = backend.create_vllm_engine_params()
+    
+    elif(engine == "llama_cpp"):
+        backend = _get_llama_cpp_backend()
+        # Create the LLM object
+        llm = backend.create_LLM_object(
+            model_name = model, 
+            model_type = model_type,
+            dtype = dtype, 
+            gpu_memory_utilization = gpu_memory_utilization, 
+            max_model_len = max_model_len,
+            logits = logits,
+            **kwargs
+        )
+        # Set the autoregressive sampler function
+        autoregressive_sampler = backend.sample
+        # Set the engine name
+        autoregressive_sampler.engine = "llama_cpp"
+        # Llama.cpp does not have a separate engine params class
+        engine_params = None
 
     else:
         raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Try 'vllm'.")
     
     # Create tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    if tokenizer_path is not None:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=trust_remote_code)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
 
     # Create the Autoregressive Sampler object
     sampler = AutoregressiveSampler(
@@ -233,7 +273,13 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     
     # Check the individual engine compatibility for power sampling
     if sampler.engine == "vllm":
-        vllm_backend.check_vllm_power_sampling_compatibility(sampler)
+        backend = _get_vllm_backend()
+        backend.check_vllm_power_sampling_compatibility(sampler)
+
+    elif sampler.engine == "llama_cpp":
+        backend = _get_llama_cpp_backend()
+        backend.check_vllm_power_sampling_compatibility(sampler)
+
     else:
         print(f"Warning: Engine {sampler.engine} not supported for Power Sampling.")
 
