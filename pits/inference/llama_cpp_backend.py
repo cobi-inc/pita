@@ -82,9 +82,7 @@ def create_LLM_object(
     vram_before = get_gpu_vram_usage_mb() or 0
 
     # Initialize LLaMA.cpp locally for performance (as done in power_sample.py main)
-    if(model_type == "safetensors"):
-        raise ValueError("safetensors model type is not currently supported in llama.cpp backend. Please use gguf model type.")
-    elif(model_type == "gguf"):
+    if(model_type == "gguf"):
         # Loading the GGUF model with from_pretrained
         llm = Llama.from_pretrained(
             repo_id=model_name,
