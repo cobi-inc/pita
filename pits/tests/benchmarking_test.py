@@ -1,13 +1,10 @@
 # Training Free Reasoning Libraries
 from pits.utils.benchmarking_utils import benchmark_sampling
-from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler, enable_power_sampling
+from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pits.sampling.power_sample import enable_power_sampling
 
 # Pytorch Library
 import torch
-
-# Inference Library
-from vllm import LLM
-from transformers import AutoTokenizer
 
 #Standard Libraries
 import random
@@ -28,37 +25,33 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    total_output_tokens = 8192 #total tokens for response
-    block_size = 400 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_steps = 10 
-
-    # Set whether to use the API server or programmatical LLM
-    api_condition = False
-
-    #Sampling parameters for the LLM
-    temperature = 0.75
-    top_k = 100 # Consider all tokens when -1 or N tokens when N > 0
-
+    total_output_tokens = 1000 #total tokens for response
+    block_size = 250 # tokens per block. Number of blocks = token_count / block_size
+    MCMC_steps = 5 
 
     # LLM parameters
-    engine = "vllm"
-    model = "Qwen/Qwen3-4B-AWQ"
-    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code = True)
-    skip_tokenizer_init = False
-    dtype = "auto"
+    #engine = "vllm"
+    #model = "Qwen/Qwen3-4B-AWQ"
+
+    engine_name = "llama_cpp"
+    model_name = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+
+    dtype = "Q5_K_M"
     gpu_memory_utilization = 0.8
     max_model_len = 8192
 
     #Initialize Autoregressive Sampler
     sampler = create_autoregressive_sampler(
-        engine, 
-        model, 
-        dtype="auto", 
+        engine=engine_name, 
+        model=model_name, 
+        dtype=dtype,
+        tokenizer_path="Qwen/Qwen3-4B-AWQ", 
         gpu_memory_utilization=gpu_memory_utilization, 
         max_model_len=max_model_len, 
-        max_logprobs = 100,
-        logprobs_mode='raw_logits'
+        max_logprobs = None,
+        logits=True
     )
+    sampler.sampling_params.logits_per_token = 1000
 
     # Create the power sampling parameters to use
     enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps)
@@ -85,3 +78,5 @@ if __name__ == "__main__":
             output_file_name = f"results/{dataset_name}_power_sampling_results_temp_{temp}.csv", 
             seed=seed
         )
+
+    del sampler

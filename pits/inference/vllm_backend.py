@@ -3,7 +3,13 @@ from vllm import LLM, SamplingParams, TokensPrompt
 
 # Take in the context (string) and max_new_tokens (int)
 # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
-def sample(self, context, max_new_tokens):
+def sample(
+        self, 
+        context, # The input context string to generate from
+        max_new_tokens, # The maximum number of new tokens to generate
+        **kwargs # Additional keyword arguments passed to the vLLM generate function
+    ):
+
     # Prepare the context as a TokensPrompt if it's a list of token IDs
     if isinstance(context, list):
         context = TokensPrompt(prompt_token_ids=context)
@@ -13,7 +19,7 @@ def sample(self, context, max_new_tokens):
         self.sampling_params.engine_params.max_tokens = max_new_tokens
 
     # Generate a new response from the LLM
-    llm_output = self.llm.generate(context, sampling_params=self.sampling_params.engine_params)
+    llm_output = self.llm.generate(context, sampling_params=self.sampling_params.engine_params, **kwargs)
     tokens = llm_output[0].outputs[0].token_ids
     
     # Extract the top top_k logits/logprobs for each generated token
@@ -21,11 +27,27 @@ def sample(self, context, max_new_tokens):
     top_k_logits = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
     # Create a list of the logit/logprob for the chosen token at each position
     chosen_token_logit = [llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))]
-
+    
+    # Returns the generated token_ids, the chosen token logit/logprob, and the top_k logits/logprobs
     return tokens, chosen_token_logit, top_k_logits
 
 # Create the LLM object given the model name and engine parameters
-def create_LLM_object(model_name, dtype="auto", gpu_memory_utilization=0.85, max_model_len=2048, max_logprobs=100, logprobs_mode='raw_logits', **kwargs):
+def create_LLM_object(
+        model_name,
+        model_type=None, # TO DO: Add support for both safetensors (default) and GGUF in vLLM
+        dtype="auto", 
+        gpu_memory_utilization=0.85, 
+        max_model_len=2048, 
+        max_logprobs=100, 
+        logits=True, 
+        **kwargs
+    ):
+
+    if(logits):
+        logprobs_mode = 'raw_logits'
+    else:
+        logprobs_mode = None
+        
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
               dtype=dtype,
@@ -52,4 +74,4 @@ def check_vllm_power_sampling_compatibility(sampler):
         raise ValueError("LLM engine max_logprobs must be set to at least top_k to enable power sampling.")
     
     if(sampler.llm.logprobs_mode != 'raw_logits'):
-        raise ValueError("LLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling.")
+        raise ValueError("LLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling. This is done by setting logits=True when creating the LLM object.")

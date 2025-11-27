@@ -12,6 +12,64 @@ from tqdm import tqdm
 # Custom Libraries
 from pits.inference.autoregressive_sampler_backend import AutoregressiveSampler
 
+# Lazy imports for backends - will be imported when needed
+vllm_backend = None
+llama_cpp_backend = None
+
+def _get_vllm_backend():
+    global vllm_backend
+    if vllm_backend is None:
+        import pits.inference.vllm_backend as _vllm_backend
+        vllm_backend = _vllm_backend
+    return vllm_backend
+
+def _get_llama_cpp_backend():
+    global llama_cpp_backend
+    if llama_cpp_backend is None:
+        import pits.inference.llama_cpp_backend as _llama_cpp_backend
+        llama_cpp_backend = _llama_cpp_backend
+    return llama_cpp_backend
+
+# Power Sampling Parameters
+class Power_Sampling_Params:
+    def __init__(
+        self, 
+        total_output_tokens=1000, # Max sequence length in tokens to generate when power sampling
+        block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
+    ):
+        self.total_output_tokens = total_output_tokens 
+        self.block_size = block_size
+        self.MCMC_steps = MCMC_steps
+
+# Checks that the LLM and parameters are compatible with power sampling and enables power sampling
+def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
+    # Check if the sampler is initialized
+    if(sampler is None):
+        raise ValueError("Sampler must be initialized before enabling power sampling.")
+    
+    # Check the individual engine compatibility for power sampling
+    if sampler.engine == "vllm":
+        backend = _get_vllm_backend()
+        backend.check_vllm_power_sampling_compatibility(sampler)
+
+    elif sampler.engine == "llama_cpp":
+        backend = _get_llama_cpp_backend()
+        backend.check_llama_cpp_power_sampling_compatibility(sampler)
+        
+
+    else:
+        raise ValueError(f"Engine {sampler.engine} not supported for Power Sampling.")
+
+    # Set the power sampling parameters
+    sampler.power_sampling_params = Power_Sampling_Params(
+        total_output_tokens=total_output_tokens,
+        block_size=block_size,
+        MCMC_steps=MCMC_steps
+    )
+
+    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
+
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # logprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
@@ -175,7 +233,6 @@ def power_sampling(
 
         #Iterate over the number of MCMC steps
         for _ in tqdm(range(sampler.power_sampling_params.MCMC_steps), disable=True):
-
             #Find a new point to start a proposal from. Generate idx tokens for the step
             idx = random.randint(1, len(context) - 1)
             index_proposal_block.append(idx)

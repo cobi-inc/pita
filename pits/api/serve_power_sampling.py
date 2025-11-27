@@ -103,6 +103,8 @@ async def create_completion(request: ChatCompletionRequest):
             sampler=sampler,
             prompt=prompt
         )
+    elif(smc_params is not None):
+        pass
     else:
         generated_text, _, _ = sampler.sample(prompt, sampler.token_count)
         generated_text = sampler.tokenizer.decode(generated_text, skip_special_tokens=True)
