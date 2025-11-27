@@ -35,7 +35,7 @@ def sample(
     n_total = llm_output['usage']['total_tokens']
 
     # Reconstruct an array of all generated tokens
-    # elf.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
+    # self.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
     tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']))
 
     number_of_logits = self.sampling_params.logits_per_token
