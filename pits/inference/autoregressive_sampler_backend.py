@@ -94,8 +94,9 @@ class Sampling_Params:
         max_tokens = 16, # Max Number of tokens to generate per sequence
         temperature = 1.0, # Controls randomness of sampling. Lower is more deterministic, higher is more random
         top_p = 1.0, # Controls tokens to consider based on cumulative probability. Must be in (0, 1]
-        top_k = 0, # Controls number of top tokens to consider. 0 or -1 is considers all tokens
+        top_k = -1, # Controls number of top tokens to consider. 0 or -1 is considers all tokens
         logprobs = None, # Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities
+        logits_per_token = None, # Number of descending ranked logits to return per output token
         presence_penalty = 0.0, # Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
         frequency_penalty = 0.0, # Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
         repetition_penalty = 1.0, # Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats
@@ -114,6 +115,7 @@ class Sampling_Params:
         object.__setattr__(self, 'top_p', top_p)
         object.__setattr__(self, 'top_k', top_k)
         object.__setattr__(self, 'logprobs', logprobs)
+        object.__setattr__(self, 'logits_per_token', logits_per_token)
         object.__setattr__(self, 'presence_penalty', presence_penalty)
         object.__setattr__(self, 'frequency_penalty', frequency_penalty)
         object.__setattr__(self, 'repetition_penalty', repetition_penalty)
@@ -126,7 +128,7 @@ class Sampling_Params:
 
         # Sync all parameters to engine_params after initialization
         if engine is not None and engine_params is not None:
-            for param_name in ['max_tokens', 'temperature', 'top_p', 'top_k', 'logprobs', 
+            for param_name in ['max_tokens', 'temperature', 'top_p', 'top_k', 'logprobs', 'logits_per_token',
                                'presence_penalty', 'frequency_penalty', 'repetition_penalty',
                                'min_p', 'seed', 'stop', 'stop_token_ids', 'ignore_eos', 'min_tokens']:
                 self._sync_param_to_engine(param_name, getattr(self, param_name))
@@ -157,18 +159,6 @@ class Sampling_Params:
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
 
-# Power Sampling Parameters
-class Power_Sampling_Params:
-    def __init__(
-        self, 
-        total_output_tokens=1000, # Max sequence length in tokens to generate when power sampling
-        block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
-        MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
-    ):
-        self.total_output_tokens = total_output_tokens 
-        self.block_size = block_size
-        self.MCMC_steps = MCMC_steps
-
 # TO DO once SMC is implemented
 class SMC_Sampling_Params:
     def __init__(
@@ -198,9 +188,10 @@ def create_autoregressive_sampler(
     dtype = "auto", # Data type to use when loading the model. "auto" lets the engine decide
     tokenizer_path = None, # Path to tokenizer if different from model path
     gpu_memory_utilization = 0.85, # GPU memory utilization to use 
-    max_model_len = 2048, # Max model context length (context window = prompt + generated tokens)
-    max_logprobs = 100, # Number of logits/logprobs to store per output token
+    max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
+    max_logprobs = 0, # Number of logits/logprobs to store per output token
     logits = True, # Mode to extract logits from the model
+    logits_per_token = 0, # Number of descending ranked logits to return per output token
     trust_remote_code = True, # Whether to trust remote code when loading the model
     sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
     **kwargs # Additional keyword arguments passed to the backend LLM creation function
@@ -261,39 +252,16 @@ def create_autoregressive_sampler(
         llm=llm,
         tokenizer=tokenizer,
         sample_fn=autoregressive_sampler,
-        sampling_params= Sampling_Params(engine = engine, engine_params = engine_params, logprobs = max_logprobs) if sampling_params is None else sampling_params
+        sampling_params= Sampling_Params(
+            engine = engine, 
+            engine_params = engine_params, 
+            logprobs = max_logprobs,
+            logits_per_token = logits_per_token
+        ) if sampling_params is None else sampling_params
     )
     print("Model loaded successfully. Sampling parameters set to default values.")
 
     return sampler
-
-# Checks that the LLM and parameters are compatible with power sampling and enables power sampling
-def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
-    # Check if the sampler is initialized
-    if(sampler is None):
-        raise ValueError("Sampler must be initialized before enabling power sampling.")
-    
-    # Check the individual engine compatibility for power sampling
-    if sampler.engine == "vllm":
-        backend = _get_vllm_backend()
-        backend.check_vllm_power_sampling_compatibility(sampler)
-
-    elif sampler.engine == "llama_cpp":
-        backend = _get_llama_cpp_backend()
-        backend.check_llama_cpp_power_sampling_compatibility(sampler)
-        
-
-    else:
-        raise ValueError(f"Engine {sampler.engine} not supported for Power Sampling.")
-
-    # Set the power sampling parameters
-    sampler.power_sampling_params = Power_Sampling_Params(
-        total_output_tokens=total_output_tokens,
-        block_size=block_size,
-        MCMC_steps=MCMC_steps
-    )
-
-    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
 
 # TO DO once SMC is implemented
 def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
