@@ -1,7 +1,7 @@
 from llama_cpp import Llama
 import numpy as np
 
-# Custom Libraires
+# Custom Libraries
 from pits.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 
 # Take in the context (string) and max_new_tokens (int)
