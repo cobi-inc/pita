@@ -63,7 +63,7 @@ def create_LLM_object(
         **kwargs):
     
     if(model_type == "gguf"):
-        # File the correct dtype in the GUFF Hugging Face Repo
+        # File the correct dtype in the GGUF Hugging Face Repo
         if dtype == "auto":
             kwargs['filename'] = "*f16*"
         else:
