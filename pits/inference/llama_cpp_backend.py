@@ -36,7 +36,7 @@ def sample(
 
     # Reconstruct an array of all generated tokens
     # self.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
-    tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']))
+    tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']), dtype=np.int32)
 
     number_of_logits = self.sampling_params.logits_per_token
 
@@ -106,6 +106,8 @@ def create_LLM_object(
                 "Options to Reduce VRAM:\n"
                 "1. Reduce the context size (n_ctx parameter)\n"
                 "2. Turn off GPU KV-caching with kwarg: offload_kqv = True\n"
+                "3. Load only 'N' layers to the GPU kwarg: n_gpu_layers = N\n"
+            )
         try:
             total_vram_int = int(total_vram_mb)
             vram_mb_int = int(vram_mb)

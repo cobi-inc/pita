@@ -189,7 +189,7 @@ def create_autoregressive_sampler(
     tokenizer_path = None, # Path to tokenizer if different from model path
     gpu_memory_utilization = 0.85, # GPU memory utilization to use 
     max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
-    max_logprobs = 0, # Number of logits/logprobs to store per output token
+    max_logprobs = None, # Number of logits/logprobs to store per output token
     logits = True, # Mode to extract logits from the model
     logits_per_token = 0, # Number of descending ranked logits to return per output token
     trust_remote_code = True, # Whether to trust remote code when loading the model

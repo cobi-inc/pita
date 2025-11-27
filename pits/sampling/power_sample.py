@@ -48,6 +48,10 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
     if(sampler is None):
         raise ValueError("Sampler must be initialized before enabling power sampling.")
     
+    # Check that you have a logit space to operate in
+    if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token <= 0:
+        raise ValueError("Sampler must be initialized with logits_per_token to enable power sampling.")
+
     # Check the individual engine compatibility for power sampling
     if sampler.engine == "vllm":
         backend = _get_vllm_backend()

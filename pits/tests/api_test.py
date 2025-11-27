@@ -1,5 +1,5 @@
 #Library Code
-from pits.inference.autoregressive_sampler_backend import Power_Sampling_Params
+from pits.sampling.power_sample import Power_Sampling_Params
 from pits.api.test_time_coding import encode
 # Standard Libraries
 import requests

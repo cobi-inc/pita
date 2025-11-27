@@ -17,10 +17,8 @@ from typing import Optional, List, Union, Dict, Any
 from fastapi import FastAPI, HTTPException
 import uvicorn
 
-# Import from your existing power_sample.py
-# Adjust the import path if necessary based on where you place this script
-
-app = FastAPI(title="Power Sampling API")
+# --- FastAPI Application ---
+app = FastAPI(title="PITA API")
 
 # --- Global Sampler State ---
 SERVER_STATE = {"sampler": None}
@@ -29,26 +27,44 @@ SERVER_STATE = {"sampler": None}
 @app.on_event("startup")
 async def startup_event():
     # Configuration hardcoded; ideally load from config/env vars
-    ENGINE = "vllm"
-    MODEL_NAME = "Qwen/Qwen3-4B-AWQ" # Example model from paper
-    DTYPE = "auto" # Let the engine decide
+    ENGINE = "llama_cpp"
+    MODEL_NAME = "unsloth/Qwen3-4B-Instruct-2507-GGUF" # Example model
+    DTYPE = "Q5_K_M" # Let the engine decide
     GPU_MEMORY_UTILIZATION = 0.85
-    CONTEXT_LENGTH = 8192 # Default max buffer for generation
-    MAX_LOGPROBS = 100
+    CONTEXT_LENGTH = 1024 # Default max buffer for generation
+    LOGITS_PER_TOKEN = 1000
 
-    print(f"Loading model {MODEL_NAME}...")
+    print(f"Loading model {MODEL_NAME} using {ENGINE}...")
 
-    sampler = create_autoregressive_sampler(ENGINE, 
-                                MODEL_NAME, 
-                                dtype=DTYPE, 
-                                gpu_memory_utilization=GPU_MEMORY_UTILIZATION, 
-                                max_model_len=CONTEXT_LENGTH, 
-                                max_logprobs = MAX_LOGPROBS,
-                                logprobs_mode='raw_logits',
-                                trust_remote_code=True)
+    #Initialize Autoregressive Sampler
+    sampler = create_autoregressive_sampler(
+        engine = ENGINE, 
+        model = MODEL_NAME, 
+        dtype = DTYPE,
+        tokenizer_path = "Qwen/Qwen3-4B-AWQ", 
+        gpu_memory_utilization = GPU_MEMORY_UTILIZATION, 
+        max_model_len = CONTEXT_LENGTH, 
+        logits = True,
+        logits_per_token = LOGITS_PER_TOKEN
+    ) 
 
     SERVER_STATE["sampler"] = sampler
-    print("Power Sampling Server Ready.")
+    print("PITA Server Ready.")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Shutting down PITA Server...")
+    sampler = SERVER_STATE["sampler"]
+    if sampler is not None:
+        # Properly close/free the model based on engine
+        if sampler.engine == "vllm":
+            sampler.llm.close()
+        elif sampler.engine == "llama_cpp":
+            # Close the Llama object directly
+            sampler.llm.close()  # or del sampler.llm if close() is not available
+
+    SERVER_STATE["sampler"] = None
+    print("Shutdown complete.")
 
 # --- API Endpoint ---
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
@@ -68,7 +84,7 @@ async def create_completion(request: ChatCompletionRequest):
     # Handle optional max_tokens (default to sampler's token_count if None)
     max_tokens = request.max_tokens if request.max_tokens is not None else sampler.token_count
     if max_tokens > sampler.tokenizer.model_max_length:
-        raise HTTPException(status_code=400, detail=f"Requested {request.max_tokens}. {sampler.llm.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
+        raise HTTPException(status_code=400, detail=f"Requested {max_tokens} tokens. {sampler.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
     sampler.token_count = max_tokens 
 
     # Check the message in the system prompt for inference scaling sampling parameters
@@ -149,7 +165,7 @@ async def create_completion(request: ChatCompletionRequest):
 @app.get("/v1/models")
 async def list_models():
     sampler = SERVER_STATE["sampler"]
-    return {"object": "list", "data": [{"id": "Qwen/Qwen3-4B-AWQ", "object": "model", "created": 0, "owned_by": "custom"}]}
+    return {"object": "list", "data": [{"id": sampler.model, "object": "model", "created": 0, "owned_by": "custom"}]}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
