@@ -106,7 +106,13 @@ def create_LLM_object(
         print("Warning: Could not extract VRAM usage from llama.cpp logs. Model loaded into CPU RAM. Proceeding without VRAM check.")    
     else:
         if(int(vram_mb)/int(total_vram_mb) > gpu_memory_utilization):
-            raise ValueError("VRAM usage exceeds the specified GPU memory utilization threshold. \n Options to Reduce VRAM:\n 1. Reduce Context Size:\n 2. turn off GPU KV-caching with kwarg: offload_kqv = True. \n 3. Load only 'N' layers to the GPU kwarg: n_gpu_layers = N \n")
+            raise ValueError(
+                "VRAM usage exceeds the specified GPU memory utilization threshold.\n"
+                "Options to Reduce VRAM:\n"
+                "1. Reduce the context size (n_ctx parameter)\n"
+                "2. Turn off GPU KV-caching with kwarg: offload_kqv = True\n"
+                "3. Load only 'N' layers to the GPU with kwarg: n_gpu_layers = N\n"
+            )
         else:
             print(f"VRAM Usage for Model Load: {vram_mb} MiB / {total_vram_mb} MiB ({(int(vram_mb)/int(total_vram_mb))*100:.2f} %)")
     
