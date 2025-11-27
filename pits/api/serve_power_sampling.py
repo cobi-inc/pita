@@ -55,12 +55,13 @@ async def startup_event():
 async def shutdown_event():
     print("Shutting down PITA Server...")
     sampler = SERVER_STATE["sampler"]
-
-    # Properly close/free the model based on engine
-    if(sampler.engine == "vllm"):
-        sampler.llm.close() # Close VLLM engine properly
-    elif(sampler.engine == "llama_cpp"):
-        sampler.llm.model.free_model() # Free Llama.cpp model memory
+    if sampler is not None:
+        # Properly close/free the model based on engine
+        if sampler.engine == "vllm":
+            sampler.llm.close()
+        elif sampler.engine == "llama_cpp":
+            # Close the Llama object directly
+            sampler.llm.close()  # or del sampler.llm if close() is not available
 
     SERVER_STATE["sampler"] = None
     print("Shutdown complete.")
