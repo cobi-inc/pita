@@ -1,6 +1,5 @@
 from contextlib import redirect_stdout
 import re
-import sys
 from llama_cpp import Llama
 import numpy as np
 
