@@ -54,7 +54,7 @@ def sample(
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
         model_name,  # Model name that will be used to load the LLM (Hugging Face only currently)
-        model_type=None, # GGUF models only supported currently by LLaMA.cpp. Will through error if safetensors is selected
+        model_type=None, # GGUF models only supported currently by LLaMA.cpp. Will throw error if safetensors is selected
         dtype="auto", 
         gpu_memory_utilization=0.85, 
         max_model_len=2048, 
