@@ -102,7 +102,7 @@ def create_LLM_object(
     vram_after = get_gpu_vram_usage_mb() or 0
     vram_mb = vram_after - vram_before
 
-    if(vram_mb is None):
+    if(vram_mb < 1):
         print("Warning: Could not extract VRAM usage from llama.cpp logs. Model loaded into CPU RAM. Proceeding without VRAM check.")    
     else:
         if(int(vram_mb)/int(total_vram_mb) > gpu_memory_utilization):
