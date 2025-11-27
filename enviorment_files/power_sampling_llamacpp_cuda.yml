@@ -17,3 +17,7 @@ dependencies:
     - regex
     - transformers
     - torch
+    - pydantic
+    - fastapi
+    - uvicorn
+    - openai
