@@ -1,6 +1,7 @@
 # Training Free Reasoning Libraries
 from pits.utils.benchmarking_utils import benchmark_sampling
-from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler, enable_power_sampling
+from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pits.sampling.power_sample import enable_power_sampling
 
 # Pytorch Library
 import torch
@@ -24,17 +25,9 @@ if __name__ == "__main__":
     random.seed(seed)
 
     # Power Sampling Hyperparameters
-    total_output_tokens = 400 #total tokens for response
-    block_size = 400 # tokens per block. Number of blocks = token_count / block_size
-    MCMC_steps = 2 
-
-    # Set whether to use the API server or programmatical LLM
-    api_condition = False
-
-    #Sampling parameters for the LLM
-    temperature = 0.75
-    top_k = 100 # Consider all tokens when -1 or N tokens when N > 0
-
+    total_output_tokens = 1000 #total tokens for response
+    block_size = 250 # tokens per block. Number of blocks = token_count / block_size
+    MCMC_steps = 5 
 
     # LLM parameters
     #engine = "vllm"
@@ -55,9 +48,10 @@ if __name__ == "__main__":
         tokenizer_path="Qwen/Qwen3-4B-AWQ", 
         gpu_memory_utilization=gpu_memory_utilization, 
         max_model_len=max_model_len, 
-        max_logprobs = 5,
-        logprobs_mode='raw_logits'
+        max_logprobs = None,
+        logits=True
     )
+    sampler.sampling_params.logits_per_token = 1000
 
     # Create the power sampling parameters to use
     enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps)
