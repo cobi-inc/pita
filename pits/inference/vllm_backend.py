@@ -44,9 +44,11 @@ def create_LLM_object(
     ):
 
     if(logits):
+        # User wants unprocessed logits output
         logprobs_mode = 'raw_logits'
     else:
-        logprobs_mode = None
+        # Default to raw_logprobs if the user does not want logits
+        logprobs_mode = 'raw_logprobs'
         
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,

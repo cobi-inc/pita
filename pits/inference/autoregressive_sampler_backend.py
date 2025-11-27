@@ -186,12 +186,11 @@ def create_autoregressive_sampler(
     engine, # Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported
     model, # Model to load 
     dtype = "auto", # Data type to use when loading the model. "auto" lets the engine decide
-    tokenizer_path = None, # Path to tokenizer if different from model path
+    tokenizer_path = None, # Path to a model with a tokenizer if the model path doesn't include a tokenizer
     gpu_memory_utilization = 0.85, # GPU memory utilization to use 
     max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
     max_logprobs = None, # Number of logits/logprobs to store per output token
-    logits = True, # Mode to extract logits from the model
-    logits_per_token = 0, # Number of descending ranked logits to return per output token
+    logits_per_token = None, # Number of descending ranked logits to return per output token
     trust_remote_code = True, # Whether to trust remote code when loading the model
     sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
     **kwargs # Additional keyword arguments passed to the backend LLM creation function
@@ -202,8 +201,23 @@ def create_autoregressive_sampler(
     # Determine Model Type for Hugging Face Repos
     model_type = detect_model_type(model)
 
+    # Enable the use of logits if logits_per_token is set
+    if(logits_per_token is not None):
+        logits = True
+    else:
+        logits = False
+
     if(engine == "vllm"):
         backend = _get_vllm_backend()
+
+        # vLLM uses both logits and logprobs interchangeably depending on the logprobs_mode set during initialization
+        # some librares have distinct modes for logits vs logprobs like llama_cpp
+        # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
+        # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clairity
+        if(max_logprobs is not None and logits_per_token is not None):
+            print("Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM.")
+            max_logprobs = logits_per_token
+        
         # Create the LLM object
         llm = backend.create_LLM_object(
             model_name = model, 
@@ -239,7 +253,8 @@ def create_autoregressive_sampler(
     else:
         raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
     
-    # Create tokenizer
+    # Create tokenizer depending on whether a tokenizer path is provided
+    # Needed as some models do not include the tokenizer files in the same repo as the model
     if tokenizer_path is not None:
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=trust_remote_code)
     else:

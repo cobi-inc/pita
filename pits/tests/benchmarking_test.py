@@ -12,11 +12,7 @@ import time
 
 # Main function to test power sampling
 if __name__ == "__main__":
-    # Tell Pytorch to use the GPU if available
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
+
 
     # Initialize the random number generator
     #seed = 42
@@ -29,14 +25,29 @@ if __name__ == "__main__":
     block_size = 250 # tokens per block. Number of blocks = token_count / block_size
     MCMC_steps = 5 
 
+    engine_name = "vllm"
+
     # LLM parameters
-    #engine = "vllm"
-    #model = "Qwen/Qwen3-4B-AWQ"
+    if(engine_name == "vllm"):
+        model_name = "Qwen/Qwen3-4B-AWQ"
+        dtype = "auto"
+        tokenizer_path = None
+        max_logprobs = 100
+        logits_per_token = None
 
-    engine_name = "llama_cpp"
-    model_name = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+    elif(engine_name == "llama_cpp"):
+        model_name = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+        dtype = "Q5_K_M"
+        tokenizer_path="Qwen/Qwen3-4B-AWQ"
+        max_logprobs = None
+        logits_per_token = 1000
+        
+        # Tell Pytorch to use the GPU if available
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
 
-    dtype = "Q5_K_M"
     gpu_memory_utilization = 0.8
     max_model_len = 8192
 
@@ -48,8 +59,8 @@ if __name__ == "__main__":
         tokenizer_path="Qwen/Qwen3-4B-AWQ", 
         gpu_memory_utilization=gpu_memory_utilization, 
         max_model_len=max_model_len, 
-        max_logprobs = None,
-        logits=True
+        max_logprobs = max_logprobs,
+        logits_per_token = logits_per_token
     )
     sampler.sampling_params.logits_per_token = 1000
 
