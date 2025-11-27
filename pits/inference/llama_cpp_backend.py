@@ -1,4 +1,3 @@
-from contextlib import redirect_stdout
 from llama_cpp import Llama
 import numpy as np
 
