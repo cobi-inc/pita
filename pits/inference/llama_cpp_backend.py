@@ -108,11 +108,16 @@ def create_LLM_object(
                 "Options to Reduce VRAM:\n"
                 "1. Reduce the context size (n_ctx parameter)\n"
                 "2. Turn off GPU KV-caching with kwarg: offload_kqv = True\n"
-                "3. Load only 'N' layers to the GPU with kwarg: n_gpu_layers = N\n"
-            )
+        try:
+            total_vram_int = int(total_vram_mb)
+            vram_mb_int = int(vram_mb)
+        except (ValueError, TypeError):
+            print(f"Warning: Could not extract total VRAM value ('{total_vram_mb}'). Skipping VRAM utilization check.")
         else:
-            print(f"VRAM Usage for Model Load: {vram_mb} MiB / {total_vram_mb} MiB ({(int(vram_mb)/int(total_vram_mb))*100:.2f} %)")
-    
+            if(vram_mb_int / total_vram_int > gpu_memory_utilization):
+                raise ValueError("VRAM usage exceeds the specified GPU memory utilization threshold. \n Options to Reduce VRAM:\n 1. Reduce Context Size:\n 2. turn off GPU KV-caching with kwarg: offload_kqv = True. \n 3. Load only 'N' layers to the GPU kwarg: n_gpu_layers = N \n")
+            else:
+                print(f"VRAM Usage for Model Load: {vram_mb_int} MiB / {total_vram_int} MiB ({(vram_mb_int/total_vram_int)*100:.2f} %)")
     print("--- Model Initialization Complete. ---")
 
     # Return created LLM object
