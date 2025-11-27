@@ -94,7 +94,7 @@ class Sampling_Params:
         max_tokens = 16, # Max Number of tokens to generate per sequence
         temperature = 1.0, # Controls randomness of sampling. Lower is more deterministic, higher is more random
         top_p = 1.0, # Controls tokens to consider based on cumulative probability. Must be in (0, 1]
-        top_k = -1, # Controls number of top tokens to consider. 0 or -1 is considers all tokens
+        top_k = -1, # Controls number of top tokens to consider. 0 or -1 considers all tokens
         logprobs = None, # Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities
         logits_per_token = None, # Number of descending ranked logits to return per output token
         presence_penalty = 0.0, # Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
