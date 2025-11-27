@@ -28,7 +28,7 @@ SERVER_STATE = {"sampler": None}
 async def startup_event():
     # Configuration hardcoded; ideally load from config/env vars
     ENGINE = "llama_cpp"
-    MODEL_NAME = "unsloth/Qwen3-4B-Instruct-2507-GGUF" # Example model from paper
+    MODEL_NAME = "unsloth/Qwen3-4B-Instruct-2507-GGUF" # Example model
     DTYPE = "Q5_K_M" # Let the engine decide
     GPU_MEMORY_UTILIZATION = 0.85
     CONTEXT_LENGTH = 1024 # Default max buffer for generation
