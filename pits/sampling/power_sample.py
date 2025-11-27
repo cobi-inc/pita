@@ -1,7 +1,6 @@
 # Standard Libraries
 import os
 import random
-import time
 
 # Math Libraries
 import numpy as np
