@@ -141,7 +141,7 @@ class Sampling_Params:
 
 
     def _sync_param_to_engine(self, param_name, value):
-        # Some engines may not have engine_params
+        # Skip syncing for llama_cpp as it does not use a separate engine_params class
         if self.engine == "llama_cpp":
             return
 
