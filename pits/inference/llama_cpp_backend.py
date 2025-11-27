@@ -73,7 +73,7 @@ def create_LLM_object(
 
     # Check to see if the user wants to use the GPU
     if(gpu_memory_utilization > 0 and 'n_gpu_layers' not in kwargs):
-        kwargs['n_gpu_layers'] = -1  # Use as many GPU layers as possibles
+        kwargs['n_gpu_layers'] = -1  # Use as many GPU layers as possible
 
     # Get the System VRAM
     total_vram_mb = get_total_vram()
