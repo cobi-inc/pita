@@ -50,8 +50,8 @@ def get_total_vram():
                 vram_bytes = int(match.group(1))
                 vram_mib = vram_bytes // (1024 * 1024)
                 return vram_mib
-        except Exception:
-            pass
+        except Exception as e:
+            return f"Error reading ROCm SMI: {e}"
 
     return "Could not detect Total VRAM. Ensure drivers are installed."
 
