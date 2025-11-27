@@ -45,6 +45,8 @@ def create_LLM_object(
 
     if(logits):
         logprobs_mode = 'raw_logits'
+    else:
+        logprobs_mode = None
         
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
