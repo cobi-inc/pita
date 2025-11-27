@@ -33,7 +33,6 @@ def sample(
         **kwargs)
     
     print(llm_output)
-    print("LLM Scores Shape:", self.llm.scores.shape)
     # We need to know where the prompt ends and the generation begins.
     n_prompt = llm_output['usage']['prompt_tokens']
     n_total = llm_output['usage']['total_tokens']
