@@ -85,7 +85,7 @@ def create_LLM_object(
     if(model_type == "safetensors"):
         ValueError("safetensors model type is not currently supported in llama.cpp backend. Please use gguf model type.")
     elif(model_type == "gguf"):
-        # Loading the safetensors model with from_pretrained
+        # Loading the GGUF model with from_pretrained
         llm = Llama.from_pretrained(
             repo_id=model_name,
             n_ctx=max_model_len, # Text Context length
