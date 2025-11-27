@@ -32,15 +32,17 @@ def sample(
         logprobs = self.sampling_params.logprobs,
         **kwargs)
     
+    print(llm_output)
+    print("LLM Scores Shape:", self.llm.scores.shape)
     # We need to know where the prompt ends and the generation begins.
     n_prompt = llm_output['usage']['prompt_tokens']
     n_total = llm_output['usage']['total_tokens']
 
     # Reconstruct an array of all generated tokens
     # elf.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
-    tokens = np.append(self.llm.input_ids[n_prompt:n_total-1], self.tokenizer.encode(llm_output['choices'][0]['logprobs']['tokens'][-1]))
+    tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']))
 
-    number_of_logits = self.sampling_params.logprobs + 1
+    number_of_logits = self.sampling_params.logits_per_token
 
     # Use partition to find top number_of_logits indices
     # scores logits are stored in self.llm.scores. The previous index's scores correspond to the next token prediction token[i] is predicted by scores[i-1]
