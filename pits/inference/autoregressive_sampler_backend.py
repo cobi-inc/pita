@@ -237,7 +237,7 @@ def create_autoregressive_sampler(
         engine_params = None
 
     else:
-        raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Try 'vllm'.")
+        raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
     
     # Create tokenizer
     if tokenizer_path is not None:
