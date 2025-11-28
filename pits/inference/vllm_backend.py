@@ -82,6 +82,6 @@ def check_vllm_power_sampling_compatibility(sampler):
     if(sampler.llm.llm_engine.model_config.logprobs_mode != 'raw_logits'):
         raise ValueError(
             f"vLLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling."
-            f"vLLM engine logprobs_mode is set to {sampler.llm.llm_engine.model_config.logprobs_mode}." 
-            f"This is done by setting logits=True when creating the LLM object."
+            f"\nvLLM engine logprobs_mode is set to {sampler.llm.llm_engine.model_config.logprobs_mode}." 
+            f"\nThis is done by setting logits=True when creating the LLM object."
                         )
