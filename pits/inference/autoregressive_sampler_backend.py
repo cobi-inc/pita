@@ -214,8 +214,8 @@ def create_autoregressive_sampler(
         # some librares have distinct modes for logits vs logprobs like llama_cpp
         # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
         # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clairity
-        if(max_logprobs is not None and logits_per_token is not None):
-            print("Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM.")
+        if(logits == True and max_logprobs is not None):
+            print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM.")
             max_logprobs = logits_per_token
         
         # Create the LLM object

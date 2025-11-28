@@ -47,8 +47,8 @@ def create_LLM_object(
         # User wants unprocessed logits output
         logprobs_mode = 'raw_logits'
     else:
-        # Default to raw_logprobs if the user does not want logits
-        logprobs_mode = 'raw_logprobs'
+        # Default to processed logprobs if the user does not want logits
+        logprobs_mode = 'processed_logprobs'
         
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
@@ -68,12 +68,20 @@ def create_vllm_engine_params():
 
 # Check that the vLLM engine can suppport power sampling with the given configuration
 def check_vllm_power_sampling_compatibility(sampler):
-    # Check to make sure the vLLM engine is outputing logits/logprobs
-    if(sampler.sampling_params.top_k <= 0):
-        raise ValueError("LLM engine top_k must be set to a positive integer to enable power sampling.")
+    # Make sure the user has actually set logits_per_token
+    if(sampler.sampling_params.logits_per_token is None):
+        raise ValueError("LLM engine logits_per_token must be set to at least top_k to enable power sampling.")
     
-    if(sampler.llm.max_logprobs is None or sampler.llm.max_logprobs < sampler.sampling_params.top_k):
-        raise ValueError("LLM engine max_logprobs must be set to at least top_k to enable power sampling.")
-    
-    if(sampler.llm.logprobs_mode != 'raw_logits'):
-        raise ValueError("LLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling. This is done by setting logits=True when creating the LLM object.")
+    # Make sure top_k matches logits_per_token to make sure that the inference engine is actually using only the logits requested
+    if(sampler.sampling_params.top_k != sampler.sampling_params.logits_per_token):
+        print("Warning: The sampler top_k does not match the LLM engine logits_per_token setting. This may lead to unexpected behavior during power sampling.")
+        print("Automatically setting the LLM engine logits_per_token to match the sampler top_k.")
+        sampler.sampling_params.top_k = sampler.sampling_params.logits_per_token
+
+    # For vLLM, make sure that logprobs_mode is set to 'raw_logits' to get unprocessed logits
+    if(sampler.llm.llm_engine.model_config.logprobs_mode != 'raw_logits'):
+        raise ValueError(
+            f"vLLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling."
+            f"vLLM engine logprobs_mode is set to {sampler.llm.llm_engine.model_config.logprobs_mode}." 
+            f"This is done by setting logits=True when creating the LLM object."
+                        )
