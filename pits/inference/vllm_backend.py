@@ -1,5 +1,8 @@
 # vLLM Libraries
-from vllm import LLM, SamplingParams, TokensPrompt
+from vllm import LLM, SamplingParams
+
+# Utilities
+import numpy as np
 
 # Take in the context (string) and max_new_tokens (int)
 # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
@@ -10,23 +13,23 @@ def sample(
         **kwargs # Additional keyword arguments passed to the vLLM generate function
     ):
 
-    # Prepare the context as a TokensPrompt if it's a list of token IDs
-    if isinstance(context, list):
-        context = TokensPrompt(prompt_token_ids=context)
-    
     # Update the max tokens if needed
     if(self.sampling_params.engine_params.max_tokens != max_new_tokens):
         self.sampling_params.engine_params.max_tokens = max_new_tokens
 
     # Generate a new response from the LLM
-    llm_output = self.llm.generate(context, sampling_params=self.sampling_params.engine_params, **kwargs)
+    llm_output = self.llm.generate(
+        context, 
+        sampling_params=self.sampling_params.engine_params, 
+        **kwargs
+    )
     tokens = llm_output[0].outputs[0].token_ids
     
     # Extract the top top_k logits/logprobs for each generated token
     # Logits vs Logprobs depend on the logprobs_mode set during the LLM Class initialization
-    top_k_logits = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
+    top_k_logits = np.array([[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs])
     # Create a list of the logit/logprob for the chosen token at each position
-    chosen_token_logit = [llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))]
+    chosen_token_logit = np.array([llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))])
     
     # Returns the generated token_ids, the chosen token logit/logprob, and the top_k logits/logprobs
     return tokens, chosen_token_logit, top_k_logits
