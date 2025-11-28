@@ -66,16 +66,16 @@ def create_vllm_engine_params():
     vllm_params = SamplingParams()
     return vllm_params
 
-# Check that the vLLM engine can suppport power sampling with the given configuration
+# Check that the vLLM engine can support power sampling with the given configuration
 def check_vllm_power_sampling_compatibility(sampler):
     # Make sure the user has actually set logits_per_token
     if(sampler.sampling_params.logits_per_token is None):
-        raise ValueError("LLM engine logits_per_token must be set to at least top_k to enable power sampling.")
+        raise ValueError("LLM engine logits_per_token must be set to enable power sampling.")
     
     # Make sure top_k matches logits_per_token to make sure that the inference engine is actually using only the logits requested
     if(sampler.sampling_params.top_k != sampler.sampling_params.logits_per_token):
         print("Warning: The sampler top_k does not match the LLM engine logits_per_token setting. This may lead to unexpected behavior during power sampling.")
-        print("Automatically setting the LLM engine logits_per_token to match the sampler top_k.")
+        print("Automatically setting the LLM engine top_k to match the logits_per_token.")
         sampler.sampling_params.top_k = sampler.sampling_params.logits_per_token
 
     # For vLLM, make sure that logprobs_mode is set to 'raw_logits' to get unprocessed logits
