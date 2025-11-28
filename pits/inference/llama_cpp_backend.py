@@ -134,6 +134,6 @@ def check_llama_cpp_power_sampling_compatibility(sampler):
         print("Automatically setting the LLM engine logits_per_token to match the sampler top_k.")
         sampler.sampling_params.top_k = sampler.sampling_params.logits_per_token
 
-    # Give a warning that logprobs gives log-porbabilities to the user dramatically slowing down inference
+    # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
     if(sampler.sampling_params.logprobs is not None):
         print("Warning: llama.cpp backend logprobs parameter is set to output log-probabilities which may dramatically slow down inference. It is recommended to set logprobs=None when using power sampling with llama.cpp backend.")
