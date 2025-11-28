@@ -13,10 +13,14 @@ def sample(
         **kwargs # Additional keyword arguments passed to the backend Llama create_completion function
     ):
 
+    # Update the max tokens if needed
+    if(self.sampling_params.max_tokens != max_new_tokens):
+        self.sampling_params.max_tokens = max_new_tokens
+
     # Generate a new response from the LLM
     llm_output = self.llm.create_completion(
         prompt = context,
-        max_tokens = max_new_tokens,
+        max_tokens = self.sampling_params.max_tokens,
         temperature = self.sampling_params.temperature,
         top_p = self.sampling_params.top_p,
         min_p = self.sampling_params.min_p,
@@ -27,9 +31,9 @@ def sample(
         top_k = self.sampling_params.top_k,
         seed = self.sampling_params.seed,
         logprobs = self.sampling_params.logprobs,
-        **kwargs)
+        **kwargs
+    )
     
-    print(llm_output)
     # We need to know where the prompt ends and the generation begins.
     n_prompt = llm_output['usage']['prompt_tokens']
     n_total = llm_output['usage']['total_tokens']
@@ -38,17 +42,15 @@ def sample(
     # self.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
     tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']), dtype=np.int32)
 
-    number_of_logits = self.sampling_params.logits_per_token
-
-    # Use partition to find top number_of_logits indices
+    # Use partition to find top self.sampling_params.logits_per_token indices
     # scores logits are stored in self.llm.scores. The previous index's scores correspond to the next token prediction token[i] is predicted by scores[i-1]
-    top_k_logits = -np.partition(-self.llm.scores[n_prompt-1:n_total-1], number_of_logits, axis=1)[:, :number_of_logits]
+    top_k_logits = -np.partition(-self.llm.scores[n_prompt-1:n_total-1], self.sampling_params.logits_per_token, axis=1)[:, :self.sampling_params.logits_per_token]
     
     # Use advanced indexing to extract the actual logit values for these indices
     # shape: (n_completion, TOP_K)
     chosen_token_logit = self.llm.scores[np.arange(n_prompt-1, n_total-1), tokens]
 
-    # Returns the generated array token_ids, the chosen token logit/logprob, and the top_k logits/logprobs where k = self.llm.sampling_params.logprobs + 1
+    # Returns the generated array token_ids, the chosen token logit/logprob, and the top_k logits/logprobs where k = self.sampling_params.logits_per_token
     return tokens, chosen_token_logit, top_k_logits
 
 # Create the LLM object given the model name and engine parameters
