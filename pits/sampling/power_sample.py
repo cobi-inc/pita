@@ -61,7 +61,6 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
         backend = _get_llama_cpp_backend()
         backend.check_llama_cpp_power_sampling_compatibility(sampler)
         
-
     else:
         raise ValueError(f"Engine {sampler.engine} not supported for Power Sampling.")
 

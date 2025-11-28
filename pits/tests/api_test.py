@@ -17,9 +17,9 @@ client = OpenAI(
 
 its_params = encode(
     Power_Sampling_Params = Power_Sampling_Params(
-        total_output_tokens=1000,
+        total_output_tokens=10000,
         block_size=250,
-        MCMC_steps=1
+        MCMC_steps=3
     )
 )
 
