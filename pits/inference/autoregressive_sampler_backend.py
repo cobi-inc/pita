@@ -211,7 +211,7 @@ def create_autoregressive_sampler(
         backend = _get_vllm_backend()
 
         # vLLM uses both logits and logprobs interchangeably depending on the logprobs_mode set during initialization
-        # some librares have distinct modes for logits vs logprobs like llama_cpp
+        # some libraries have distinct modes for logits vs logprobs like llama_cpp
         # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
         # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clairity
         if(logits == True and max_logprobs is not None):
