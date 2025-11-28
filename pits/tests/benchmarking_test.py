@@ -33,7 +33,7 @@ if __name__ == "__main__":
         dtype = "auto"
         tokenizer_path = None
         max_logprobs = 100
-        logits_per_token = None
+        logits_per_token = 100
 
     elif(engine_name == "llama_cpp"):
         model_name = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
@@ -62,7 +62,6 @@ if __name__ == "__main__":
         max_logprobs = max_logprobs,
         logits_per_token = logits_per_token
     )
-    sampler.sampling_params.logits_per_token = 1000
 
     # Create the power sampling parameters to use
     enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps)

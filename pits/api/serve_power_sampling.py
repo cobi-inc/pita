@@ -27,12 +27,26 @@ SERVER_STATE = {"sampler": None}
 @app.on_event("startup")
 async def startup_event():
     # Configuration hardcoded; ideally load from config/env vars
-    ENGINE = "llama_cpp"
-    MODEL_NAME = "unsloth/Qwen3-4B-Instruct-2507-GGUF" # Example model
-    DTYPE = "Q5_K_M" # Let the engine decide
-    GPU_MEMORY_UTILIZATION = 0.85
-    CONTEXT_LENGTH = 1024 # Default max buffer for generation
-    LOGITS_PER_TOKEN = 1000
+    ENGINE = "vllm"
+
+    # LLM parameters
+    if(ENGINE == "vllm"):
+        MODEL_NAME = "Qwen/Qwen3-4B-AWQ"
+        DTYPE = "auto"
+        GPU_MEMORY_UTILIZATION = 0.85
+        TOKENIZER_PATH = None
+        CONTEXT_LENGTH = 1024 # Default max buffer for generation
+        MAX_LOGPROBS = 1000
+        LOGITS_PER_TOKEN = 1000
+
+    elif(ENGINE == "llama_cpp"):
+        MODEL_NAME = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+        DTYPE = "Q5_K_M"
+        GPU_MEMORY_UTILIZATION = 0.85
+        TOKENIZER_PATH = "Qwen/Qwen3-4B-AWQ"
+        CONTEXT_LENGTH = 1024 # Default max buffer for generation
+        MAX_LOGPROBS = None
+        LOGITS_PER_TOKEN = 1000
 
     print(f"Loading model {MODEL_NAME} using {ENGINE}...")
 
@@ -41,10 +55,10 @@ async def startup_event():
         engine = ENGINE, 
         model = MODEL_NAME, 
         dtype = DTYPE,
-        tokenizer_path = "Qwen/Qwen3-4B-AWQ", 
+        tokenizer_path = TOKENIZER_PATH, 
         gpu_memory_utilization = GPU_MEMORY_UTILIZATION, 
         max_model_len = CONTEXT_LENGTH, 
-        logits = True,
+        max_logprobs = MAX_LOGPROBS,
         logits_per_token = LOGITS_PER_TOKEN
     ) 
 
