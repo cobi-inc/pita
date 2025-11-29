@@ -5,7 +5,7 @@ import numpy as np
 from pits.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 
 # Logits Processor Functions
-# Calculate and Store Normalizaton Constant
+# Calculate and Store Normalization Constant
 
 # Take in the context (string) and max_new_tokens (int)
 # Returns arrays of the generated token_ids, the chosen token logits, and all the logits as lists to the user
