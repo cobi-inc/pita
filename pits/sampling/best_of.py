@@ -45,8 +45,8 @@ def best_of_n_logprob(context, sampler):
     # Add the top_k sequence_cumulative_logprobs together and choose them based off their probabilities
     # Find the log probabilities of the top_k sequences
     top_k_cum_logprobs = sequence_cumulative_logprobs[top_k_sequence_cum_logprobs_indices[:sampler.best_of_sampling_params.sequence_top_k]]
-    # Convert to relative probabilities
-    top_k_cum_relative_probs = top_k_cum_logprobs / sum(top_k_cum_logprobs)
+    # Convert to relative probabilities using log-sum-exp trick for numerical stability
+    top_k_cum_relative_probs = np.exp(top_k_cum_logprobs - logsumexp(top_k_cum_logprobs))
 
     # Take a weighted random choice from the top_k sequences based on their relative probabilities
     best_index = np.random.choice(top_k_sequence_cum_logprobs_indices[:sampler.best_of_sampling_params.sequence_top_k], p=top_k_cum_relative_probs)
