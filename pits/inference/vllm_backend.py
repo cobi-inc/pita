@@ -23,14 +23,24 @@ def sample(
         sampling_params=self.sampling_params.engine_params, 
         **kwargs
     )
-    tokens = llm_output[0].outputs[0].token_ids
-    
-    # Extract the top top_k logits/logprobs for each generated token
-    # Logits vs Logprobs depend on the logprobs_mode set during the LLM Class initialization
-    top_k_logits = np.array([[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs])
-    # Create a list of the logit/logprob for the chosen token at each position
-    chosen_token_logit = np.array([llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))])
-    
+
+    # Handle both single and batched inputs
+    if isinstance(context, str):
+        # Single prompt - original behavior
+        tokens = llm_output[0].outputs[0].token_ids
+        top_k_logits = np.array([[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs])
+        chosen_token_logit = np.array([llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))])
+    else:
+        # Batched prompts - return lists of results per sequence
+        tokens = [output.outputs[0].token_ids for output in llm_output]
+        top_k_logits = [
+            np.array([[obj.logprob for obj in position_dict.values()] for position_dict in output.outputs[0].logprobs])
+            for output in llm_output
+        ]
+        chosen_token_logit = [
+            np.array([output.outputs[0].logprobs[i][output.outputs[0].token_ids[i]].logprob for i in range(len(output.outputs[0].token_ids))])
+            for output in llm_output
+        ]
     # Returns the generated token_ids, the chosen token logit/logprob, and the top_k logits/logprobs
     return tokens, chosen_token_logit, top_k_logits
 
@@ -41,7 +51,7 @@ def create_LLM_object(
         dtype="auto", 
         gpu_memory_utilization=0.85, 
         max_model_len=2048, 
-        max_logprobs=100, 
+        max_logprobs=100, # Controls how many logprobs or logits are stored for each token
         logits=True, 
         **kwargs
     ):
@@ -58,7 +68,7 @@ def create_LLM_object(
               dtype=dtype,
               gpu_memory_utilization=gpu_memory_utilization,
               max_model_len=max_model_len,
-              max_logprobs=max_logprobs, # needed for MCMC
+              max_logprobs=max_logprobs, # Controls how many logprobs or logits are stored for each token
               logprobs_mode=logprobs_mode,
               **kwargs)
 

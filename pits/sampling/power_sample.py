@@ -34,16 +34,14 @@ def _get_llama_cpp_backend():
 class Power_Sampling_Params:
     def __init__(
         self, 
-        total_output_tokens=1000, # Max sequence length in tokens to generate when power sampling
         block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
         MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
     ):
-        self.total_output_tokens = total_output_tokens 
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps
 
 # Checks that the LLM and parameters are compatible with power sampling and enables power sampling
-def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
+def enable_power_sampling(sampler, block_size, MCMC_steps):
     # Check if the sampler is initialized
     if(sampler is None):
         raise ValueError("Sampler must be initialized before enabling power sampling.")
@@ -66,12 +64,11 @@ def enable_power_sampling(sampler, total_output_tokens, block_size, MCMC_steps):
 
     # Set the power sampling parameters
     sampler.power_sampling_params = Power_Sampling_Params(
-        total_output_tokens=total_output_tokens,
         block_size=block_size,
         MCMC_steps=MCMC_steps
     )
-
-    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Total Output Tokens = {total_output_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
+    
+    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.logits_per_token}, Total Output Tokens = {sampler.sampling_params.max_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
 
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
@@ -122,7 +119,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
     token_history = ""
 
     # Iterate over the number of blocks to be generated
-    block_count = sampler.power_sampling_params.total_output_tokens // sampler.power_sampling_params.block_size
+    block_count = sampler.sampling_params.max_tokens // sampler.power_sampling_params.block_size
     for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio
         block_acceptance = 0
@@ -210,7 +207,7 @@ def power_sampling(
     # New Context Window to be changed
     context = []
 
-    block_count = sampler.power_sampling_params.total_output_tokens // sampler.power_sampling_params.block_size
+    block_count = sampler.sampling_params.max_tokens // sampler.power_sampling_params.block_size
     # Iterate over the number of blocks to be generated
     for block_idx in tqdm(range(block_count), disable=True):
         # Block Acceptances Ratio 

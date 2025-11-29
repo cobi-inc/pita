@@ -171,16 +171,6 @@ class SMC_Sampling_Params:
         self.particle_length = particle_length
         self.resample_interval = resample_interval
 
-# TO DO once best-of sampling is implemented
-class Best_of_Sampling_Params:
-    def __init__(
-        self,
-        n = 1, # Number of outputs to return for the given prompt request
-        best_of = 5, # The top `best_of` sequences generated. best_of must be greater than or equal to n
-    ):
-        self.n = n
-        self.best_of = best_of
-
 # Create an AutogressiveSampler object given the engine, engine parameters, and model name
 def create_autoregressive_sampler(
     engine, # Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported
@@ -204,6 +194,7 @@ def create_autoregressive_sampler(
     # Enable the use of logits if logits_per_token is set
     if(logits_per_token is not None):
         logits = True
+        prob_count = logits_per_token
     else:
         logits = False
 
@@ -214,17 +205,22 @@ def create_autoregressive_sampler(
         # some libraries have distinct modes for logits vs logprobs like llama_cpp
         # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
         # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clarity
-        if(logits == True and max_logprobs is not None):
+        if(logits == True):
             print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM.")
-            max_logprobs = logits_per_token
-        
+            prob_count = logits_per_token
+        elif(logits == False and max_logprobs is not None):
+            print("vLLM does not output both logits and logprobs separately. max_logprobs is set while logits_per_token is not set. Defaulting to using and returning max_logprobs for vLLM.")
+            prob_count = max_logprobs
+        else:
+            prob_count = None
+            
         # Create the LLM object
         llm = backend.create_LLM_object(
             model_name = model, 
             dtype = dtype,
             gpu_memory_utilization = gpu_memory_utilization,
             max_model_len = max_model_len,
-            max_logprobs = max_logprobs,
+            max_logprobs = prob_count,
             logits = logits,
             **kwargs
         )
@@ -296,7 +292,3 @@ def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
     )
 
     print(f"SMC Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Particles = {particles}, Particle Length = {particle_length}, Resample Interval = {resample_interval}, Temperature = {sampler.sampling_params.temperature}")
-
-# TO DO once best-of sampling is implemented
-def enable_best_of_sampling(sampler, n, best_of):
-    pass
