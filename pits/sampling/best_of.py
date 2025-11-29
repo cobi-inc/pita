@@ -34,7 +34,13 @@ def best_of_n_logprob(context, sampler):
         sequence_cumulative_logprobs[seq_index] /= len(top_k_logits[seq_index])
 
     # Select the top_k sequences based on cumulative logprobs
-    top_k_sequence_cum_logprobs_indices = np.argpartition(-sequence_cumulative_logprobs, sampler.best_of_sampling_params.sequence_top_k)
+    sequence_top_k = sampler.best_of_sampling_params.sequence_top_k
+    sequence_n = len(sequence_cumulative_logprobs)
+    if sequence_top_k == sequence_n:
+        # If top_k equals the number of sequences, sort all
+        top_k_sequence_cum_logprobs_indices = np.argsort(-sequence_cumulative_logprobs)
+    else:
+        top_k_sequence_cum_logprobs_indices = np.argpartition(-sequence_cumulative_logprobs, sequence_top_k)[:sequence_top_k]
 
     # Add the top_k sequence_cumulative_logprobs together and choose them based off their probabilities
     # Find the log probabilities of the top_k sequences
