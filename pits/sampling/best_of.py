@@ -14,7 +14,7 @@ class Best_of_Params:
 # Default logprob evaluation function
 # Context: The prompt in string format that will be used for generation (Should be in Chat Template format if using chat models)
 # Sampler: An AutoregressiveSampler object with best_of sampling enabled
-# Returns: The best seqeunce in string format based on logprob evaluation
+# Returns: The best sequence in string format based on logprob evaluation
 def best_of_n_logprob(context, sampler):
     # Sample sequence_n sequences from the LLM
     token_sequences, chosen_logit_token, top_k_logits = sampler.sample(
