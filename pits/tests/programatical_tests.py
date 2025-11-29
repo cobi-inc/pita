@@ -17,7 +17,7 @@ def test_pita_lib(
     en_best_of_sampling_test = False
 ):
     
-    # Cretae the LLM engine and sampler
+    # Create the LLM engine and sampler
     # LLM parameters
     if(engine_name == "vllm"):
         _engine_name = "vllm"
