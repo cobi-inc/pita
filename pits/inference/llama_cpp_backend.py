@@ -4,8 +4,11 @@ import numpy as np
 # Custom Libraries
 from pits.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 
+# Logits Processor Functions
+# Calculate and Store Normalizaton Constant
+
 # Take in the context (string) and max_new_tokens (int)
-# Returns arrays of the generated token_ids, the chosen token logprobs, and all the logprobs as lists to the user
+# Returns arrays of the generated token_ids, the chosen token logits, and all the logits as lists to the user
 def sample(
         self, 
         context, # The input context string to generate from
@@ -17,41 +20,66 @@ def sample(
     if(self.sampling_params.max_tokens != max_new_tokens):
         self.sampling_params.max_tokens = max_new_tokens
 
-    # Generate a new response from the LLM
-    llm_output = self.llm.create_completion(
-        prompt = context,
-        max_tokens = self.sampling_params.max_tokens,
-        temperature = self.sampling_params.temperature,
-        top_p = self.sampling_params.top_p,
-        min_p = self.sampling_params.min_p,
-        stop = self.sampling_params.stop,
-        frequency_penalty = self.sampling_params.frequency_penalty,
-        presence_penalty = self.sampling_params.presence_penalty,
-        repeat_penalty = self.sampling_params.repetition_penalty,
-        top_k = self.sampling_params.top_k,
-        seed = self.sampling_params.seed,
-        logprobs = self.sampling_params.logprobs,
-        **kwargs
-    )
+    #Check if context is a list of strings or a single string
+    if(isinstance(context, list)):
+        context_list_len = len(context)
+    else:
+        context_list_len = 1
     
-    # We need to know where the prompt ends and the generation begins.
-    n_prompt = llm_output['usage']['prompt_tokens']
-    n_total = llm_output['usage']['total_tokens']
+    token_lists = []
+    chosen_logit_token_lists = []
+    top_k_logits_lists = []
 
-    # Reconstruct an array of all generated tokens
-    # self.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
-    tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']), dtype=np.int32)
+    for context_index in range(context_list_len):
+        if(context_list_len > 1):
+            context_input = context[context_index]
+        else:
+            context_input = context
 
-    # Use partition to find top self.sampling_params.logits_per_token indices
-    # scores logits are stored in self.llm.scores. The previous index's scores correspond to the next token prediction token[i] is predicted by scores[i-1]
-    top_k_logits = -np.partition(-self.llm.scores[n_prompt-1:n_total-1], self.sampling_params.logits_per_token, axis=1)[:, :self.sampling_params.logits_per_token]
-    
-    # Use advanced indexing to extract the actual logit values for these indices
-    # shape: (n_completion, TOP_K)
-    chosen_token_logit = self.llm.scores[np.arange(n_prompt-1, n_total-1), tokens]
+        # Generate a new response from the LLM
+        llm_output = self.llm.create_completion(
+            prompt = context_input,
+            max_tokens = self.sampling_params.max_tokens,
+            temperature = self.sampling_params.temperature,
+            top_p = self.sampling_params.top_p,
+            min_p = self.sampling_params.min_p,
+            stop = self.sampling_params.stop,
+            frequency_penalty = self.sampling_params.frequency_penalty,
+            presence_penalty = self.sampling_params.presence_penalty,
+            repeat_penalty = self.sampling_params.repetition_penalty,
+            top_k = self.sampling_params.top_k,
+            seed = self.sampling_params.seed,
+            logprobs = self.sampling_params.logprobs,
+            **kwargs
+        )
+        
+        # We need to know where the prompt ends and the generation begins.
+        n_prompt = llm_output['usage']['prompt_tokens']
+        n_total = llm_output['usage']['total_tokens']
 
-    # Returns the generated array token_ids, the chosen token logit/logprob, and the top_k logits/logprobs where k = self.sampling_params.logits_per_token
-    return tokens, chosen_token_logit, top_k_logits
+        # Reconstruct an array of all generated tokens
+        # self.llm.input_ids doesn't store the last generated token, so we need to get it from llm_output
+        tokens = np.array(self.tokenizer.encode(llm_output['choices'][0]['text']), dtype=np.int32)
+
+        # Use partition to find top self.sampling_params.logits_per_token indices
+        # scores logits are stored in self.llm.scores. The previous index's scores correspond to the next token prediction token[i] is predicted by scores[i-1]
+        top_k_logits = -np.partition(-self.llm.scores[n_prompt-1:n_total-1], self.sampling_params.logits_per_token, axis=1)[:, :self.sampling_params.logits_per_token]
+        
+        # Use advanced indexing to extract the actual logit values for these indices
+        # shape: (n_completion, TOP_K)
+        chosen_token_logit = self.llm.scores[np.arange(n_prompt-1, n_total-1), tokens]
+
+        if(context_list_len > 1):
+            # Append to lists
+            token_lists.append(tokens)
+            chosen_logit_token_lists.append(chosen_token_logit)
+            top_k_logits_lists.append(top_k_logits)
+        else:
+            # Returns the generated array token_ids, the chosen token logit/logprob, and the top_k logits/logprobs where k = self.sampling_params.logits_per_token
+            return tokens, chosen_token_logit, top_k_logits
+
+    # Return Lists as arrays
+    return token_lists, chosen_logit_token_lists, top_k_logits_lists
 
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
