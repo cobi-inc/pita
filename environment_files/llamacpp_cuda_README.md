@@ -1,5 +1,5 @@
 ## Installation
-conda env create -f enviorment_files/power_sampling_llamacpp_cuda.yml
+conda env create -f environment_files/power_sampling_llamacpp_cuda.yml
 conda activate power_sampling_llamacpp_cuda
 
 # Set up CUDA library path (required once per environment)

@@ -1,7 +1,7 @@
 #PITA Libraries
-from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler
-from pits.sampling.power_sample import enable_power_sampling, power_sampling
-from pits.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
+from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pita.sampling.power_sample import enable_power_sampling, power_sampling
+from pita.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
 
 def test_pita_lib(
     engine_name,
@@ -61,6 +61,8 @@ def test_pita_lib(
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
         
+    else:
+        raise ValueError(f"Engine {engine_name} not supported for testing.")
     #Initialize Autoregressive Sampler
     sampler = create_autoregressive_sampler(
         engine=_engine_name, 
@@ -192,7 +194,7 @@ if __name__ == "__main__":
 
     # Test PITA Library with llama.cpp
     test_pita_lib(
-        engine_name = "llama_cpp",
+        engine_name = "vllm",
         en_base_test = True,
         en_power_sampling_test = True,
         en_best_of_sampling_test = True

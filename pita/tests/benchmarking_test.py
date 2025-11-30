@@ -1,7 +1,7 @@
 # Training Free Reasoning Libraries
-from pits.utils.benchmarking_utils import benchmark_sampling
-from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler
-from pits.sampling.power_sample import enable_power_sampling
+from pita.utils.benchmarking_utils import benchmark_sampling
+from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pita.sampling.power_sample import enable_power_sampling
 
 # Pytorch Library
 import torch

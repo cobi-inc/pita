@@ -10,8 +10,8 @@ dependencies:
   - cuda-toolkit=12.4.1 # Use the single meta-package from the nvidia channel
   - cxx-compiler      # Use conda-forge's cxx-compiler for a modern GCC
   - pip:
-    - --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
-    - llama-cpp-python
+    # - --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
+    # - llama-cpp-python
     - pandas
     - datasets
     - regex

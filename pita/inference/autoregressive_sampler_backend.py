@@ -9,19 +9,19 @@ llama_cpp_backend = None
 def _get_vllm_backend():
     global vllm_backend
     if vllm_backend is None:
-        import pits.inference.vllm_backend as _vllm_backend
+        import pita.inference.vllm_backend as _vllm_backend
         vllm_backend = _vllm_backend
     return vllm_backend
 
 def _get_llama_cpp_backend():
     global llama_cpp_backend
     if llama_cpp_backend is None:
-        import pits.inference.llama_cpp_backend as _llama_cpp_backend
+        import pita.inference.llama_cpp_backend as _llama_cpp_backend
         llama_cpp_backend = _llama_cpp_backend
     return llama_cpp_backend
 
 # Utils
-from pits.utils.system_utils import detect_model_type
+from pita.utils.system_utils import detect_model_type
 
 # Engine-specific parameter mappings
 # llama_cpp does not have a separate engine_params class, so it is not included here

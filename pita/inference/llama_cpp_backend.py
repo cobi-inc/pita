@@ -2,7 +2,7 @@ from llama_cpp import Llama
 import numpy as np
 
 # Custom Libraries
-from pits.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
+from pita.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 
 # Logits Processor Functions
 # Calculate and Store Normalization Constant

@@ -1,6 +1,6 @@
 #Library Code
-from pits.sampling.power_sample import Power_Sampling_Params
-from pits.api.test_time_coding import encode
+from pita.sampling.power_sample import Power_Sampling_Params
+from pita.api.test_time_coding import encode
 # Standard Libraries
 import requests
 from openai import OpenAI

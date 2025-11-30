@@ -1,5 +1,5 @@
-from pits.api.test_time_coding import encode, decode
-from pits.inference.autoregressive_sampler_backend import Power_Sampling_Params, SMC_Sampling_Params, Best_of_Sampling_Params
+from pita.api.test_time_coding import encode, decode
+from pita.inference.autoregressive_sampler_backend import Power_Sampling_Params, SMC_Sampling_Params, Best_of_Sampling_Params
 
 def main():
     # Create parameter objects

@@ -12,8 +12,8 @@ from transformers import AutoTokenizer
 import datasets
 
 #Import Custom Libraries
-from pits.utils.parse_utils import parse_answer
-from pits.sampling.power_sample import power_sampling, sliding_window_power_sample
+from pita.utils.parse_utils import parse_answer
+from pita.sampling.power_sample import power_sampling, sliding_window_power_sample
 
 # Prompting constants and templates
 CONFIDENCE_BOOSTER = "You are very knowledgeable. An expert. Think and respond with confidence. "

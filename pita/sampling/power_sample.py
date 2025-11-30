@@ -10,7 +10,7 @@ import torch
 from tqdm import tqdm
 
 # Custom Libraries
-from pits.inference.autoregressive_sampler_backend import AutoregressiveSampler
+from pita.inference.autoregressive_sampler_backend import AutoregressiveSampler
 
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
@@ -19,14 +19,14 @@ llama_cpp_backend = None
 def _get_vllm_backend():
     global vllm_backend
     if vllm_backend is None:
-        import pits.inference.vllm_backend as _vllm_backend
+        import pita.inference.vllm_backend as _vllm_backend
         vllm_backend = _vllm_backend
     return vllm_backend
 
 def _get_llama_cpp_backend():
     global llama_cpp_backend
     if llama_cpp_backend is None:
-        import pits.inference.llama_cpp_backend as _llama_cpp_backend
+        import pita.inference.llama_cpp_backend as _llama_cpp_backend
         llama_cpp_backend = _llama_cpp_backend
     return llama_cpp_backend
 

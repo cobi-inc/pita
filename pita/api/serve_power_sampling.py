@@ -1,5 +1,5 @@
 # Custom Software
-from pits.api.api_template import (
+from pita.api.api_template import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatCompletionChoice,
@@ -7,9 +7,9 @@ from pits.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from pits.sampling.power_sample import power_sampling
-from pits.inference.autoregressive_sampler_backend import create_autoregressive_sampler
-from pits.api.test_time_coding import decode
+from pita.sampling.power_sample import power_sampling
+from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pita.api.test_time_coding import decode
 
 # Standard Libraries
 import time
