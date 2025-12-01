@@ -159,18 +159,6 @@ class Sampling_Params:
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
 
-# TO DO once SMC is implemented
-class SMC_Sampling_Params:
-    def __init__(
-        self, 
-        particles = 4, 
-        particle_length = 50, 
-        resample_interval = 50
-    ):
-        self.particles = particles
-        self.particle_length = particle_length
-        self.resample_interval = resample_interval
-
 # Create an AutogressiveSampler object given the engine, engine parameters, and model name
 def create_autoregressive_sampler(
     engine, # Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported
@@ -273,22 +261,3 @@ def create_autoregressive_sampler(
     print("Model loaded successfully. Sampling parameters set to default values.")
 
     return sampler
-
-# TO DO once SMC is implemented
-def enable_SMC_sampling(sampler, particles, particle_length, resample_interval):
-    # Check if the sampler is initialized
-    if(sampler is None):
-        raise ValueError("Sampler must be initialized before enabling SMC sampling.")
-    
-    # Check to make sure the LLM engine is outputing logits/logprobs
-    if(sampler.sampling_params.top_k <= 0):
-        raise ValueError("LLM engine top_k must be set to a positive integer to enable SMC sampling.")
-    
-    # Set the SMC sampling parameters
-    sampler.smc_sampling_params = SMC_Sampling_Params(
-        particles=particles,
-        particle_length=particle_length,
-        resample_interval=resample_interval
-    )
-
-    print(f"SMC Sampling Enabled: Logits Consider = {sampler.sampling_params.top_k}, Particles = {particles}, Particle Length = {particle_length}, Resample Interval = {resample_interval}, Temperature = {sampler.sampling_params.temperature}")
