@@ -98,7 +98,7 @@ def SequentialMonteCarlo(
             # Update finished flags
             finished = finished[indices]
 
-             # if all particles finished, we can stop early
+            # if all particles finished, we can stop early
             if finished.all():
                 break
 
