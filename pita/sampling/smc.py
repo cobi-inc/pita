@@ -93,7 +93,7 @@ def SequentialMonteCarlo(
                 size=sampler.smc_sampling_params.num_particles, 
                 p=normalized_weights
             )
-            # Set the new particle array accourding to resampled indices
+            # Set the new particle array according to resampled indices
             particles = [particles[idx] for idx in indices]
             # Assign the cum_logit_weights to the corresponding cum_log_weights of the resampled particles
             cum_logit_weights = cum_logit_weights[indices]
