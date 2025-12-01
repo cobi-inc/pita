@@ -1,7 +1,9 @@
 #PITA Libraries
 from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
 from pita.sampling.power_sample import enable_power_sampling, power_sampling
+from pita.sampling.smc import enable_smc_sampling, SequentialMonteCarlo
 from pita.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
+
 
 def test_pita_lib(
     engine_name,
@@ -14,6 +16,7 @@ def test_pita_lib(
     logits_per_token = None,
     en_base_test = False, 
     en_power_sampling_test = False,
+    en_smc_sampling_test = False,
     en_best_of_sampling_test = False
 ):
     
@@ -151,6 +154,37 @@ def test_pita_lib(
             log_file.write(f"Index Proposals: {index_proposals}\n")
             log_file.write("\n")
 
+    # Test Sequential Monte Carlo Sampling
+    if(en_smc_sampling_test):
+        # Set max tokens for sampling
+        sampler.sampling_params.max_tokens = 500
+
+        # Sequential Monte Carlo Sampling Hyperparameters
+        num_particles = 5
+        tokens_per_step = 32
+        stop_on_eos = True
+
+        # Enable Sequential Monte Carlo Sampling
+        enable_smc_sampling(
+            sampler,
+            num_particles=num_particles,
+            tokens_per_step=tokens_per_step,
+            stop_on_eos=stop_on_eos
+        )
+
+        # Test Sequential Monte Carlo Sampling
+        output = SequentialMonteCarlo(
+            sampler,
+            prompt
+        )
+
+        with open(f"test_results_{_engine_name}.log", "a") as log_file:
+            log_file.write(f"Sequential Monte Carlo Sampling Test Output: \n{output}\n")
+            log_file.write(f"Number of Particles: {num_particles}\n")
+            log_file.write(f"Tokens Per Step: {tokens_per_step}\n")
+            log_file.write(f"Stop on EOS: {stop_on_eos}\n")
+            log_file.write("\n")
+
     # Test Best Of Sampling
     if(en_best_of_sampling_test):
         # Set Best Of Sampling Parameters
@@ -185,17 +219,19 @@ def test_pita_lib(
     
 if __name__ == "__main__":
     # Test PITA Library with vLLM
-    # test_pita_lib(
-    #     engine_name = "vllm",
-    #     en_base_test = True,
-    #     en_power_sampling_test = True,
-    #     en_best_of_sampling_test = True
-    # )
-
-    # Test PITA Library with llama.cpp
     test_pita_lib(
         engine_name = "vllm",
         en_base_test = True,
         en_power_sampling_test = True,
+        en_smc_sampling_test = True,
         en_best_of_sampling_test = True
     )
+
+    # Test PITA Library with llama.cpp
+    # test_pita_lib(
+    #     engine_name = "llama_cpp",
+    #     en_base_test = True,
+    #     en_power_sampling_test = True,
+    #     en_smc_sampling_test = True,
+    #     en_best_of_sampling_test = True
+    # )
