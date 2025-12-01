@@ -57,7 +57,7 @@ def decode(system_string):
             if not (parts[i+1].isdigit() and parts[i+2].isdigit() and parts[i+3].isdigit()):
                 raise ValueError(f"Invalid parameters for SMC: expected 3 integers after 'SMC', got '{parts[i+1]}', '{parts[i+2]}', '{parts[i+3]}'.")
             
-            # If valide, create the SMC_Sampling_Params object
+            # If valid, create the SMC_Sampling_Params object
             smc_params = SequentialMonteCarlo_Params(
                 num_particles=int(parts[i+1]),
                 tokens_per_step=int(parts[i+2]),
