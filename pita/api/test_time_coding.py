@@ -42,7 +42,10 @@ def decode(system_string):
     while i < len(parts):
         # Check to see if the test time coding parts are present
         if parts[i] == "PS" :
-            # Check if the next 3 parts are valid digits (non-negative integers)
+            # Check if there are enough parts remaining
+            if i + 2 >= len(parts):
+                raise ValueError("Invalid system string format: 'PS' requires 2 integer parameters, but string is truncated.")
+            # Check if the next 2 parts are valid digits (non-negative integers)
             if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
                 raise ValueError(f"Invalid parameters for Power Sampling: expected 2 integers after 'PS', got '{parts[i+1]}', '{parts[i+2]}'.")
             
@@ -53,6 +56,9 @@ def decode(system_string):
             )
             i += 3
         elif parts[i] == "SMC":
+            # Check if there are enough parts remaining
+            if i + 3 >= len(parts):
+                raise ValueError("Invalid system string format: 'SMC' requires 3 integer parameters, but string is truncated.")
             # Check if the next 3 parts are valid digits (non-negative integers)
             if not (parts[i+1].isdigit() and parts[i+2].isdigit() and parts[i+3].isdigit()):
                 raise ValueError(f"Invalid parameters for SMC: expected 3 integers after 'SMC', got '{parts[i+1]}', '{parts[i+2]}', '{parts[i+3]}'.")
@@ -65,6 +71,9 @@ def decode(system_string):
             )
             i += 4
         elif parts[i] == "BO":
+            # Check if there are enough parts remaining
+            if i + 2 >= len(parts):
+                raise ValueError("Invalid system string format: 'BO' requires 2 integer parameters, but string is truncated.")
             # Check if the next 2 parts are valid digits (non-negative integers)
             if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
                 raise ValueError(f"Invalid parameters for Best Of Sampling: expected 2 integers after 'BO', got '{parts[i+1]}', '{parts[i+2]}'.")
