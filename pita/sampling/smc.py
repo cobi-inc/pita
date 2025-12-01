@@ -1,6 +1,5 @@
 # Standard Libraries
 import os
-import random
 
 # Math Libraries
 import numpy as np
