@@ -61,6 +61,8 @@ async def startup_event():
         max_logprobs = MAX_LOGPROBS,
         logits_per_token = LOGITS_PER_TOKEN
     ) 
+    
+    sampler.sampling_params.max_tokens = 1000
 
     SERVER_STATE["sampler"] = sampler
     print("PITA Server Ready.")
@@ -92,7 +94,6 @@ async def create_completion(request: ChatCompletionRequest):
     
     # Grab the Sampler from the Server State
     sampler = SERVER_STATE["sampler"]
-
 
     # Check the max tokens the user want to generate
     # Handle optional max_tokens (default to sampler's token_count if None)
@@ -133,6 +134,7 @@ async def create_completion(request: ChatCompletionRequest):
             sampler=sampler,
             prompt=prompt
         )
+        
     elif(smc_params is not None):
         pass
     else:
