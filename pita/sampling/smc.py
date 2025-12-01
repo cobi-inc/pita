@@ -29,7 +29,7 @@ def enable_smc_sampling(
 ) -> None:
     # Check if the sampler is initialized
     if(sampler is None):
-        raise ValueError("Sampler must be initialized before enabling power sampling.")
+        raise ValueError("Sampler must be initialized before enabling SMC sampling.")
     
     sampler.smc_sampling_params = SequentialMonteCarlo_Params(
         num_particles=num_particles,
