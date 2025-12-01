@@ -49,7 +49,7 @@ def decode(system_string):
             if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
                 raise ValueError(f"Invalid parameters for Power Sampling: expected 2 integers after 'PS', got '{parts[i+1]}', '{parts[i+2]}'.")
             
-            # If valide, create the Power_Sampling_Params object
+            # If valid, create the Power_Sampling_Params object
             ps_params = Power_Sampling_Params(
                 block_size=int(parts[i+1]),
                 MCMC_steps=int(parts[i+2])
