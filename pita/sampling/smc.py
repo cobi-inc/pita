@@ -1,5 +1,4 @@
 # Standard Libraries
-import os
 
 # Math Libraries
 import numpy as np
