@@ -15,44 +15,6 @@ from pita.utils.constants import REDIS_HOST, REDIS_PORT
 # Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
 def sample(
         self, 
-        context : str | list[str], # The input context string to generate from
-        max_new_tokens: int, # The maximum number of new tokens to generate
-        **kwargs # Additional keyword arguments passed to the vLLM generate function
-    ):
-
-    # Update the max tokens if needed
-    if(self.sampling_params.engine_params.max_tokens != max_new_tokens):
-        self.sampling_params.engine_params.max_tokens = max_new_tokens
-
-    # Generate a new response from the LLM
-    llm_output = self.llm.generate(
-        context, 
-        sampling_params=self.sampling_params.engine_params, 
-        **kwargs
-    )
-
-    # Handle both single and batched inputs
-    if isinstance(context, str):
-        # Single prompt - original behavior
-        tokens = llm_output[0].outputs[0].token_ids
-        top_k_logits = np.array([[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs])
-        chosen_token_logit = np.array([llm_output[0].outputs[0].logprobs[i][tokens[i]].logprob for i in range(len(tokens))])
-    else:
-        # Batched prompts - return lists of results per sequence
-        tokens = [output.outputs[0].token_ids for output in llm_output]
-        top_k_logits = [
-            np.array([[obj.logprob for obj in position_dict.values()] for position_dict in output.outputs[0].logprobs])
-            for output in llm_output
-        ]
-        chosen_token_logit = [
-            np.array([output.outputs[0].logprobs[i][output.outputs[0].token_ids[i]].logprob for i in range(len(output.outputs[0].token_ids))])
-            for output in llm_output
-        ]
-    # Returns the generated token_ids, the chosen token logit/logprob, and the top_k logits/logprobs
-    return tokens, chosen_token_logit, top_k_logits
-
-def sample_logits(
-        self, 
         context: str | list[str], # The input context string to generate from
         max_new_tokens: int | list[int], # The maximum number of new tokens to generate
         **kwargs # Additional keyword arguments passed to the vLLM generate function
