@@ -147,6 +147,7 @@ def sliding_window_power_sample(sampler: AutoregressiveSampler, prompt):
             #Generate proposed block of tokens
             proposed_tokens_list, proposed_token_logprob_list, proposed_logprobs_list = sampler.sample(prompt + token_history + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
             
+
             # Record how many tokens have been generated
             total_tokens_generated += len(proposed_tokens_list)
 
@@ -246,6 +247,8 @@ def power_sampling(
             #Generate proposed block of tokens
             proposed_tokens_list, proposed_chosen_token_logit_list, proposed_top_k_logits_list = sampler.sample(prompt + sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
             
+            print("proposed_logprobs_list:", proposed_top_k_logits_list[1])
+            print("proposed_chosen_token_logit_list:", proposed_chosen_token_logit_list)
             # Record how many tokens have been generated
             total_tokens_generated += len(proposed_tokens_list)
 

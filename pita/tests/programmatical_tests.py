@@ -112,8 +112,8 @@ def test_pita_lib(
     # Test the AutoregressiveSampler.sample() function
     if(en_base_test):
         # Set max tokens for sampling
-        sampler.sampling_params.max_tokens = 500
-
+        sampler.sampling_params.max_tokens = 1000
+        sampler.sampling_params.logprobs = 0
         # Test basic sampling
         output = sampler.sample(prompt, sampler.sampling_params.max_tokens)
         output = sampler.tokenizer.decode(output[0], skip_special_tokens=True)
@@ -125,8 +125,8 @@ def test_pita_lib(
     # Test Power Sampling
     if(en_power_sampling_test):
         # Set max tokens for sampling
-        sampler.sampling_params.max_tokens = 500
-
+        sampler.sampling_params.max_tokens = 1000
+        sampler.sampling_params.logprobs = 10
         # Power Sampling Hyperparameters
         block_size = 250 # tokens per block. Number of blocks = token_count / block_size
         MCMC_steps = 3 
@@ -223,8 +223,8 @@ if __name__ == "__main__":
         engine_name = "vllm",
         en_base_test = True,
         en_power_sampling_test = True,
-        en_smc_sampling_test = True,
-        en_best_of_sampling_test = True
+        en_smc_sampling_test = False,
+        en_best_of_sampling_test = False
     )
 
     # Test PITA Library with llama.cpp

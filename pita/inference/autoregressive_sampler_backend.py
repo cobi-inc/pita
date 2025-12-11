@@ -22,6 +22,11 @@ def _get_llama_cpp_backend():
 
 # Utils
 from pita.utils.system_utils import detect_model_type
+import time
+from pita.utils.constants import REDIS_HOST, REDIS_PORT
+
+# Memory Management
+import redis
 
 # Engine-specific parameter mappings
 # llama_cpp does not have a separate engine_params class, so it is not included here
@@ -169,6 +174,7 @@ def create_autoregressive_sampler(
     max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
     max_logprobs = None, # Number of logits/logprobs to store per output token
     logits_per_token = None, # Number of descending ranked logits to return per output token
+    normalization_constants = False, # Whether to return softmax normalization constants 
     trust_remote_code = True, # Whether to trust remote code when loading the model
     sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
     **kwargs # Additional keyword arguments passed to the backend LLM creation function
@@ -180,6 +186,7 @@ def create_autoregressive_sampler(
     model_type = detect_model_type(model)
 
     # Enable the use of logits if logits_per_token is set
+    # This is important as the engine cannot be set to return logits after it is initialized
     if(logits_per_token is not None):
         logits = True
         prob_count = logits_per_token
@@ -194,8 +201,9 @@ def create_autoregressive_sampler(
         # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
         # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clarity
         if(logits == True):
-            print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM.")
+            print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM max_logprobs engine parameter and in vLLM's logprobs Sampling_Params.")
             prob_count = logits_per_token
+            max_logprobs = logits_per_token
         elif(logits == False and max_logprobs is not None):
             print("vLLM does not output both logits and logprobs separately. max_logprobs is set while logits_per_token is not set. Defaulting to using and returning max_logprobs for vLLM.")
             prob_count = max_logprobs
@@ -211,12 +219,20 @@ def create_autoregressive_sampler(
             max_logprobs = prob_count,
             logits = logits,
             **kwargs
-        )
+        )  
+        
         # Set the autoregressive sampler function
-        autoregressive_sampler = backend.sample
+        autoregressive_sampler = backend.sample_logits
+
         # Create the engine parameters used for the completion function in vLLM
         engine_params = backend.create_vllm_engine_params()
-    
+
+        # Set the redis client for the LogitsLoggingProcessor
+        # Add the normalization_constants and normalization_constants_temp_scaled lists to extra_args
+        if(normalization_constants):
+            engine_params.extra_args = {}
+            engine_params.extra_args["req_id"] = "my_request_" + str(time.time())
+        
     elif(engine == "llama_cpp"):
         backend = _get_llama_cpp_backend()
         # Create the LLM object
@@ -244,6 +260,8 @@ def create_autoregressive_sampler(
     else:
         tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
 
+    print("Engine Params Extra Args:", engine_params.extra_args if engine_params is not None else "N/A")
+
     # Create the Autoregressive Sampler object
     sampler = AutoregressiveSampler(
         engine=engine,
@@ -256,8 +274,8 @@ def create_autoregressive_sampler(
             engine_params = engine_params, 
             logprobs = max_logprobs,
             logits_per_token = logits_per_token
+            
         ) if sampling_params is None else sampling_params
     )
-    print("Model loaded successfully. Sampling parameters set to default values.")
 
     return sampler
