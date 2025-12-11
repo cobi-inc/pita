@@ -222,7 +222,7 @@ def create_autoregressive_sampler(
         )  
         
         # Set the autoregressive sampler function
-        autoregressive_sampler = backend.sample_logits
+        autoregressive_sampler = backend.sample
 
         # Create the engine parameters used for the completion function in vLLM
         engine_params = backend.create_vllm_engine_params()
