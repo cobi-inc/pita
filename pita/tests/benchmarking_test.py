@@ -23,13 +23,13 @@ if __name__ == "__main__":
 
     # LLM parameters
     if(engine_name == "vllm"):
-        _model_name = "Qwen/Qwen3-4B-AWQ"
+        _model_name = "Qwen/Qwen2.5-7B"
         _dtype = "auto"
         _tokenizer_path = None
-        _gpu_memory_utilization = 0.25
+        _gpu_memory_utilization = 0.85
         _max_model_len = 2048
-        _max_logprobs = 2
-        _logits_per_token = 2
+        _max_logprobs = 0
+        _logits_per_token = 0
         _normalization_constant = True
 
     elif(engine_name == "llama_cpp"):

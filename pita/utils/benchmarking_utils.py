@@ -173,7 +173,6 @@ def benchmark_sampling(
 
             # Setup Logging file paths
             if(power_sampling_logging != False):
-                power_sampling_logging_path = os.path.join(power_sampling_logging_path, f"question_{question_index}")
                 os.makedirs(power_sampling_logging_path, exist_ok=True)
 
             # Send the prompt to the sliding window power sampling function
