@@ -1,24 +1,26 @@
 #PITA Libraries
-from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pita.inference.LLM_backend import create_autoregressive_sampler
 from pita.sampling.power_sample import enable_power_sampling, power_sampling
 from pita.sampling.smc import enable_smc_sampling, SequentialMonteCarlo
 from pita.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
 
+#Other Libraries
+import time
 
 def test_pita_lib(
     engine_name,
-    model_name = None,
-    dtype = None,
-    tokenizer_path = None,
-    gpu_memory_utilization = None,
-    max_model_len = None,
-    max_logprobs = None,
-    logits_per_token = None,
-    en_base_test = False, 
-    en_power_sampling_test = False,
-    en_smc_sampling_test = False,
-    en_best_of_sampling_test = False
-):
+    model_name: str = None,
+    dtype: str = None,
+    tokenizer_path: str = None,
+    gpu_memory_utilization: float = None,
+    max_model_len: int = None,
+    max_logprobs: int = None,
+    logits_per_token: int = None,
+    en_base_test : bool = False, 
+    en_power_sampling_test: bool = False,
+    en_smc_sampling_test: bool = False,
+    en_best_of_sampling_test: bool = False
+) -> None:
     
     # Create the LLM engine and sampler
     # LLM parameters
@@ -29,10 +31,11 @@ def test_pita_lib(
             _model_name = "Qwen/Qwen3-4B-AWQ"
             _dtype = "auto"
             _tokenizer_path = None
-            _gpu_memory_utilization = 0.85
+            _gpu_memory_utilization = 0.25
             _max_model_len = 2048
-            _max_logprobs = 100
-            _logits_per_token = 100
+            _max_logprobs = 2
+            _logits_per_token = 2
+            _normalization_constant = True
         else:
             print(f"Using user provided model {model_name} for vLLM. Make sure all engine parameters are set correctly.")
             _model_name = model_name
@@ -42,6 +45,7 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
+            _normalization_constant = True
 
     elif(engine_name == "llama_cpp"):
         _engine_name = "llama_cpp"
@@ -54,6 +58,8 @@ def test_pita_lib(
             _max_model_len = 2048
             _max_logprobs = None
             _logits_per_token = 100
+            _normalization_constant = True
+
         else:
             print(f"Using user provided model {model_name} for llama_cpp. Make sure all engine parameters are set correctly.")
             _model_name = model_name
@@ -63,7 +69,8 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
-        
+            _normalization_constant = True
+
     else:
         raise ValueError(f"Engine {engine_name} not supported for testing.")
     #Initialize Autoregressive Sampler
@@ -75,7 +82,8 @@ def test_pita_lib(
         gpu_memory_utilization=_gpu_memory_utilization, 
         max_model_len=_max_model_len, 
         max_logprobs = _max_logprobs,
-        logits_per_token = _logits_per_token
+        logits_per_token = _logits_per_token,
+        normalization_constants = _normalization_constant
     )
 
     # Message to test model and tokenizer with
@@ -112,8 +120,8 @@ def test_pita_lib(
     # Test the AutoregressiveSampler.sample() function
     if(en_base_test):
         # Set max tokens for sampling
-        sampler.sampling_params.max_tokens = 500
-
+        sampler.sampling_params.max_tokens = 1000
+        sampler.sampling_params.logprobs = 0
         # Test basic sampling
         output = sampler.sample(prompt, sampler.sampling_params.max_tokens)
         output = sampler.tokenizer.decode(output[0], skip_special_tokens=True)
@@ -124,12 +132,13 @@ def test_pita_lib(
 
     # Test Power Sampling
     if(en_power_sampling_test):
-        # Set max tokens for sampling
-        sampler.sampling_params.max_tokens = 500
+        # Set sampling parameters
+        sampler.sampling_params.max_tokens = 1000
+        sampler.sampling_params.temperature = 0.25
 
         # Power Sampling Hyperparameters
         block_size = 250 # tokens per block. Number of blocks = token_count / block_size
-        MCMC_steps = 3 
+        MCMC_steps = 5 
 
         # Enable Power Sampling
         enable_power_sampling(
@@ -137,21 +146,35 @@ def test_pita_lib(
             block_size, # tokens per block. Number of blocks = token_count / block_size
             MCMC_steps, # MCMC steps per block
         )
+
+        # Log Power Sampling parameters
+        with open(f"test_results_{_engine_name}.log", "a") as log_file:
+            log_file.write(f"Power Sampling Parameters:\n")
+            log_file.write(f"Max Tokens: {sampler.sampling_params.max_tokens}\n")
+            log_file.write(f"Temperature: {sampler.sampling_params.temperature}\n")
+            log_file.write(f"Block Size: {block_size}\n")
+            log_file.write(f"MCMC Steps: {MCMC_steps}\n")
+
+        # Measure Time take for power sampling with logging
+        start_time = time.time()
+
         # Test power sampling
-        output, acceptances, block_acceptances, index_proposals, total_generated = power_sampling(
+        output = power_sampling(
             sampler, # Autoregressive Sampler Object
-            prompt # Template prompt
+            prompt, # Template prompt
+            logging = True # Enable logging to CSV file
         )
+
+        # Calculate time taken and user tokens per second
+        end_time = time.time()
+        time_taken = end_time - start_time
+        tokens_generated = len(sampler.tokenizer.tokenize(output))
+        user_tokens_per_second = tokens_generated / time_taken
 
         with open(f"test_results_{_engine_name}.log", "a") as log_file:
             log_file.write(f"Power Sampling Test Output: \n{output}\n")
-            log_file.write(f"Total Output Tokens: {sampler.sampling_params.max_tokens}\n")
-            log_file.write(f"Block Size: {block_size}\n")
-            log_file.write(f"MCMC Steps: {MCMC_steps}\n")
-            log_file.write(f"Total Generated Tokens: {total_generated}\n")
-            log_file.write(f"Acceptances: {acceptances}\n")
-            log_file.write(f"Block Acceptances: {block_acceptances}\n")
-            log_file.write(f"Index Proposals: {index_proposals}\n")
+            log_file.write(f"Power Sampling Log File: power_sampling_log.csv\n")
+            log_file.write(f"User Token Per Second Estimate (Includes overhead from logging): {user_tokens_per_second}\n")
             log_file.write("\n")
 
     # Test Sequential Monte Carlo Sampling
@@ -212,9 +235,7 @@ def test_pita_lib(
             log_file.write("\n")
 
     # Shutdown the sampler to free resources
-    if(engine_name == "vllm"):
-        sampler.llm.close()
-    elif(engine_name == "llama_cpp"):
+    if(engine_name == "llama_cpp"):
         sampler.llm.close()
     
 if __name__ == "__main__":
@@ -223,8 +244,8 @@ if __name__ == "__main__":
         engine_name = "vllm",
         en_base_test = True,
         en_power_sampling_test = True,
-        en_smc_sampling_test = True,
-        en_best_of_sampling_test = True
+        en_smc_sampling_test = False,
+        en_best_of_sampling_test = False
     )
 
     # Test PITA Library with llama.cpp

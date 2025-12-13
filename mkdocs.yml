@@ -1,0 +1,45 @@
+site_name: Pita Documentation
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - API:
+      - Template: api/api_template.md
+      - Serve: api/serve.md
+      - Test Time Coding: api/test_time_coding.md
+    - Inference:
+      - Autoregressive Sampler: inference/autoregressive_sampler_backend.md
+      - DeepSpeed Backend: inference/deepspeed_backend.md
+      - Llama CPP Backend: inference/llama_cpp_backend.md
+      - TensorRT Backend: inference/tensorRT_backend.md
+      - Transformers Backend: inference/transformers_backend.md
+      - vLLM Backend: inference/vllm_backend.md
+      - vLLM Logits Processor: inference/vllm_logits_processor.md
+    - Sampling:
+      - Best Of: sampling/best_of.md
+      - Power Sample: sampling/power_sample.md
+      - SMC: sampling/smc.md
+    - Utils:
+      - Benchmarking: utils/benchmarking_utils.md
+      - Constants: utils/constants.md
+      - Parse Utils: utils/parse_utils.md
+      - System Utils: utils/system_utils.md
+      - Grading:
+        - Math:
+          - Eval Math: utils/grading_utils/math/eval_math.md
+          - Math Grader: utils/grading_utils/math/math_grader.md
+          - Math Normalize: utils/grading_utils/math/math_normalize.md
+          - Parse Utils: utils/grading_utils/math/parse_utils.md
