@@ -97,7 +97,6 @@ class LogitsLoggingProcessor(LogitsProcessor):
                 # Store as JSON-like string with all normalization info
                 data = f"{norm_val},{norm_temp_val},{max_val}"
                 pipe.rpush(req_id, data)
-                print(f"Pushed norm_constant={norm_val}, norm_temp_scaled={norm_temp_val}, max_logit={max_val} for req_id {req_id}")
                 found_any = True
             else:
                 print(f"row_idx {row_idx} >= batch size {logits.size(0)}, skipping")

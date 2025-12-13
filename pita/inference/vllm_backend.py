@@ -19,17 +19,22 @@ def sample(
         max_new_tokens: int | list[int], # The maximum number of new tokens to generate
         **kwargs # Additional keyword arguments passed to the vLLM generate function
     ) -> tuple[
-            list[int] | list[list[int]], 
-            list[float] | list[list[float]], 
-            list[float] | list[list[float]], 
-            list[float] | list[list[float]], 
-            list[float] | list[list[float]]
+            list[int] | list[list[int]], # The generated token IDs
+            list[float] | list[list[float]], # The top_k logits (if logits_per_token is set) or None
+            list[float] | list[list[float]], # The top_k logprobs (if logprobs is set) or None
+            list[float] | list[list[float]], # The log(Normalization Constants - Unprocessed) for each token in the generated sequence
+            list[float] | list[list[float]]  # The log(Normalization Constants - Temperature Processed) for each token in the generated sequence
         ]:
         
     # Update the max tokens if needed
     if(self.sampling_params.engine_params.max_tokens != max_new_tokens):
         self.sampling_params.engine_params.max_tokens = max_new_tokens
     
+    # Set the sampling_params logprobs to logits_per_token if needed. Always assume the users when using vLLM wants logits if logits_per_token is sets
+    if(self.sampling_params.logits_per_token is not None and self.sampling_params.logprobs is not None):
+        if(self.sampling_params.logits_per_token > self.sampling_params.logprobs ):
+            self.sampling_params.logprobs = self.sampling_params.logits_per_token
+
     # Generate a new response from the LLM
     llm_output = self.llm.generate(
         context, 
@@ -37,14 +42,16 @@ def sample(
         **kwargs
     )
     
-    print(llm_output)
-
     # Get the generated tokens
     tokens = llm_output[0].outputs[0].token_ids
 
     # Extract all logits/logprobs for each position (list of lists to handle variable lengths)
-    logits_logprobs = [[obj.logprob for obj in position_dict.values()] for position_dict in llm_output[0].outputs[0].logprobs]
-    
+    # Create a 2D array of Nones to hold the logits/logprobs
+    logits_logprobs = np.full((len(llm_output[0].outputs[0].logprobs), 1 + (self.sampling_params.logits_per_token if self.sampling_params.logits_per_token is not None else self.sampling_params.logprobs)), None)    
+    for token_idx in range(len(tokens)):
+        for logit_idx, values in enumerate(llm_output[0].outputs[0].logprobs[token_idx].values()):
+            logits_logprobs[token_idx][logit_idx] = values.logprob
+
     if(self.sampling_params.logits_per_token is not None):
         top_k_logits = logits_logprobs
         top_k_logprobs = None
@@ -55,7 +62,7 @@ def sample(
     # Get the Normalization Constants from Redis
     unprocessed_normalization_constant = []
     temp_processed_normalization_constant = []
-    if (hasattr(self.sampling_params.engine_params, 'extra_args') and hasattr(self.sampling_params.engine_params.extra_args, 'req_id')  ):
+    if (hasattr(self.sampling_params.engine_params, 'extra_args') and 'req_id' in self.sampling_params.engine_params.extra_args):        
         # Set the req_id used to store the normalization constants in Redis
         req_id = self.sampling_params.engine_params.extra_args["req_id"]
 
@@ -77,7 +84,6 @@ def sample(
     # Returns the generated token_ids, the chosen token logit/logprob, the top_k logits/logprobs, and the normalization constants
     return tokens, top_k_logits, top_k_logprobs, unprocessed_normalization_constant, temp_processed_normalization_constant
 
-
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
         model_name,
@@ -95,6 +101,7 @@ def create_LLM_object(
         logprobs_mode = 'raw_logits'
         # Enable the Redis logging logits processor by adding it to the kwargs
         kwargs["logits_processors"] = [LogitsLoggingProcessor]
+        print("Added LogitsLoggingProcessor to the vLLM LLM object for logging logits.")
 
     else:
         # Default to processed logprobs if the user does not want logits

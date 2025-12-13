@@ -4,7 +4,7 @@
 import numpy as np
 
 # Custom Libraries
-from pita.inference.autoregressive_sampler_backend import AutoregressiveSampler
+from pita.inference.LLM_backend import AutoregressiveSampler
 
 # SMC Class
 class SequentialMonteCarlo_Params:

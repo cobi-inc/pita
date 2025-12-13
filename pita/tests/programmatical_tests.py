@@ -1,5 +1,5 @@
 #PITA Libraries
-from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
+from pita.inference.LLM_backend import create_autoregressive_sampler
 from pita.sampling.power_sample import enable_power_sampling, power_sampling
 from pita.sampling.smc import enable_smc_sampling, SequentialMonteCarlo
 from pita.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
@@ -29,10 +29,11 @@ def test_pita_lib(
             _model_name = "Qwen/Qwen3-4B-AWQ"
             _dtype = "auto"
             _tokenizer_path = None
-            _gpu_memory_utilization = 0.85
+            _gpu_memory_utilization = 0.25
             _max_model_len = 2048
-            _max_logprobs = 100
-            _logits_per_token = 100
+            _max_logprobs = 2
+            _logits_per_token = 2
+            _normalization_constant = True
         else:
             print(f"Using user provided model {model_name} for vLLM. Make sure all engine parameters are set correctly.")
             _model_name = model_name
@@ -42,6 +43,7 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
+            _normalization_constant = True
 
     elif(engine_name == "llama_cpp"):
         _engine_name = "llama_cpp"
@@ -54,6 +56,8 @@ def test_pita_lib(
             _max_model_len = 2048
             _max_logprobs = None
             _logits_per_token = 100
+            _normalization_constant = True
+
         else:
             print(f"Using user provided model {model_name} for llama_cpp. Make sure all engine parameters are set correctly.")
             _model_name = model_name
@@ -63,7 +67,8 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
-        
+            _normalization_constant = True
+
     else:
         raise ValueError(f"Engine {engine_name} not supported for testing.")
     #Initialize Autoregressive Sampler
@@ -75,7 +80,8 @@ def test_pita_lib(
         gpu_memory_utilization=_gpu_memory_utilization, 
         max_model_len=_max_model_len, 
         max_logprobs = _max_logprobs,
-        logits_per_token = _logits_per_token
+        logits_per_token = _logits_per_token,
+        normalization_constants = _normalization_constant
     )
 
     # Message to test model and tokenizer with
@@ -126,10 +132,9 @@ def test_pita_lib(
     if(en_power_sampling_test):
         # Set max tokens for sampling
         sampler.sampling_params.max_tokens = 1000
-        sampler.sampling_params.logprobs = 10
         # Power Sampling Hyperparameters
         block_size = 250 # tokens per block. Number of blocks = token_count / block_size
-        MCMC_steps = 3 
+        MCMC_steps = 5 
 
         # Enable Power Sampling
         enable_power_sampling(
@@ -213,7 +218,7 @@ def test_pita_lib(
 
     # Shutdown the sampler to free resources
     if(engine_name == "vllm"):
-        sampler.llm.close()
+        sampler.llm.client.shutdown()
     elif(engine_name == "llama_cpp"):
         sampler.llm.close()
     

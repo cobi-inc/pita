@@ -230,6 +230,7 @@ def create_autoregressive_sampler(
         # Set the redis client for the LogitsLoggingProcessor
         # Add the normalization_constants and normalization_constants_temp_scaled lists to extra_args
         if(normalization_constants):
+            print("Enabling normalization constants in engine parameters extra_args.")
             engine_params.extra_args = {}
             engine_params.extra_args["req_id"] = "my_request_" + str(time.time())
         
