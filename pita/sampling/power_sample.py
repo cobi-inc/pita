@@ -36,8 +36,8 @@ def _get_llama_cpp_backend():
 class Power_Sampling_Params:
     def __init__(
         self, 
-        block_size=50, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
-        MCMC_steps=5 # Number of MCMC steps to perform per block. More steps = better quality but slower
+        block_size=192, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        MCMC_steps=8 # Number of MCMC steps to perform per block. More steps = better quality but slower
     ):
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps

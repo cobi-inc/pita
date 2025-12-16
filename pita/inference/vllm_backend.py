@@ -12,7 +12,12 @@ import numpy as np
 from pita.utils.constants import REDIS_HOST, REDIS_PORT
 
 # Take in the context (string) and max_new_tokens (int)
-# Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
+# Returns:
+#   - The generated token IDs
+#   - The top_k logits (if logits_per_token is set) or None
+#   - The top_k logprobs (if logprobs is set) or None
+#   - The log(Normalization Constants - Unprocessed) for each token in the generated sequence
+#   - The log(Normalization Constants - Temperature Processed) for each token in the generated sequence
 def sample(
         self, 
         context: str | list[str], # The input context string to generate from
