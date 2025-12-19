@@ -1,7 +1,6 @@
 # Math Libraries
 import numpy as np
 import numpy.typing as npt
-from typing import Tuple
 
 # process the top_k_probs to find just the probs of the chosen tokens
 # can be either the logits or logprobs outputted by the LLM inference engine
