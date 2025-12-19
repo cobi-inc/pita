@@ -83,7 +83,7 @@ def power_sampling_logprobability_metric(
 ) -> list[float]:
     # Check if you have the logits
     if(top_k_logits is not None):
-        # Find the power sampling log probabilities from teh logits and unprocessed normalization constant
+        # Find the power sampling log probabilities from the logits and unprocessed normalization constant
         logits_list = process_top_k_probs(top_k_logits, tokens)
         probability_list = power_sampling_logprobs(logits_list, unprocessed_normalization_constant, sampler.sampling_params.temperature)
     else: 
