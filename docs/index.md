@@ -4,7 +4,7 @@
 
 ## Key Features
 
-- **Training-Free Reasoning**: enhance model performance without additional training.
+- **Training-Free Reasoning**: Enhance model performance without additional training.
 - **Multiple Backends**: Support for vLLM, DeepSpeed, Llama.cpp, and more.
 - **Advanced Sampling**: Implementations of Power Sampling, Self-Consistency, and other strategies.
 
