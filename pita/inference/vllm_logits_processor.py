@@ -104,7 +104,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
         # Calculate the Normalization Constants if normalization_constants = True or entropy = True
         for(req_id, params) in self.active_req_ids.items():
             if(params.normalization_constants):
-                # Calculate the Normalization Constants if requireds
+                # Calculate the Normalization Constants if required
                 log_norm_constant[req_id] = torch.logsumexp(logits[req_id], dim=-1)
                 log_norm_constant_temp_scaled[req_id] = torch.logsumexp(logits[req_id] / params.temperature, dim=-1)                
             #If entropy = True, calculate the entropy
