@@ -10,9 +10,15 @@ import redis
 # Utilities
 import numpy as np
 from pita.utils.constants import REDIS_HOST, REDIS_PORT
+from pita.utils.redis_manager import RedisManager
 
 # Take in the context (string) and max_new_tokens (int)
-# Returns the generated tokens. the chosen token logprobs, and all the logprobs as lists to the user
+# Returns:
+#   - The generated token IDs
+#   - The top_k logits (if logits_per_token is set) or None
+#   - The top_k logprobs (if logprobs is set) or None
+#   - The log(Normalization Constants - Unprocessed) for each token in the generated sequence
+#   - The log(Normalization Constants - Temperature Processed) for each token in the generated sequence
 def sample(
         self, 
         context: str | list[str], # The input context string to generate from
@@ -60,8 +66,9 @@ def sample(
         top_k_logits = None
 
     # Get the Normalization Constants from Redis
-    unprocessed_normalization_constant = []
-    temp_processed_normalization_constant = []
+    unprocessed_log_normalization_constant = []
+    temp_processed_log_normalization_constant = []
+    entropy = []
     if (hasattr(self.sampling_params.engine_params, 'extra_args') and 'req_id' in self.sampling_params.engine_params.extra_args):        
         # Set the req_id used to store the normalization constants in Redis
         req_id = self.sampling_params.engine_params.extra_args["req_id"]
@@ -78,11 +85,12 @@ def sample(
         # Parse the normalization terms (format: "norm_val,norm_temp_val,max_val")
         for term in normalization_terms:
             parts = term.split(',')
-            unprocessed_normalization_constant.append(float(parts[0]))
-            temp_processed_normalization_constant.append(float(parts[1]))
+            unprocessed_log_normalization_constant.append(float(parts[0]))
+            temp_processed_log_normalization_constant.append(float(parts[1]))
+            entropy.append(float(parts[2]))
 
     # Returns the generated token_ids, the chosen token logit/logprob, the top_k logits/logprobs, and the normalization constants
-    return tokens, top_k_logits, top_k_logprobs, unprocessed_normalization_constant, temp_processed_normalization_constant
+    return tokens, top_k_logits, top_k_logprobs, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy
 
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
@@ -93,20 +101,25 @@ def create_LLM_object(
         max_model_len=2048, 
         max_logprobs=1000, # Controls how many logprobs or logits are stored for each token
         logits=True, 
+        logits_processor=False,
         **kwargs
     ):
 
     if(logits):
         # User wants unprocessed logits output
         logprobs_mode = 'raw_logits'
-        # Enable the Redis logging logits processor by adding it to the kwargs
-        kwargs["logits_processors"] = [LogitsLoggingProcessor]
-        print("Added LogitsLoggingProcessor to the vLLM LLM object for logging logits.")
-
     else:
         # Default to processed logprobs if the user does not want logits
         logprobs_mode = 'processed_logprobs'
-        
+
+    if(logits_processor):
+        # Enable the Redis logging logits processor by adding it to the kwargs
+        kwargs["logits_processors"] = [LogitsLoggingProcessor]
+        RedisManager.start()
+        print("Added LogitsLoggingProcessor to the vLLM LLM object for logging logits.")
+    else:
+        print("LogitsLoggingProcessor not enabled. Logits will not be logged.")
+
     # Initialize VLLM locally for performance (as done in power_sample.py main)
     llm = LLM(model=model_name,
               dtype=dtype,
@@ -142,3 +155,14 @@ def check_vllm_power_sampling_compatibility(sampler):
             f"\nvLLM engine logprobs_mode is set to {sampler.llm.llm_engine.model_config.logprobs_mode}." 
             f"\nThis is done by setting logits=True when creating the LLM object."
                         )
+    
+    # Print all the extra_args of the vLLM SamplingParams
+    print("vLLM SamplingParams extra_args:", sampler.sampling_params.engine_params.extra_args)  
+
+    # Make sure the user has enabled the logits processor
+    if('req_id' not in sampler.sampling_params.engine_params.extra_args):
+        raise ValueError("req_id must be set to use power sampling with vLLM.")
+    
+    # Set the normalization constant in the extra_args of the vLLM SamplingParams to True 
+    sampler.sampling_params.engine_params.extra_args["normalization_constants"] = True
+    print("Enabled normalization constants in vLLM SamplingParams for power sampling.")

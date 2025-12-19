@@ -111,6 +111,8 @@ class Sampling_Params:
         stop_token_ids = None, # Token IDs that stop token generation. Returned output excludes stop tokens
         ignore_eos = False, # Continues generating tokens after EOS token is generated.
         min_tokens = 0, # Minimum Number of tokens to generate per sequence before EOS or stop is considered
+        normalization_constants = None,
+        entropy = None
     ):  
         object.__setattr__(self, 'engine', engine)
         object.__setattr__(self, 'engine_params', engine_params)
@@ -130,6 +132,8 @@ class Sampling_Params:
         object.__setattr__(self, 'stop_token_ids', stop_token_ids)
         object.__setattr__(self, 'ignore_eos', ignore_eos)
         object.__setattr__(self, 'min_tokens', min_tokens)
+        object.__setattr__(self, 'normalization_constants', normalization_constants)
+        object.__setattr__(self, 'entropy', entropy)
 
         # Sync all parameters to engine_params after initialization
         if engine is not None and engine_params is not None:
@@ -174,7 +178,7 @@ def create_autoregressive_sampler(
     max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
     max_logprobs = None, # Number of logits/logprobs to store per output token
     logits_per_token = None, # Number of descending ranked logits to return per output token
-    normalization_constants = False, # Whether to return softmax normalization constants 
+    logits_processor = False, # Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated 
     trust_remote_code = True, # Whether to trust remote code when loading the model
     sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
     **kwargs # Additional keyword arguments passed to the backend LLM creation function
@@ -218,6 +222,7 @@ def create_autoregressive_sampler(
             max_model_len = max_model_len,
             max_logprobs = prob_count,
             logits = logits,
+            logits_processor = logits_processor,
             **kwargs
         )  
         
@@ -229,8 +234,8 @@ def create_autoregressive_sampler(
 
         # Set the redis client for the LogitsLoggingProcessor
         # Add the normalization_constants and normalization_constants_temp_scaled lists to extra_args
-        if(normalization_constants):
-            print("Enabling normalization constants in engine parameters extra_args.")
+        if(logits_processor):
+            print("Enabling logits processing in engine parameters extra_args.")
             engine_params.extra_args = {}
             engine_params.extra_args["req_id"] = "my_request_" + str(time.time())
         

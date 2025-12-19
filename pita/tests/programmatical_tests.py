@@ -1,7 +1,7 @@
 #PITA Libraries
 from pita.inference.LLM_backend import create_autoregressive_sampler
 from pita.sampling.power_sample import enable_power_sampling, power_sampling
-from pita.sampling.smc import enable_smc_sampling, SequentialMonteCarlo
+from pita.sampling.smc import enable_smc_sampling, sequential_monte_carlo
 from pita.sampling.best_of import enable_best_of_sampling, best_of_n_logprob
 
 #Other Libraries
@@ -31,11 +31,11 @@ def test_pita_lib(
             _model_name = "Qwen/Qwen3-4B-AWQ"
             _dtype = "auto"
             _tokenizer_path = None
-            _gpu_memory_utilization = 0.25
+            _gpu_memory_utilization = 0.85
             _max_model_len = 2048
             _max_logprobs = 2
             _logits_per_token = 2
-            _normalization_constant = True
+            _logits_processor = True
         else:
             print(f"Using user provided model {model_name} for vLLM. Make sure all engine parameters are set correctly.")
             _model_name = model_name
@@ -45,7 +45,7 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
-            _normalization_constant = True
+            _logits_processor = True
 
     elif(engine_name == "llama_cpp"):
         _engine_name = "llama_cpp"
@@ -58,7 +58,7 @@ def test_pita_lib(
             _max_model_len = 2048
             _max_logprobs = None
             _logits_per_token = 100
-            _normalization_constant = True
+            _logits_processor = True
 
         else:
             print(f"Using user provided model {model_name} for llama_cpp. Make sure all engine parameters are set correctly.")
@@ -69,7 +69,7 @@ def test_pita_lib(
             _max_model_len = max_model_len
             _max_logprobs = max_logprobs
             _logits_per_token = logits_per_token
-            _normalization_constant = True
+            _logits_processor = True
 
     else:
         raise ValueError(f"Engine {engine_name} not supported for testing.")
@@ -83,7 +83,7 @@ def test_pita_lib(
         max_model_len=_max_model_len, 
         max_logprobs = _max_logprobs,
         logits_per_token = _logits_per_token,
-        normalization_constants = _normalization_constant
+        logits_processor = _logits_processor
     )
 
     # Message to test model and tokenizer with
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     # Test PITA Library with vLLM
     test_pita_lib(
         engine_name = "vllm",
-        en_base_test = True,
+        en_base_test = False,
         en_power_sampling_test = True,
         en_smc_sampling_test = False,
         en_best_of_sampling_test = False
