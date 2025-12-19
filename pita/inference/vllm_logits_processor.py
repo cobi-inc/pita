@@ -116,7 +116,6 @@ class LogitsLoggingProcessor(LogitsProcessor):
         pipe = self.redis_client.pipeline()
         
         found_any = False
-        found_any = False
         for row_idx, params in self.active_req_ids.items():
             req_id = params.req_id
             if row_idx < logits.size(0):
