@@ -1,4 +1,5 @@
 import torch
+from torch.distributions import Categorical
 import redis
 from vllm.v1.sample.logits_processor.interface import (
     LogitsProcessor, 
@@ -7,8 +8,20 @@ from vllm.v1.sample.logits_processor.interface import (
 )
 from vllm.config import VllmConfig
 from typing import Dict, Optional, List
+from dataclasses import dataclass
 
 from pita.utils.constants import REDIS_HOST, REDIS_PORT
+
+@dataclass
+class sampling_params:
+    req_id: str
+    normalization_constants: bool
+    temperature: float
+    entropy: bool
+    entropy_inference: bool
+    gradient_steps: int
+    learning_rate: float
+    delta: float
 
 class LogitsLoggingProcessor(LogitsProcessor):
     def __init__(
@@ -17,7 +30,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
         device: torch.device, 
         is_pin_memory: bool
     ) -> None:
-        self.active_req_ids: Dict[int, str] = {}
+        self.active_req_ids: Dict[int, sampling_params] = {}
         self.redis_client = None
         self.temperature = 1.0  # Default temperature, can be configured per request
 
@@ -43,10 +56,20 @@ class LogitsLoggingProcessor(LogitsProcessor):
         for req_index, params, _, _ in batch_update.added:
             # Debug: Check if extra_args survived the trip
             args_str = str(params.extra_args) if params.extra_args else "None"
-
+            
+            # Update the req_id map
             if params.extra_args and "req_id" in params.extra_args:
                 req_id = params.extra_args["req_id"]
-                self.active_req_ids[req_index] = req_id
+                self.active_req_ids[req_index] = sampling_params(
+                    req_id, 
+                    params.extra_args.get("normalization_constants", False), 
+                    params.temperature, 
+                    params.extra_args.get("entropy", False), 
+                    params.extra_args.get("entropy_inference", False), 
+                    params.extra_args.get("gradient_steps", 0), 
+                    params.extra_args.get("learning_rate", 0.0), 
+                    params.extra_args.get("delta", 0.0)
+                )
             else:
                 print(f"WARNING: No req_id found in extra_args for req_index {req_index}. extra_args: {args_str}. Logits logging will be skipped for this request.")
 
@@ -65,7 +88,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
                 if from_idx in self.active_req_ids:
                     self.active_req_ids[to_idx] = self.active_req_ids[from_idx]
                     del self.active_req_ids[from_idx]
-
+ 
     def apply(self, logits: torch.Tensor) -> torch.Tensor:
         self._ensure_redis()
         
@@ -73,29 +96,32 @@ class LogitsLoggingProcessor(LogitsProcessor):
             print("WARNING: active_req_ids is empty in apply()!")
             return logits
         
-        # Get the max logit (this is what vLLM uses to shift the logits)
-        max_logit = logits.max(dim=-1).values
-        shifted_logits = logits - max_logit.unsqueeze(-1)
-
-        # Calculate normalization constant (LogSumExp) for the current token's distribution
-        # dim=-1 ensures we sum over the vocabulary dimension
-        norm_constant = torch.logsumexp(shifted_logits, dim=-1)
+        # Store the max_logits and shift_logits of each request
+        log_norm_constant = torch.zeros(len(self.active_req_ids), device=logits.device)
+        log_norm_constant_temp_scaled = torch.zeros(len(self.active_req_ids), device=logits.device)
+        entropy = torch.zeros(len(self.active_req_ids), device=logits.device)
         
-        # Scale by temperature if needed
-        norm_constant_temp_scaled = torch.logsumexp(shifted_logits / self.temperature, dim=-1)
+        # Calculate the Normalization Constants if normalization_constants = True or entropy = True
+        for(req_id, params) in self.active_req_ids.items():
+            if(params.normalization_constants):
+                # Calculate the Normalization Constants if requireds
+                log_norm_constant[req_id] = torch.logsumexp(logits[req_id], dim=-1)
+                log_norm_constant_temp_scaled[req_id] = torch.logsumexp(logits[req_id] / params.temperature, dim=-1)                
+            #If entropy = True, calculate the entropy
+            if(params.entropy):
+                entropy[req_id] = Categorical(logits=logits[req_id]).entropy()
+    
 
         # Prepare pipeline for batch Redis operations
         pipe = self.redis_client.pipeline()
         
         found_any = False
-        for row_idx, req_id in self.active_req_ids.items():
+        found_any = False
+        for row_idx, params in self.active_req_ids.items():
+            req_id = params.req_id
             if row_idx < logits.size(0):
-                norm_val = norm_constant[row_idx].item()
-                norm_temp_val = norm_constant_temp_scaled[row_idx].item()
-                max_val = max_logit[row_idx].item()
-                
                 # Store as JSON-like string with all normalization info
-                data = f"{norm_val},{norm_temp_val},{max_val}"
+                data = f"{log_norm_constant[row_idx]},{log_norm_constant_temp_scaled[row_idx]},{entropy[row_idx]}"
                 pipe.rpush(req_id, data)
                 found_any = True
             else:

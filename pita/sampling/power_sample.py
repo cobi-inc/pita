@@ -75,14 +75,8 @@ def enable_power_sampling(sampler, block_size, MCMC_steps):
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # logprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
-def logprobs(tokens_list, top_k_logits, unprocessed_normalization_constant, temp_processed_normalization_constant, power_sampling_temperature):
-    # Initialize normalization tensors with -inf (shape: num_tokens)
-    # Find the chosen token logits from the top_k_logits and scale them by the max logit
-    chosen_token_logit_list = np.zeros(len(tokens_list))
-    for i in range(len(tokens_list)):
-        if(len(top_k_logits[i]) > 1):
-            chosen_token_logit_list[i] = top_k_logits[i][0] - np.max(top_k_logits[i][:2])
-            
+def logprobs(chosen_logit_list, unprocessed_normalization_constant, temp_processed_normalization_constant, power_sampling_temperature):
+
     # log_probs is the power sampled version =
     # log(softmax(logit_selected)^(1/T)) = 
     # (1/T) * log((e^(logit_selected) / sum(e^all_logits)) = 
@@ -90,8 +84,8 @@ def logprobs(tokens_list, top_k_logits, unprocessed_normalization_constant, temp
     # The scaled version uses already temperature scaled logits
     # Scaled = log(softmax(logit_selected / T)) =
     # 1/T * logit_selected - log(sum(e^(all_logits / T)))
-    logprob_initial = (1/power_sampling_temperature) * (chosen_token_logit_list - unprocessed_normalization_constant)
-    logprob_temp_scaled_initial = (1/power_sampling_temperature) * chosen_token_logit_list - temp_processed_normalization_constant
+    logprob_initial = (1/power_sampling_temperature) * (chosen_logit_list - unprocessed_normalization_constant)
+    logprob_temp_scaled_initial = (1/power_sampling_temperature) * chosen_logit_list - temp_processed_normalization_constant
 
     return logprob_initial, logprob_temp_scaled_initial
 
@@ -102,16 +96,20 @@ def power_sampling(
     logging=False,
     log_file_path=None
 ):  
+    # Set the random seed for reproducibility
+    if sampler.sampling_params.seed is not None:
+        np.random.seed(sampler.sampling_params.seed)
+        random.seed(sampler.sampling_params.seed)
+
     # Statistic Logging in a CSV
     if(logging):
         #create or overwrite log file
-        power_sampling_log_path = log_file_path if log_file_path is not None else f"power_sampling_log_{time.time()}.csv"
+        power_sampling_log_path = log_file_path if log_file_path is not None else f"power_sampling_log_{time.strftime('%H%M%S_%d_%m_%Y')}.csv"
         with open(power_sampling_log_path, "w") as log_file:
-            log_file.write(json.dumps(vars(sampler), default=str, indent=2) + "\n")            
-            log_file.write(prompt + "\n")
+            log_file.write(f'"{json.dumps(vars(sampler), default=str).replace("\"", "\"\"")}"\n')
+            log_file.write(f'"{prompt.replace("\"", "\"\"")}"\n')
             log_file.write("proposed_power_sampling_logprob_norm,proposed_low_temp_logprob_norm,compared_power_sampling_logprob_norm,compared_low_temp_logprob_norm,new_power_sampling_logprob_norm,new_low_temp_logprob_norm,acceptance_ratio,accepted,starting_index,tokens_generated,\n")
-
-    # Log Probabilites
+    
     logprob = [] # Current list of unscaled log probabilites of the new sample. Length of block_size
     logprob_temp_scaled = [] # Current list of tokens probabilites individually scaled by temperature. Length of block_size
     proposed_logprob = [] # Proposed list of unscaled log probabilites of the new sample. Length of max_new_tokens
@@ -126,10 +124,10 @@ def power_sampling(
         
         # Generate next block of tokens as baseline
         # If the programmatical LLM is being used
-        tokens_list, top_k_logits, _, unprocessed_normalization_constant, temp_processed_normalization_constant = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.power_sampling_params.block_size)
-
+        tokens_list, top_k_logits, _, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.power_sampling_params.block_size)
+        
         # Calculate the initial power sampling and low-temperature logprobabilities for the generated block
-        logprob_initial, logprob_temp_scaled_initial = logprobs(tokens_list, top_k_logits, unprocessed_normalization_constant, temp_processed_normalization_constant, sampler.sampling_params.temperature)
+        logprob_initial, logprob_temp_scaled_initial = logprobs(top_k_logits[:, 0], unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, sampler.sampling_params.temperature)
 
         # Extend the initial log probabilities
         logprob = [*logprob, *logprob_initial.tolist()]
@@ -162,10 +160,10 @@ def power_sampling(
             context_proposed = context[:idx]
 
             #Generate proposed block of tokens
-            proposed_tokens_list, proposed_top_k_logits_list, _, unprocessed_normalization_constant, temp_processed_normalization_constant = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
+            proposed_tokens_list, proposed_top_k_logits_list, _, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
 
             # Find the log probabilities of the generated tokens
-            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_tokens_list, proposed_top_k_logits_list, unprocessed_normalization_constant, temp_processed_normalization_constant, sampler.sampling_params.temperature)
+            proposed_logprob, proposed_logprob_temp_scaled = logprobs(proposed_top_k_logits_list[:, 0], unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, sampler.sampling_params.temperature)
 
             # Extend the initial log probabilities
             # Calculate the Metro-Hastings acceptance ratio
@@ -212,8 +210,16 @@ def power_sampling(
         
         # Check if an EOS token has been generated and end the process if so
         if(sampler.tokenizer.eos_token_id in context):
-            return sampler.tokenizer.decode(context, skip_special_tokens=False)
+            decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
+            if logging:
+                with open(power_sampling_log_path, "a") as log_file:
+                    log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
+            return decoded_text
 
 
     # EOS never found, just return the full generated context
-    return sampler.tokenizer.decode(context, skip_special_tokens=False)
+    decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
+    if logging:
+        with open(power_sampling_log_path, "a") as log_file:
+            log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
+    return decoded_text
