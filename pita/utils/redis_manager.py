@@ -69,6 +69,7 @@ class RedisManager:
                     # Could add stricter check for port/args, but simplified for now
                     return True
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                # Process may have terminated or be inaccessible; safely skip it and continue scanning
                 pass
         return False
         
