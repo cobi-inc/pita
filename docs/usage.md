@@ -31,7 +31,7 @@ llm = create_LLM_object(
 # Further usage depends on specific modules (see API Reference)
 ```
 
-## detailed Components
+## Detailed Components
 
 The library is structured into several key components:
 
