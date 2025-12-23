@@ -11,11 +11,32 @@ from pita.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 # Returns arrays of the generated token_ids, the chosen token logits, and all the logits as lists to the user
 def sample(
         self, 
-        context, # The input context string to generate from
-        max_new_tokens, # The maximum number of new tokens to generate
-        **kwargs # Additional keyword arguments passed to the backend Llama create_completion function
-    ):
+        context: str | list[str], 
+        max_new_tokens: int | list[int], 
+        **kwargs 
+    ) -> tuple[
+            list[int] | list[list[int]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]]  
+        ]:
+    """
+    Generate text from the given context using the vLLM engine.
 
+    Args:
+        context (str | list[str]): The input context string to generate from.
+        max_new_tokens (int | list[int]): The maximum number of new tokens to generate.
+        **kwargs: Additional keyword arguments passed to the vLLM generate function.
+
+    Returns:
+        tokens: list[int] | list[list[int]]: The generated token IDs.
+        top_k_logits: list[float] | list[list[float]] | None: The top_k logits (if logits_per_token is set).
+        top_k_logprobs: list[float] | list[list[float]] | None: The top_k logprobs (if logprobs is set).
+        unprocessed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Unprocessed) for each token.
+        temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
+        entropy: list[float] | list[list[float]]: The entropy for each token.
+    """
     # Update the max tokens if needed
     if(self.sampling_params.max_tokens != max_new_tokens):
         self.sampling_params.max_tokens = max_new_tokens
@@ -79,7 +100,7 @@ def sample(
             return tokens, chosen_token_logit, top_k_logits
 
     # Return Lists as arrays
-    return token_lists, chosen_logit_token_lists, top_k_logits_lists
+    return tokens, top_k_logits, top_k_logprobs, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy
 
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
