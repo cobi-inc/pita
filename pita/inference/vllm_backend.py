@@ -200,3 +200,32 @@ def check_vllm_power_sampling_compatibility(sampler):
     # Set the normalization constant in the extra_args of the vLLM SamplingParams to True 
     sampler.sampling_params.engine_params.extra_args["normalization_constants"] = True
     print("Enabled normalization constants in vLLM SamplingParams for power sampling.")
+
+def check_token_metric_compatibility(
+    sampler: AutoregressiveSampler, 
+    token_metric: str):
+
+    if(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
+        # Make sure the user has actually set logits_per_token
+        if(sampler.sampling_params.logits_per_token is None):
+            raise ValueError("LLM engine logits_per_token must be set to enable power sampling.")
+        
+        # For vLLM, make sure that logprobs_mode is set to 'raw_logits' to get unprocessed logits
+        if(sampler.llm.llm_engine.model_config.logprobs_mode != 'raw_logits'):
+            raise ValueError(
+                f"vLLM engine logprobs_mode must be set to 'raw_logits' to enable power sampling."
+                f"\nvLLM engine logprobs_mode is set to {sampler.llm.llm_engine.model_config.logprobs_mode}." 
+                f"\nThis is done by setting logits=True when creating the LLM object."
+                            )
+        # Print all the extra_args of the vLLM SamplingParams
+        print("vLLM SamplingParams extra_args:", sampler.sampling_params.engine_params.extra_args)  
+
+        # Make sure the user has enabled the logits processor
+        if('req_id' not in sampler.sampling_params.engine_params.extra_args):
+            raise ValueError("req_id must be set to use power sampling with vLLM.")
+        
+        # Set the normalization constant in the extra_args of the vLLM SamplingParams to True 
+        sampler.sampling_params.engine_params.extra_args["normalization_constants"] = True
+        print("Enabled normalization constants in vLLM SamplingParams for power sampling.")
+        
+    
