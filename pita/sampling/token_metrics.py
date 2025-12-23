@@ -2,6 +2,8 @@
 import numpy as np
 import numpy.typing as npt
 
+# TODO Figure out if any of these functions are needed anymore
+
 # process the top_k_probs to find just the probs of the chosen tokens
 # can be either the logits or logprobs outputted by the LLM inference engine
 # top_k_probs is a np.array of the top_k_probs returned from a LLM inference engine
