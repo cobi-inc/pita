@@ -12,7 +12,7 @@ from tqdm import tqdm
 import json
 
 # Custom Libraries
-from pita.inference.LLM_backend import AutoregressiveSampler
+from pita.inference.LLM_backend import AutoregressiveSampler, Output
 
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
@@ -33,15 +33,37 @@ def _get_llama_cpp_backend():
     return llama_cpp_backend
 
 # Power Sampling Parameters
-class Power_Sampling_Params:
+class Power_Sampling:
+    """
+    Power Sampling Class that stores the parameters and methods used for power sampling.
+    
+    Attributes:
+        block_size (int): How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        MCMC_steps (int): Number of MCMC steps to perform per block. More steps = better quality but slower
+        token_metric (str): Metric to use for token selection. Can be "logprobs", "power_distribution", or "entropy"
+    """
     def __init__(
         self, 
-        block_size=192, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
-        MCMC_steps=8 # Number of MCMC steps to perform per block. More steps = better quality but slower
+        block_size: int = 192, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        MCMC_steps: int = 8, # Number of MCMC steps to perform per block. More steps = better quality but slower
+        token_metric: str = "power_distribution"
     ):
         self.block_size = block_size
         self.MCMC_steps = MCMC_steps
+        self.token_metric = token_metric
 
+    # TODO Implement the power sampling method in the Power_Sampling class
+    # Power Sampling method 
+    def sample(
+        self, 
+        sampler: AutoregressiveSampler, 
+        prompt: str,
+        logging: bool = False,
+        log_file_path: str = None
+    )-> Output:
+        pass
+        
+# TODO remove this function as it will be incorperated into the LLM_backend.py
 # Checks that the LLM and parameters are compatible with power sampling and enables power sampling
 def enable_power_sampling(sampler, block_size, MCMC_steps):
     # Check if the sampler is initialized
@@ -72,6 +94,7 @@ def enable_power_sampling(sampler, block_size, MCMC_steps):
     
     print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.logits_per_token}, Total Output Tokens = {sampler.sampling_params.max_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
 
+# TODO remove this function or incorperate it into the sample() function in the Power_Sampling Class
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
 # token_ids is a list of the chosen tokens
 # logprobs_list is a list of lists of the logprobs of each possible token for a given position in the token sequence from vLLM
@@ -89,6 +112,7 @@ def logprobs(chosen_logit_list, unprocessed_normalization_constant, temp_process
 
     return logprob_initial, logprob_temp_scaled_initial
 
+# TODO incorperate this function in the sample() function of the Power_Sampling class
 # Performs power sampling on the given prompt
 def power_sampling(
     sampler: AutoregressiveSampler, 
