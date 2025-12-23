@@ -31,7 +31,7 @@ nav:
       - Template: api/api_template.md
       - Serve: api/serve.md
       - Test Time Coding: api/test_time_coding.md
-    - OfflineInference:
+    - Offline Inference:
       - LLM Backend: inference/LLM_backend.md
       - DeepSpeed Backend: inference/deepspeed_backend.md
       - Llama CPP Backend: inference/llama_cpp_backend.md
