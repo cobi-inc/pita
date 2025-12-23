@@ -7,6 +7,7 @@ from pita.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 # Logits Processor Functions
 # Calculate and Store Normalization Constant
 
+# TODO update the llama cpp sample function to take in the standard variables and return the Output object
 # Take in the context (string) and max_new_tokens (int)
 # Returns arrays of the generated token_ids, the chosen token logits, and all the logits as lists to the user
 def sample(
@@ -102,6 +103,7 @@ def sample(
     # Return Lists as arrays
     return tokens, top_k_logits, top_k_logprobs, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy
 
+# TODO Instead of using logits_all = True, use a logits processor
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
         model_name,  # Model name that will be used to load the LLM (Hugging Face only currently)
@@ -182,3 +184,7 @@ def check_llama_cpp_power_sampling_compatibility(sampler):
     # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
     if(sampler.sampling_params.logprobs is not None):
         print("Warning: llama.cpp backend logprobs parameter is set to output log-probabilities which may dramatically slow down inference. It is recommended to set logprobs=None when using power sampling with llama.cpp backend.")
+
+def check_token_metric_compatibility(sampler, token_metric):
+    if(token_metric == "power_distribution"):
+        check_llama_cpp_power_sampling_compatibility(sampler)
