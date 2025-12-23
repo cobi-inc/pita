@@ -2,6 +2,7 @@ import numpy as np
 from scipy.special import logsumexp
 from llama_cpp import Llama, LogitsProcessorList
 
+# TODO verify that the llama logit processor is working
 class LogSumExpProcessor:
     def __init__(self):
         # We store the results in a list to track them for every generated token

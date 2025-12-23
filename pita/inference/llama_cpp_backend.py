@@ -184,7 +184,7 @@ def check_llama_cpp_power_sampling_compatibility(sampler):
     # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
     if(sampler.sampling_params.logprobs is not None):
         print("Warning: llama.cpp backend logprobs parameter is set to output log-probabilities which may dramatically slow down inference. It is recommended to set logprobs=None when using power sampling with llama.cpp backend.")
-
+# TODO Implement the token metric compatibility check after implementing the token metrics in the logit processor
 def check_token_metric_compatibility(sampler, token_metric):
     if(token_metric == "power_distribution"):
         check_llama_cpp_power_sampling_compatibility(sampler)
