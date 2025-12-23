@@ -20,7 +20,8 @@ class Sequential_Monte_Carlo:
         self.stop_on_eos = stop_on_eos
         self.token_metric = token_metric
         self.aggregation = aggregation
-    
+
+    # TODO implement the sample function
     def sample(
         self,
         sampler: AutoregressiveSampler,
@@ -37,6 +38,7 @@ class Sequential_Monte_Carlo:
         """
         pass
 
+# TODO Remove this function as it will be incorperated into the LLM_backend.py
 # Enable SMC Sampling Function
 # Take in the default parameters for SMC sampling and set them in the sampler object
 def enable_smc_sampling(
@@ -57,6 +59,7 @@ def enable_smc_sampling(
         stop_on_eos=stop_on_eos
     )
 
+# TODO Determine if this function is really needed anymore
 # Use a standard temperature affected log probability metric to perform SMC sampling
 # Input Variables
 # sampler: The sampler object
@@ -86,6 +89,7 @@ def standard_log_probability_metric(
     
     return probability_list
 
+# TODO Determine if this function is really needed anymore
 # Use the power sampling log probability metric to perform the SMC sampling
 # Input Variables
 # sampler: The sampler object
@@ -115,6 +119,7 @@ def power_sampling_logprobability_metric(
 
 # Use negative entropy as a comparison metric for the SMC sampling
 
+# TODO incorperate this function into the Sequential_Monte_Carlo class
 # Perform SMC Sampling Function based on the log probabilites of the tokens generated
 def sequential_monte_carlo(
     sampler: AutoregressiveSampler, 
