@@ -155,7 +155,7 @@ def create_LLM_object(
 
 def check_llama_cpp_power_sampling_compatibility(sampler):
     # Check to make sure the llama engine can output all of the logits needed for power sampling
-    if(sampler.llm._logits_all != True):
+    if not sampler.llm._logits_all:
         raise ValueError("LLM engine logits_all must be set to 'True' to enable power sampling. This is done by setting logits=True when creating the LLM object.")
     
     # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
