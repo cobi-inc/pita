@@ -59,22 +59,31 @@ ENGINE_PARAM_MAPS = {
     # Add more engines as needed
 }
 
-# Autoregressive Sampler Class
-# Stores parameters concerning the LLM, autoregressive sampling, and power sampling
-# Includes Functions:
-# sample() - Samples from the LLM given a context and max new tokens programmatical LLM
 class AutoregressiveSampler:
+    """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
+
+    Attributes:
+        engine (str): The engine used for sampling.
+        model (str): The LLM Model name.
+        llm (object): LLM object to use for sampling.
+        tokenizer (object): Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer).
+        sample_fn (object): Function to use for sampling from the autoregressive model.
+        sampling_params (object): Parameters to use for standard sampling.
+        power_sampling_params (object): Parameters to use for power sampling.
+        smc_sampling_params (object): Parameters to use for SMC sampling.
+        best_of_sampling_params (object): Parameters to use for best-of sampling.
+    """
     def __init__(
         self,
-        engine, 
-        model, # LLM Model name
-        llm, # LLM object to use for sampling
-        tokenizer, # Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer)
-        sample_fn, # Function to use for sampling from the autoregressive model
-        sampling_params, # Parameters to use for standard sampling
-        power_sampling_params = None, # Parameters to use for power sampling
-        smc_sampling_params = None, # Parameters to use for SMC sampling
-        best_of_sampling_params = None # Parameters to use for best-of sampling
+        engine: str,
+        model: str,
+        llm: object,
+        tokenizer: object,
+        sample_fn: object,
+        sampling_params: object,
+        power_sampling_params: object = None,
+        smc_sampling_params: object = None,
+        best_of_sampling_params: object = None
     ):  
         self.engine = engine
         self.model = model
@@ -86,31 +95,71 @@ class AutoregressiveSampler:
         self.smc_sampling_params = smc_sampling_params
         self.best_of_sampling_params = best_of_sampling_params
         
-    def sample(self, context, max_new_tokens):
+    def sample(self, 
+        context: str, 
+        max_new_tokens: int):
+        """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
+
+        Args:
+            context (str): The input context.
+            max_new_tokens (int): Maximum number of new tokens to generate.
+            **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
+
+        Returns:
+            tokens: list[int] | list[list[int]]: The generated token IDs.
+            top_k_logits: list[float] | list[list[float]] | None: The top_k logits (if logits_per_token is set).
+            top_k_logprobs: list[float] | list[list[float]] | None: The top_k logprobs (if logprobs is set).
+            unprocessed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Unprocessed) for each token.
+            temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
+            entropy: list[float] | list[list[float]]: The entropy for each token.
+        """
         return self.sample_fn(self, context, max_new_tokens)
 
-#Common Sampling Parameters
 class Sampling_Params:
+    """Sampling parameters used for generating results from the LLM. Generalized across all engines. Changes to this class should be reflected in the engine specific parameter classes.
+
+    Args:
+        engine: Engine name (e.g., "vllm", "transformers", etc.).
+        engine_params: Engine specific parameter Class (vLLM: SamplingParams, llama.cpp: None).
+        enable_thinking: Whether to enable thinking.
+        max_tokens: Max Number of tokens to generate per sequence.
+        temperature: Controls randomness of sampling. Lower is more deterministic, higher is more random.
+        top_p: Controls tokens to consider based on cumulative probability. Must be in (0, 1].
+        top_k: Controls number of top tokens to consider. 0 or -1 considers all tokens.
+        logprobs: Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities.
+        logits_per_token: Number of descending ranked logits to return per output token.
+        presence_penalty: Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
+        frequency_penalty: Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
+        repetition_penalty: Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats.
+        min_p: Represents the minimum probability for a token to be considered. 0 disables.
+        seed: Random seed.
+        stop: Strings that stop token generation. Returned output excludes stop strings.
+        stop_token_ids: Token IDs that stop token generation. Returned output excludes stop tokens.
+        ignore_eos: Continues generating tokens after EOS token is generated.
+        min_tokens: Minimum Number of tokens to generate per sequence before EOS or stop is considered.
+        normalization_constants: Normalization constants.
+        entropy: Entropy.
+    """
     def __init__(
         self,
-        engine = None, # Engine name (e.g., "vllm", "transformers", etc.)
-        engine_params = None, # Engine specific parameter Class (vLLM: SamplingParams, Add more as needed)
+        engine = None,
+        engine_params = None,
         enable_thinking = False,
-        max_tokens = 16, # Max Number of tokens to generate per sequence
-        temperature = 1.0, # Controls randomness of sampling. Lower is more deterministic, higher is more random
-        top_p = 1.0, # Controls tokens to consider based on cumulative probability. Must be in (0, 1]
-        top_k = -1, # Controls number of top tokens to consider. 0 or -1 considers all tokens
-        logprobs = None, # Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities
-        logits_per_token = None, # Number of descending ranked logits to return per output token
-        presence_penalty = 0.0, # Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
-        frequency_penalty = 0.0, # Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats
-        repetition_penalty = 1.0, # Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats
-        min_p = 0.0, # Represents the minimum probability for a token to be considered. 0 disables
-        seed = None, # Random seed
-        stop = None, # Strings that stop token generation. Returned output excludes stop strings
-        stop_token_ids = None, # Token IDs that stop token generation. Returned output excludes stop tokens
-        ignore_eos = False, # Continues generating tokens after EOS token is generated.
-        min_tokens = 0, # Minimum Number of tokens to generate per sequence before EOS or stop is considered
+        max_tokens = 16,
+        temperature = 1.0,
+        top_p = 1.0,
+        top_k = -1,
+        logprobs = None,
+        logits_per_token = None,
+        presence_penalty = 0.0,
+        frequency_penalty = 0.0,
+        repetition_penalty = 1.0,
+        min_p = 0.0,
+        seed = None,
+        stop = None,
+        stop_token_ids = None,
+        ignore_eos = False,
+        min_tokens = 0,
         normalization_constants = None,
         entropy = None
     ):  
@@ -168,21 +217,42 @@ class Sampling_Params:
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
 
-# Create an AutogressiveSampler object given the engine, engine parameters, and model name
 def create_autoregressive_sampler(
-    engine, # Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported
-    model, # Model to load 
-    dtype = "auto", # Data type to use when loading the model. "auto" lets the engine decide
-    tokenizer_path = None, # Path to a model with a tokenizer if the model path doesn't include a tokenizer
-    gpu_memory_utilization = 0.85, # GPU memory utilization to use 
-    max_model_len = 1024, # Max model context length (context window = prompt + generated tokens)
-    max_logprobs = None, # Number of logits/logprobs to store per output token
-    logits_per_token = None, # Number of descending ranked logits to return per output token
-    logits_processor = False, # Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated 
-    trust_remote_code = True, # Whether to trust remote code when loading the model
-    sampling_params = None, # General sampling parameters to use (Sampling_Params Class)
-    **kwargs # Additional keyword arguments passed to the backend LLM creation function
+    engine,
+    model,
+    dtype = "auto",
+    tokenizer_path = None,
+    gpu_memory_utilization = 0.85,
+    max_model_len = 1024,
+    max_logprobs = None,
+    logits_per_token = None,
+    logits_processor = False,
+    trust_remote_code = True,
+    sampling_params = None,
+    **kwargs
 ):
+    """Create an AutoregressiveSampler object given the engine, engine parameters, and model name.
+
+    Args:
+        engine: Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported.
+        model: Model to load.
+        dtype: Data type to use when loading the model. "auto" lets the engine decide.
+        tokenizer_path: Path to a model with a tokenizer if the model path doesn't include a tokenizer.
+        gpu_memory_utilization: GPU memory utilization to use.
+        max_model_len: Max model context length (context window = prompt + generated tokens).
+        max_logprobs: Number of logits/logprobs to store per output token.
+        logits_per_token: Number of descending ranked logits to return per output token.
+        logits_processor: Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
+        trust_remote_code: Whether to trust remote code when loading the model.
+        sampling_params: General sampling parameters to use (Sampling_Params Class).
+        **kwargs: Additional keyword arguments passed to the backend LLM creation function.
+
+    Returns:
+        An AutoregressiveSampler object.
+        
+    Raises:
+        ValueError: If the engine is not supported.
+    """
                                 
     print(f"Loading model {model} with {engine}...")
 

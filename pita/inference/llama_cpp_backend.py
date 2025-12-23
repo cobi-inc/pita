@@ -155,15 +155,9 @@ def create_LLM_object(
 
 def check_llama_cpp_power_sampling_compatibility(sampler):
     # Check to make sure the llama engine can output all of the logits needed for power sampling
-    if(sampler.llm._logits_all != True):
+    if not sampler.llm._logits_all:
         raise ValueError("LLM engine logits_all must be set to 'True' to enable power sampling. This is done by setting logits=True when creating the LLM object.")
     
-    # Make sure top_k matches logits_per_token to make sure that the inference engine is actually using only the logits requested
-    if(sampler.sampling_params.top_k != sampler.sampling_params.logits_per_token):
-        print("Warning: The sampler top_k does not match the LLM engine logits_per_token setting. This may lead to unexpected behavior during power sampling.")
-        print("Automatically setting the LLM engine logits_per_token to match the sampler top_k.")
-        sampler.sampling_params.top_k = sampler.sampling_params.logits_per_token
-
     # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
     if(sampler.sampling_params.logprobs is not None):
         print("Warning: llama.cpp backend logprobs parameter is set to output log-probabilities which may dramatically slow down inference. It is recommended to set logprobs=None when using power sampling with llama.cpp backend.")

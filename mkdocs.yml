@@ -4,6 +4,7 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
+    - navigation.expand
     - toc.integrate
 
 plugins:
@@ -12,18 +13,26 @@ plugins:
       handlers:
         python:
           paths: [.]
+          options:
+            show_signature_annotations: true
+            show_parameter_types: true
 
 nav:
   - Home: index.md
   - Installation: installation.md
   - Usage: usage.md
+  - Examples:
+    - Inference Backends: examples/inference_backends.md
+    - Serving Modes: examples/serving_modes.md
+    - Sampling Strategies: examples/sampling_strategies.md
+    - Token Metrics: examples/token_metrics.md
   - API Reference:
-    - API:
+    - API Endpoint:
       - Template: api/api_template.md
       - Serve: api/serve.md
       - Test Time Coding: api/test_time_coding.md
-    - Inference:
-      - Autoregressive Sampler: inference/autoregressive_sampler_backend.md
+    - Offline Inference:
+      - LLM Backend: inference/LLM_backend.md
       - DeepSpeed Backend: inference/deepspeed_backend.md
       - Llama CPP Backend: inference/llama_cpp_backend.md
       - TensorRT Backend: inference/tensorRT_backend.md
