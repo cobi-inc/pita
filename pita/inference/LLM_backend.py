@@ -65,10 +65,12 @@ class AutoregressiveSampler:
     Attributes:
         engine (str): The engine used for sampling.
         model (str): The LLM Model name.
-        llm (object): LLM object to use for sampling.
+        llm (object): LLM object from engine used for inference/sampling.
         tokenizer (object): Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer).
-        sample_fn (object): Function to use for sampling from the autoregressive model.
+        sample_fn (object): Standard Sampling Function to use for sampling from the autoregressive model without test time scaling.
         sampling_params (object): Parameters to use for standard sampling.
+        chain_sampling (object): Chain Sampling Object used for chain level test time scaling (i.e Best-of-N, SMC, etc.)
+        token_sampling (object): Token Sampling Object used for token level test time scaling (i.e Metropolis-Hastings Sampling)
         power_sampling_params (object): Parameters to use for power sampling.
         smc_sampling_params (object): Parameters to use for SMC sampling.
         best_of_sampling_params (object): Parameters to use for best-of sampling.
@@ -91,6 +93,8 @@ class AutoregressiveSampler:
         self.tokenizer = tokenizer
         self.sample_fn = sample_fn
         self.sampling_params = sampling_params
+        self.chain_sampling = None
+        self.token_sampling = None
         self.power_sampling_params = power_sampling_params
         self.smc_sampling_params = smc_sampling_params
         self.best_of_sampling_params = best_of_sampling_params
@@ -114,6 +118,84 @@ class AutoregressiveSampler:
             entropy: list[float] | list[list[float]]: The entropy for each token.
         """
         return self.sample_fn(self, context, max_new_tokens)
+
+    def enable_smc(
+        self,
+        num_particles: int,
+        tokens_per_step: int,
+        stop_on_eos: bool,
+        token_metric: str,  
+        aggregation: str
+        ):
+        """
+        Enables SMC sampling for the chosen LLM/Engine.
+
+        Args:
+            num_particles (int): Number of particles to use for SMC.
+            tokens_per_step (int): Number of tokens to generate per step.
+            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
+            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
+            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
+        """
+        # Check if chain sampling has already been enabled. If so replace it with SMC.
+        if(self.chain_sampling is not None):
+            print("Warning: Current Chain Sampling Strategy is being replaced with SMC.")
+        
+        # Check if the engine/LLM is set up for SMC
+        if(token_metric is "PRM"):
+            raise ValueError("PRM is not supported YET for SMC.")
+        elif(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
+            if(self.engine == "vllm"):
+                vllm_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "llama.cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+        else:
+            raise ValueError(f"{token_metric} not supported for SMC.")
+
+        # Check if the aggregation method is supported
+        if(aggregation == "last" or aggregation == "minimum" or aggregation == "product" or aggregation == "model_aggregate"):
+            pass
+        else:
+            raise ValueError(f"{aggregation} not supported for SMC.")
+
+        # Create the SMC Class
+        self.chain_sampling = Sequential_Monte_Carlo(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
+
+    def enable_power_sampling(
+        self,
+        num_particles: int,
+        tokens_per_step: int,
+        stop_on_eos: bool,
+        token_metric: str,
+        aggregation: str
+    ):
+        """
+        Enables Power Sampling for the chosen LLM/Engine.
+
+        Args:
+            num_particles (int): Number of particles to use for Power Sampling.
+            tokens_per_step (int): Number of tokens to generate per step.
+            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
+            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
+            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
+        """
+        # Check if chain sampling has already been enabled. If so replace it with Power Sampling.
+        if(self.chain_sampling is not None):
+            print("Warning: Current Chain Sampling Strategy is being replaced with Power Sampling.")
+        
+        # Check if the engine/LLM is set up for Power Sampling
+        if(token_metric is "PRM"):
+            raise ValueError("PRM is not supported YET for Power Sampling.")
+        elif(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
+            if(self.engine == "vllm"):
+                vllm_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "llama.cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+        else:
+            raise ValueError(f"{token_metric} not supported for Power Sampling.")
+
+        # Create the Power Sampling Class
+        self.chain_sampling = Power_Sampling(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
 
 class Sampling_Params:
     """Sampling parameters used for generating results from the LLM. Generalized across all engines. Changes to this class should be reflected in the engine specific parameter classes.
@@ -142,26 +224,26 @@ class Sampling_Params:
     """
     def __init__(
         self,
-        engine = None,
-        engine_params = None,
-        enable_thinking = False,
-        max_tokens = 16,
-        temperature = 1.0,
-        top_p = 1.0,
-        top_k = -1,
-        logprobs = None,
-        logits_per_token = None,
-        presence_penalty = 0.0,
-        frequency_penalty = 0.0,
-        repetition_penalty = 1.0,
-        min_p = 0.0,
-        seed = None,
-        stop = None,
-        stop_token_ids = None,
-        ignore_eos = False,
-        min_tokens = 0,
-        normalization_constants = None,
-        entropy = None
+        engine: str = None,
+        engine_params: object = None,
+        enable_thinking: bool = False,
+        max_tokens: int = 16,
+        temperature: float = 1.0,
+        top_p: float = 1.0,
+        top_k: int = -1,
+        logprobs: int = None,
+        logits_per_token: int = None,
+        presence_penalty: float = 0.0,
+        frequency_penalty: float = 0.0,
+        repetition_penalty: float = 1.0,
+        min_p: float = 0.0,
+        seed: int = None,
+        stop: list[str] = None,
+        stop_token_ids: list[int] = None,
+        ignore_eos: bool = False,
+        min_tokens: int = 0,
+        normalization_constants: list[float] = None,
+        entropy: list[float] = None
     ):  
         object.__setattr__(self, 'engine', engine)
         object.__setattr__(self, 'engine_params', engine_params)

@@ -6,16 +6,36 @@ from pita.inference.LLM_backend import AutoregressiveSampler
 from pita.sampling.token_metrics import process_top_k_probs, low_temp_logprobs, power_sampling_logprobs
 
 # SMC Class
-class Sequential_Monte_Carlo_Params:
+class Sequential_Monte_Carlo:
     def __init__(
         self, 
         num_particles: int = 10, 
         tokens_per_step: int = 5, 
-        stop_on_eos: bool = True
+        stop_on_eos: bool = True,
+        token_metric: str = "logprobs",
+        aggregation: str = "last"
     ):
         self.num_particles = num_particles
         self.tokens_per_step = tokens_per_step
         self.stop_on_eos = stop_on_eos
+        self.token_metric = token_metric
+        self.aggregation = aggregation
+    
+    def sample(
+        self,
+        sampler: AutoregressiveSampler,
+        prompt: str
+    ) -> str:
+        """
+        Samples using SMC and its parameters.
+
+        Args:
+            sampler (AutoregressiveSampler): The sampler object.
+            prompt (str): The prompt to sample from.
+        Returns:
+            str: Response to the prompt from the SMC sampling.
+        """
+        pass
 
 # Enable SMC Sampling Function
 # Take in the default parameters for SMC sampling and set them in the sampler object
@@ -23,7 +43,9 @@ def enable_smc_sampling(
     sampler: AutoregressiveSampler, 
     num_particles: int = 10, 
     tokens_per_step: int = 5, 
-    stop_on_eos: bool = True
+    stop_on_eos: bool = True,
+    token_metric: str = "logprobs",
+    aggregation: str = "last"
 ) -> None:
     # Check if the sampler is initialized
     if(sampler is None):
