@@ -1,7 +1,7 @@
 # Training Free Reasoning Libraries
 from pita.utils.benchmarking_utils import benchmark_sampling, load_benchmark
 from pita.inference.LLM_backend import create_autoregressive_sampler
-from pita.sampling.power_sample import enable_power_sampling
+from pita.sampling.power_sample import Power_Sampling
 
 # Pytorch Library
 import torch
