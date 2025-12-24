@@ -59,168 +59,30 @@ ENGINE_PARAM_MAPS = {
     # Add more engines as needed
 }
 
-class AutoregressiveSampler:
-    """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
-
-    Attributes:
-        engine (str): The engine used for sampling.
-        model (str): The LLM Model name.
-        llm (object): LLM object from engine used for inference/sampling.
-        tokenizer (object): Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer).
-        sample_fn (object): Standard Sampling Function to use for sampling from the autoregressive model without test time scaling.
-        sampling_params (object): Parameters to use for standard sampling.
-        chain_sampling (object): Chain Sampling Object used for chain level test time scaling (i.e Best-of-N, SMC, etc.)
-        token_sampling (object): Token Sampling Object used for token level test time scaling (i.e Metropolis-Hastings Sampling)
-        power_sampling_params (object): Parameters to use for power sampling.
-        smc_sampling_params (object): Parameters to use for SMC sampling.
-        best_of_sampling_params (object): Parameters to use for best-of sampling.
-    """
-    def __init__(
-        self,
-        engine: str,
-        model: str,
-        llm: object,
-        tokenizer: object,
-        sample_fn: object,
-        sampling_params: object,
-        power_sampling_params: object = None,
-        smc_sampling_params: object = None,
-        best_of_sampling_params: object = None
-    ):  
-        self.engine = engine
-        self.model = model
-        self.llm = llm
-        self.tokenizer = tokenizer
-        self.sample_fn = sample_fn
-        self.sampling_params = sampling_params
-        self.chain_sampling = None
-        self.token_sampling = None
-        self.power_sampling_params = power_sampling_params
-        self.smc_sampling_params = smc_sampling_params
-        self.best_of_sampling_params = best_of_sampling_params
-        
-    def sample(self, 
-        context: str, 
-        max_new_tokens: int):
-        """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
-
-        Args:
-            context (str): The input context.
-            max_new_tokens (int): Maximum number of new tokens to generate.
-            **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
-
-        Returns:
-            tokens: list[int] | list[list[int]]: The generated token IDs.
-            top_k_logits: list[float] | list[list[float]] | None: The top_k logits (if logits_per_token is set).
-            top_k_logprobs: list[float] | list[list[float]] | None: The top_k logprobs (if logprobs is set).
-            unprocessed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Unprocessed) for each token.
-            temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
-            entropy: list[float] | list[list[float]]: The entropy for each token.
-        """
-        return self.sample_fn(self, context, max_new_tokens)
-
-    def enable_smc(
-        self,
-        num_particles: int,
-        tokens_per_step: int,
-        stop_on_eos: bool,
-        token_metric: str,  
-        aggregation: str
-        ):
-        """
-        Enables SMC sampling for the chosen LLM/Engine.
-
-        Args:
-            num_particles (int): Number of particles to use for SMC.
-            tokens_per_step (int): Number of tokens to generate per step.
-            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
-            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
-            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
-        """
-        # Check if chain sampling has already been enabled. If so replace it with SMC.
-        if(self.chain_sampling is not None):
-            print("Warning: Current Chain Sampling Strategy is being replaced with SMC.")
-        
-        # Check if the engine/LLM is set up for SMC
-        if(token_metric is "PRM"):
-            raise ValueError("PRM is not supported YET for SMC.")
-        elif(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
-            if(self.engine == "vllm"):
-                vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama.cpp"):
-                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
-        else:
-            raise ValueError(f"{token_metric} not supported for SMC.")
-
-        # Check if the aggregation method is supported
-        if(aggregation == "last" or aggregation == "minimum" or aggregation == "product" or aggregation == "model_aggregate"):
-            pass
-        else:
-            raise ValueError(f"{aggregation} not supported for SMC.")
-
-        # Create the SMC Class
-        self.chain_sampling = Sequential_Monte_Carlo(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
-
-    def enable_power_sampling(
-        self,
-        num_particles: int,
-        tokens_per_step: int,
-        stop_on_eos: bool,
-        token_metric: str,
-        aggregation: str
-    ):
-        """
-        Enables Power Sampling for the chosen LLM/Engine.
-
-        Args:
-            num_particles (int): Number of particles to use for Power Sampling.
-            tokens_per_step (int): Number of tokens to generate per step.
-            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
-            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
-            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
-        """
-        # Check if chain sampling has already been enabled. If so replace it with Power Sampling.
-        if(self.chain_sampling is not None):
-            print("Warning: Current Chain Sampling Strategy is being replaced with Power Sampling.")
-        
-        # Check if the engine/LLM is set up for Power Sampling
-        if(token_metric is "PRM"):
-            raise ValueError("PRM is not supported YET for Power Sampling.")
-        elif(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
-            if(self.engine == "vllm"):
-                vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama.cpp"):
-                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
-        else:
-            raise ValueError(f"{token_metric} not supported for Power Sampling.")
-
-        # Create the Power Sampling Class
-        self.chain_sampling = Power_Sampling(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
-
 class Sampling_Params:
     """Sampling parameters used for generating results from the LLM. Generalized across all engines. Changes to this class should be reflected in the engine specific parameter classes.
 
     Args:
-        engine: Engine name (e.g., "vllm", "transformers", etc.).
-        engine_params: Engine specific parameter Class (vLLM: SamplingParams, llama.cpp: None).
-        enable_thinking: Whether to enable thinking.
-        max_tokens: Max Number of tokens to generate per sequence.
-        temperature: Controls randomness of sampling. Lower is more deterministic, higher is more random.
-        top_p: Controls tokens to consider based on cumulative probability. Must be in (0, 1].
-        top_k: Controls number of top tokens to consider. 0 or -1 considers all tokens.
-        logprobs: Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities.
-        logits_per_token: Number of descending ranked logits to return per output token.
-        presence_penalty: Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
-        frequency_penalty: Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
-        repetition_penalty: Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats.
-        min_p: Represents the minimum probability for a token to be considered. 0 disables.
-        seed: Random seed.
-        stop: Strings that stop token generation. Returned output excludes stop strings.
-        stop_token_ids: Token IDs that stop token generation. Returned output excludes stop tokens.
-        ignore_eos: Continues generating tokens after EOS token is generated.
-        min_tokens: Minimum Number of tokens to generate per sequence before EOS or stop is considered.
-        normalization_constants: Normalization constants.
-        entropy: Entropy.
+        engine (str): Engine name (e.g., "vllm", "transformers", etc.).
+        engine_params (object): Engine specific parameter Class (vLLM: SamplingParams, llama.cpp: None).
+        enable_thinking (bool): Whether to enable thinking.
+        max_tokens (int): Max Number of tokens to generate per sequence.
+        temperature (float): Controls randomness of sampling. Lower is more deterministic, higher is more random.
+        top_p (float): Controls tokens to consider based on cumulative probability. Must be in (0, 1].
+        top_k (int): Controls number of top tokens to consider. 0 or -1 considers all tokens.
+        logprobs (int): Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities.
+        logits_per_token (int): Number of descending ranked logits to return per output token.
+        presence_penalty (float): Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
+        frequency_penalty (float): Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
+        repetition_penalty (float): Penalizes new tokens based on appearance in prompt AND generated text so far. > 1 encourages new tokens, < 1 encourages repeats.
+        min_p (float): Represents the minimum probability for a token to be considered. 0 disables.
+        seed (int): Random seed.
+        stop (list[str]): Strings that stop token generation. Returned output excludes stop strings.
+        stop_token_ids (list[int]): Token IDs that stop token generation. Returned output excludes stop tokens.
+        ignore_eos (bool): Continues generating tokens after EOS token is generated.
+        min_tokens (int): Minimum Number of tokens to generate per sequence before EOS or stop is considered.
+        normalization_constants (list[float]): Normalization constants.
+        entropy (list[float]): Entropy.
     """
     def __init__(
         self,
@@ -299,141 +161,288 @@ class Sampling_Params:
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
 
-def create_autoregressive_sampler(
-    engine,
-    model,
-    dtype = "auto",
-    tokenizer_path = None,
-    gpu_memory_utilization = 0.85,
-    max_model_len = 1024,
-    max_logprobs = None,
-    logits_per_token = None,
-    logits_processor = False,
-    trust_remote_code = True,
-    sampling_params = None,
-    **kwargs
-):
-    """Create an AutoregressiveSampler object given the engine, engine parameters, and model name.
+class AutoregressiveSampler:
+    """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
 
-    Args:
-        engine: Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported.
-        model: Model to load.
-        dtype: Data type to use when loading the model. "auto" lets the engine decide.
-        tokenizer_path: Path to a model with a tokenizer if the model path doesn't include a tokenizer.
-        gpu_memory_utilization: GPU memory utilization to use.
-        max_model_len: Max model context length (context window = prompt + generated tokens).
-        max_logprobs: Number of logits/logprobs to store per output token.
-        logits_per_token: Number of descending ranked logits to return per output token.
-        logits_processor: Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
-        trust_remote_code: Whether to trust remote code when loading the model.
-        sampling_params: General sampling parameters to use (Sampling_Params Class).
-        **kwargs: Additional keyword arguments passed to the backend LLM creation function.
-
-    Returns:
-        An AutoregressiveSampler object.
-        
-    Raises:
-        ValueError: If the engine is not supported.
+    Attributes:
+        engine (str): The engine used for sampling.
+        model (str): The LLM Model name.
+        llm (object): LLM object from engine used for inference/sampling.
+        tokenizer (object): Tokenizer to use for encoding/decoding (HuggingFace AutoTokenizer).
+        sample_fn (object): Standard Sampling Function to use for sampling from the autoregressive model without test time scaling.
+        sampling_params (object): Parameters to use for standard sampling.
+        chain_sampling (object): Chain Sampling Object used for chain level test time scaling (i.e Best-of-N, SMC, etc.)
+        token_sampling (object): Token Sampling Object used for token level test time scaling (i.e Metropolis-Hastings Sampling)
     """
-                                
-    print(f"Loading model {model} with {engine}...")
-
-    # Determine Model Type for Hugging Face Repos
-    model_type = detect_model_type(model)
-
-    # Enable the use of logits if logits_per_token is set
-    # This is important as the engine cannot be set to return logits after it is initialized
-    if(logits_per_token is not None):
-        logits = True
-        prob_count = logits_per_token
-    else:
-        logits = False
-
-    if(engine == "vllm"):
-        backend = _get_vllm_backend()
-
-        # vLLM uses both logits and logprobs interchangeably depending on the logprobs_mode set during initialization
-        # some libraries have distinct modes for logits vs logprobs like llama_cpp
-        # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
-        # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clarity
-        if(logits == True):
-            print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM max_logprobs engine parameter and in vLLM's logprobs Sampling_Params.")
-            prob_count = logits_per_token
-            max_logprobs = logits_per_token
-        elif(logits == False and max_logprobs is not None):
-            print("vLLM does not output both logits and logprobs separately. max_logprobs is set while logits_per_token is not set. Defaulting to using and returning max_logprobs for vLLM.")
-            prob_count = max_logprobs
-        else:
-            prob_count = None
-            
-        # Create the LLM object
-        llm = backend.create_LLM_object(
-            model_name = model, 
-            dtype = dtype,
-            gpu_memory_utilization = gpu_memory_utilization,
-            max_model_len = max_model_len,
-            max_logprobs = prob_count,
-            logits = logits,
-            logits_processor = logits_processor,
-            **kwargs
-        )  
-        
-        # Set the autoregressive sampler function
-        autoregressive_sampler = backend.sample
-
-        # Create the engine parameters used for the completion function in vLLM
-        engine_params = backend.create_vllm_engine_params()
-
-        # Set the redis client for the LogitsLoggingProcessor
-        # Add the normalization_constants and normalization_constants_temp_scaled lists to extra_args
-        if(logits_processor):
-            print("Enabling logits processing in engine parameters extra_args.")
-            engine_params.extra_args = {}
-            engine_params.extra_args["req_id"] = "my_request_" + str(time.time())
-        
-    elif(engine == "llama_cpp"):
-        backend = _get_llama_cpp_backend()
-        # Create the LLM object
-        llm = backend.create_LLM_object(
-            model_name = model, 
-            model_type = model_type,
-            dtype = dtype, 
-            gpu_memory_utilization = gpu_memory_utilization, 
-            max_model_len = max_model_len,
-            logits = logits,
-            **kwargs
-        )
-        # Set the autoregressive sampler function
-        autoregressive_sampler = backend.sample
-        # Llama.cpp does not have a separate engine params class
-        engine_params = None
-
-    else:
-        raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
+    #TODO Merge the create_autoregressive_sampler into the init of the class here
+    def __init__(
+        self,
+        engine: str,
+        model: str,
+        dtype: str,
+        tokenizer_path: str,
+        gpu_memory_utilization: float,
+        max_model_len: int,
+        max_logprobs: int,
+        logits_per_token: int,
+        logits_processor: bool,
+        trust_remote_code: bool,
+        sampling_params: Sampling_Params,
+        **kwargs
+    ):      
     
-    # Create tokenizer depending on whether a tokenizer path is provided
-    # Needed as some models do not include the tokenizer files in the same repo as the model
-    if tokenizer_path is not None:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=trust_remote_code)
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
+        """Create an AutoregressiveSampler object given the engine, engine parameters, and model name.
 
-    print("Engine Params Extra Args:", engine_params.extra_args if engine_params is not None else "N/A")
+        Args:
+            engine (str): Engine to use for autoregressive sampling. Currently only "vllm" and "llama_cpp" are supported.
+            model (str): Model to load.
+            dtype (str): Data type to use when loading the model. "auto" lets the engine decide.
+            tokenizer_path (str): Path to a model with a tokenizer if the model path doesn't include a tokenizer.
+            gpu_memory_utilization (float): GPU memory utilization to use.
+            max_model_len (int): Max model context length (context window = prompt + generated tokens).
+            logprobs_per_token (int): Number of top ranked logprobs to store per output token.
+            logits_per_token (int): Number of top ranked logits to return per output token.
+            logits_processor (bool): Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
+            trust_remote_code (bool): Whether to trust remote code when loading the model.
+            sampling_params (Sampling_Params): General sampling parameters to use (Sampling_Params Class).
+            **kwargs: Additional keyword arguments passed to the backend LLM creation function.
 
-    # Create the Autoregressive Sampler object
-    sampler = AutoregressiveSampler(
-        engine=engine,
-        model=model,
-        llm=llm,
-        tokenizer=tokenizer,
-        sample_fn=autoregressive_sampler,
-        sampling_params= Sampling_Params(
-            engine = engine, 
-            engine_params = engine_params, 
-            logprobs = max_logprobs,
-            logits_per_token = logits_per_token
+        Returns:
+            An AutoregressiveSampler object.
             
-        ) if sampling_params is None else sampling_params
-    )
+        Raises:
+            ValueError: If the engine is not supported.
+        """
+        self.engine = engine
+        self.model = model
 
-    return sampler
+        print(f"Loading model {model} with {engine}...")
+
+        # Enable the use of logits if logits_per_token is set
+        # This is important as the engine cannot be set to return logits after it is initialized
+        if(logits_per_token is not None):
+            logits = True
+            prob_count = logits_per_token
+        else:
+            logits = False
+        
+        # Seperate Backend Loading for each engine
+        if(engine == "vllm"):
+            backend = _get_vllm_backend()
+
+            # vLLM uses both logits and logprobs interchangeably depending on the logprobs_mode set during initialization
+            # some libraries have distinct modes for logits vs logprobs like llama_cpp
+            # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
+            # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clarity
+            if(logits == True):
+                print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM max_logprobs engine parameter and in vLLM's logprobs Sampling_Params.")
+                prob_count = logits_per_token
+                max_logprobs = logits_per_token
+            elif(logits == False and max_logprobs is not None):
+                print("vLLM does not output both logits and logprobs separately. max_logprobs is set while logits_per_token is not set. Defaulting to using and returning max_logprobs for vLLM.")
+                prob_count = max_logprobs
+            else:
+                prob_count = None
+                
+            # Create the LLM object
+            self.llm = backend.create_LLM_object(
+                model_name = model, 
+                dtype = dtype,
+                gpu_memory_utilization = gpu_memory_utilization,
+                max_model_len = max_model_len,
+                max_logprobs = prob_count,
+                logits = logits,
+                logits_processor = logits_processor,
+                **kwargs
+            )  
+            
+            # Set the autoregressive sampler function
+            self.sample_fn = backend.sample
+
+            # Create the engine parameters used for the completion function in vLLM
+            engine_params = backend.create_vllm_engine_params()
+
+            # Set the redis client for the LogitsLoggingProcessor
+            # Add the normalization_constants and normalization_constants_temp_scaled lists to extra_args
+            if(logits_processor):
+                print("Enabling logits processing in engine parameters extra_args.")
+                engine_params.extra_args = {}
+                engine_params.extra_args["req_id"] = "my_request_" + str(time.time())
+            
+        elif(engine == "llama_cpp"):
+            backend = _get_llama_cpp_backend()
+            # Create the LLM object
+            self.llm = backend.create_LLM_object(
+                model_name = model, 
+                model_type = model_type,
+                dtype = dtype, 
+                gpu_memory_utilization = gpu_memory_utilization, 
+                max_model_len = max_model_len,
+                logits = logits,
+                **kwargs
+            )
+            # Set the autoregressive sampler function
+            self.sample_fn = backend.sample
+            # Llama.cpp does not have a separate engine params class
+            engine_params = None
+
+        else:
+            raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
+        
+        # Create tokenizer depending on whether a tokenizer path is provided
+        # Needed as some models do not include the tokenizer files in the same repo as the model
+        if tokenizer_path is not None:
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=trust_remote_code)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
+
+        print("Engine Params Extra Args:", engine_params.extra_args if engine_params is not None else "N/A")
+
+        # Intialize the Sampling Params
+        if(sampling_params is None):
+            self.sampling_params = Sampling_Params(
+                engine = engine, 
+                engine_params = engine_params, 
+                logprobs = max_logprobs,
+                logits_per_token = logits_per_token
+            )
+        else:
+            self.sampling_params = sampling_params
+
+        # Intialize the other test-time sampling parameters to Nones 
+        self.chain_sampling = None
+        self.token_sampling = None
+
+    def sample(self, 
+        context: str, 
+        max_new_tokens: int):
+        """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
+
+        Args:
+            context (str): The input context.
+            max_new_tokens (int): Maximum number of new tokens to generate.
+            **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
+
+        Returns:
+            tokens: list[int] | list[list[int]]: The generated token IDs.
+            top_k_logits: list[float] | list[list[float]] | None: The top_k logits (if logits_per_token is set).
+            top_k_logprobs: list[float] | list[list[float]] | None: The top_k logprobs (if logprobs is set).
+            unprocessed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Unprocessed) for each token.
+            temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
+            entropy: list[float] | list[list[float]]: The entropy for each token.
+        """
+        return self.sample_fn(self, context, max_new_tokens)
+
+    # Chain Sampling Methods
+    def enable_smc(
+        self,
+        num_particles: int,
+        tokens_per_step: int,
+        stop_on_eos: bool,
+        token_metric: str,  
+        aggregation: str
+    )-> None:
+        """
+        Enables SMC sampling for the chosen LLM/Engine.
+
+        Args:
+            num_particles (int): Number of particles to use for SMC.
+            tokens_per_step (int): Number of tokens to generate per step.
+            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
+            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
+            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
+        
+        Returns:
+            None
+        """
+        # Check if chain sampling has already been enabled. If so replace it with SMC.
+        if(self.chain_sampling is not None):
+            print("Warning: Current Chain Sampling Strategy is being replaced with SMC.")
+        
+        # Check if the engine/LLM is set up for SMC
+        if(token_metric == "PRM"):
+            raise ValueError("PRM is not supported YET for SMC.")
+        elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
+            if(self.engine == "vllm"):
+                vllm_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "llama.cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+        else:
+            raise ValueError(f"{token_metric} not supported for SMC.")
+
+        # Check if the aggregation method is supported
+        if(aggregation == "last" or aggregation == "minimum" or aggregation == "product" or aggregation == "model_aggregate"):
+            pass
+        else:
+            raise ValueError(f"{aggregation} not supported for SMC.")
+
+        # Create the SMC Class
+        self.chain_sampling = Sequential_Monte_Carlo(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
+
+    # Token Sampling Methods
+    def enable_power_sampling(
+        self,
+        num_particles: int,
+        tokens_per_step: int,
+        stop_on_eos: bool,
+        token_metric: str,
+        aggregation: str
+    )-> None:
+        """
+        Enables Power Sampling for the chosen LLM/Engine.
+
+        Args:
+            num_particles (int): Number of particles to use for Power Sampling.
+            tokens_per_step (int): Number of tokens to generate per step.
+            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
+            token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
+            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
+        
+        Returns:
+            None
+        """
+        # Check if chain sampling has already been enabled. If so replace it with Power Sampling.
+        if(self.power_sampling is not None):
+            print("Warning: Current Chain Sampling Strategy is being replaced with Power Sampling.")
+        
+        # Check if the engine/LLM is set up for Power Sampling
+        if(token_metric == "PRM"):
+            raise ValueError("PRM is not supported YET for Power Sampling.")
+        elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
+            if(self.engine == "vllm"):
+                vllm_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "llama.cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+        else:
+            raise ValueError(f"{token_metric} not supported for Power Sampling.")
+
+        # Create the Power Sampling Class
+        self.token_sampling = Power_Sampling(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
+
+class Output:
+    """ Output object for any LLM sampling.
+    
+    Attributes:
+        tokens (list[int] | list[list[int]]): The generated token IDs.
+        top_k_logits (list[float] | list[list[float]] | None): The top_k logits (if logits_per_token is set).
+        top_k_logprobs (list[float] | list[list[float]] | None): The top_k logprobs (if logprobs is set).
+        unprocessed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Unprocessed) for each token.
+        temp_processed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Temperature Processed) for each token.
+        entropy (list[float] | list[list[float]]): The entropy for each token.
+    """
+    def __init__(
+        self,
+        tokens: list[int] | list[list[int]] = None,
+        top_k_logits: list[float] | list[list[float]] | None = None,
+        top_k_logprobs: list[float] | list[list[float]] | None = None,
+        unprocessed_log_normalization_constant: list[float] | list[list[float]] = None,
+        temp_processed_log_normalization_constant: list[float] | list[list[float]] = None,
+        entropy: list[float] | list[list[float]] = None,
+    ):
+        self.tokens = tokens
+        self.top_k_logits = top_k_logits
+        self.top_k_logprobs = top_k_logprobs
+        self.unprocessed_log_normalization_constant = unprocessed_log_normalization_constant
+        self.temp_processed_log_normalization_constant = temp_processed_log_normalization_constant
+        self.entropy = entropy
+
