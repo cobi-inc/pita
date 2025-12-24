@@ -36,7 +36,8 @@ ENGINE_PARAM_MAPS = {
         'temperature': 'temperature',
         'top_p': 'top_p',
         'top_k': 'top_k',
-        'logprobs': 'logprobs',
+        'logprobs_per_token': 'logprobs',
+        'logits_per_token': 'logprobs',
         'presence_penalty': 'presence_penalty',
         'frequency_penalty': 'frequency_penalty',
         'repetition_penalty': 'repetition_penalty',
@@ -70,7 +71,7 @@ class Sampling_Params:
         temperature (float): Controls randomness of sampling. Lower is more deterministic, higher is more random.
         top_p (float): Controls tokens to consider based on cumulative probability. Must be in (0, 1].
         top_k (int): Controls number of top tokens to consider. 0 or -1 considers all tokens.
-        logprobs (int): Number of logits/logprobs to return per output token. logprobs+1 token returned (includes chosen token). -1 returns all vocab_size log probabilities.
+        logprobs_per_token (int): Number of logprobs to return per output token. logprobs+1 token returned (includes chosen token).
         logits_per_token (int): Number of descending ranked logits to return per output token.
         presence_penalty (float): Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
         frequency_penalty (float): Penalizes new tokens based on frequency in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
@@ -81,8 +82,8 @@ class Sampling_Params:
         stop_token_ids (list[int]): Token IDs that stop token generation. Returned output excludes stop tokens.
         ignore_eos (bool): Continues generating tokens after EOS token is generated.
         min_tokens (int): Minimum Number of tokens to generate per sequence before EOS or stop is considered.
-        normalization_constants (list[float]): Normalization constants.
-        entropy (list[float]): Entropy.
+        enable_normalization_constants (bool): Whether to enable normalization constants.
+        enable_entropy (bool): Whether to enable entropy.
     """
     def __init__(
         self,
@@ -93,7 +94,7 @@ class Sampling_Params:
         temperature: float = 1.0,
         top_p: float = 1.0,
         top_k: int = -1,
-        logprobs: int = None,
+        logprobs_per_token: int = None,
         logits_per_token: int = None,
         presence_penalty: float = 0.0,
         frequency_penalty: float = 0.0,
@@ -104,8 +105,8 @@ class Sampling_Params:
         stop_token_ids: list[int] = None,
         ignore_eos: bool = False,
         min_tokens: int = 0,
-        normalization_constants: list[float] = None,
-        entropy: list[float] = None
+        enable_normalization_constants: bool = False,
+        enable_entropy: bool = False
     ):  
         object.__setattr__(self, 'engine', engine)
         object.__setattr__(self, 'engine_params', engine_params)
@@ -114,7 +115,7 @@ class Sampling_Params:
         object.__setattr__(self, 'temperature', temperature)
         object.__setattr__(self, 'top_p', top_p)
         object.__setattr__(self, 'top_k', top_k)
-        object.__setattr__(self, 'logprobs', logprobs)
+        object.__setattr__(self, 'logprobs_per_token', logprobs_per_token)
         object.__setattr__(self, 'logits_per_token', logits_per_token)
         object.__setattr__(self, 'presence_penalty', presence_penalty)
         object.__setattr__(self, 'frequency_penalty', frequency_penalty)
@@ -125,12 +126,12 @@ class Sampling_Params:
         object.__setattr__(self, 'stop_token_ids', stop_token_ids)
         object.__setattr__(self, 'ignore_eos', ignore_eos)
         object.__setattr__(self, 'min_tokens', min_tokens)
-        object.__setattr__(self, 'normalization_constants', normalization_constants)
-        object.__setattr__(self, 'entropy', entropy)
+        object.__setattr__(self, 'enable_normalization_constants', enable_normalization_constants)
+        object.__setattr__(self, 'enable_entropy', enable_entropy)
 
         # Sync all parameters to engine_params after initialization
         if engine is not None and engine_params is not None:
-            for param_name in ['max_tokens', 'temperature', 'top_p', 'top_k', 'logprobs', 'logits_per_token',
+            for param_name in ['max_tokens', 'temperature', 'top_p', 'top_k', 'logprobs_per_token', 'logits_per_token',
                                'presence_penalty', 'frequency_penalty', 'repetition_penalty',
                                'min_p', 'seed', 'stop', 'stop_token_ids', 'ignore_eos', 'min_tokens']:
                 self._sync_param_to_engine(param_name, getattr(self, param_name))
@@ -139,6 +140,16 @@ class Sampling_Params:
     def __setattr__(self, name, value):
         # Also sync to engine_params if it exists
         super().__setattr__(name, value)
+
+        # If attribute is dependent on a Logits Processor, makes sure to propogate the change
+        if(self.engine == "vllm"):
+            if(name == "enable_normalization_constants"):
+                self.engine_params.extra_args["normalization_constants"] = value
+                return
+            elif(name == "enable_entropy"):
+                self.engine_params.extra_args["entropy"] = value
+                return
+
         self._sync_param_to_engine(name, value)
 
 
@@ -154,12 +165,50 @@ class Sampling_Params:
         if self.engine_params is None:
             raise ValueError("engine_params Class must be set in Sampling_Params to sync parameters to engine_params.")
         
+        # Check if engine is vLLM and logprobs is being changed
+        if self.engine == "vllm":
+            if(param_name == "logprobs_per_token"):
+                if(value < self.logits_per_token):
+                    # Do not overwrite the vLLM engine parameter "logprobs" as logits_per_token will fail
+                    return
+                elif(param_name == "logits_per_token"):
+                    if(value < self.logprobs_per_token):
+                        # Do not overwrite the vLLM engine parameter "logits_per_token" as logprobs_per_token will fail
+                        return
+        
         # Sync logic here
         engine_map = ENGINE_PARAM_MAPS.get(self.engine, {})
         engine_param_name = engine_map.get(param_name)
         # If the engine supports this parameter, set it
         if engine_param_name is not None:
             setattr(self.engine_params, engine_param_name, value)
+
+class Output:
+    """ Output object for any LLM sampling.
+    
+    Attributes:
+        tokens (list[int] | list[list[int]]): The generated token IDs.
+        top_k_logits (list[float] | list[list[float]] | None): The top_k logits (if logits_per_token is set). First value is always the chosen token logit.
+        top_k_logprobs (list[float] | list[list[float]] | None): The top_k logprobs (if logprobs is set). First value is always the chosen token logprob.
+        unprocessed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Unprocessed) for each token.
+        temp_processed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Temperature Processed) for each token.
+        entropy (list[float] | list[list[float]]): The entropy for each token.
+    """
+    def __init__(
+        self,
+        tokens: list[int] | list[list[int]] = None,
+        top_k_logits: list[float] | list[list[float]] | None = None,
+        top_k_logprobs: list[float] | list[list[float]] | None = None,
+        unprocessed_log_normalization_constant: list[float] | list[list[float]] = None,
+        temp_processed_log_normalization_constant: list[float] | list[list[float]] = None,
+        entropy: list[float] | list[list[float]] = None,
+    ):
+        self.tokens = tokens
+        self.top_k_logits = top_k_logits
+        self.top_k_logprobs = top_k_logprobs
+        self.unprocessed_log_normalization_constant = unprocessed_log_normalization_constant
+        self.temp_processed_log_normalization_constant = temp_processed_log_normalization_constant
+        self.entropy = entropy
 
 class AutoregressiveSampler:
     """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
@@ -183,8 +232,7 @@ class AutoregressiveSampler:
         tokenizer_path: str,
         gpu_memory_utilization: float,
         max_model_len: int,
-        max_logprobs: int,
-        logits_per_token: int,
+        max_probs: int,
         logits_processor: bool,
         trust_remote_code: bool,
         sampling_params: Sampling_Params,
@@ -200,8 +248,7 @@ class AutoregressiveSampler:
             tokenizer_path (str): Path to a model with a tokenizer if the model path doesn't include a tokenizer.
             gpu_memory_utilization (float): GPU memory utilization to use.
             max_model_len (int): Max model context length (context window = prompt + generated tokens).
-            logprobs_per_token (int): Number of top ranked logprobs to store per output token.
-            logits_per_token (int): Number of top ranked logits to return per output token.
+            max_probs (int): Number of top ranked probabilites (logits & logprobs) to store per output token.
             logits_processor (bool): Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
             trust_remote_code (bool): Whether to trust remote code when loading the model.
             sampling_params (Sampling_Params): General sampling parameters to use (Sampling_Params Class).
@@ -217,41 +264,22 @@ class AutoregressiveSampler:
         self.model = model
 
         print(f"Loading model {model} with {engine}...")
-
-        # Enable the use of logits if logits_per_token is set
-        # This is important as the engine cannot be set to return logits after it is initialized
-        if(logits_per_token is not None):
-            logits = True
-            prob_count = logits_per_token
-        else:
-            logits = False
         
         # Seperate Backend Loading for each engine
         if(engine == "vllm"):
             backend = _get_vllm_backend()
 
-            # vLLM uses both logits and logprobs interchangeably depending on the logprobs_mode set during initialization
-            # some libraries have distinct modes for logits vs logprobs like llama_cpp
-            # As a logit space library first, we set logprobs_mode to 'raw_logits' when logits=True
-            # Additionally, we default to preferring logits_per_token over max_logprobs when both are for clarity
-            if(logits == True):
-                print("vLLM does not output both logits and logprobs separately. Both max_logprobs and logits_per_token are set. Defaulting to using logits_per_token for vLLM max_logprobs engine parameter and in vLLM's logprobs Sampling_Params.")
-                prob_count = logits_per_token
-                max_logprobs = logits_per_token
-            elif(logits == False and max_logprobs is not None):
-                print("vLLM does not output both logits and logprobs separately. max_logprobs is set while logits_per_token is not set. Defaulting to using and returning max_logprobs for vLLM.")
-                prob_count = max_logprobs
-            else:
-                prob_count = None
-                
+            if(max_probs > 0 and logits_processor == False):
+                print("max_probs is set but logits_processor is False. Setting logits_processor to True.")
+                logits_processor = True
+
             # Create the LLM object
             self.llm = backend.create_LLM_object(
                 model_name = model, 
                 dtype = dtype,
                 gpu_memory_utilization = gpu_memory_utilization,
                 max_model_len = max_model_len,
-                max_logprobs = prob_count,
-                logits = logits,
+                max_probs = max_probs,
                 logits_processor = logits_processor,
                 **kwargs
             )  
@@ -303,8 +331,8 @@ class AutoregressiveSampler:
             self.sampling_params = Sampling_Params(
                 engine = engine, 
                 engine_params = engine_params, 
-                logprobs = max_logprobs,
-                logits_per_token = logits_per_token
+                logprobs_per_token = max_probs,
+                logits_per_token = max_probs
             )
         else:
             self.sampling_params = sampling_params
@@ -314,8 +342,9 @@ class AutoregressiveSampler:
         self.token_sampling = None
 
     def sample(self, 
-        context: str, 
-        max_new_tokens: int):
+        context: str,
+        **kwargs
+        )-> Output:
         """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
 
         Args:
@@ -331,7 +360,7 @@ class AutoregressiveSampler:
             temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
             entropy: list[float] | list[list[float]]: The entropy for each token.
         """
-        return self.sample_fn(self, context, max_new_tokens)
+        return self.sample_fn(self, context, **kwargs)
 
     # Chain Sampling Methods
     def enable_smc(
@@ -382,19 +411,16 @@ class AutoregressiveSampler:
     # Token Sampling Methods
     def enable_power_sampling(
         self,
-        num_particles: int,
-        tokens_per_step: int,
-        stop_on_eos: bool,
+        block_size: int,
+        MCMC_steps: int,
         token_metric: str,
-        aggregation: str
     )-> None:
         """
-        Enables Power Sampling for the chosen LLM/Engine.
+        Enables Power Sampling for the chosen LLM/Engine. Checks to see if the engine/LLM is compatible with Power Sampling by verifying that the token metric is supported/available to be used
 
         Args:
-            num_particles (int): Number of particles to use for Power Sampling.
-            tokens_per_step (int): Number of tokens to generate per step.
-            stop_on_eos (bool): (WIP)Whether to stop on end of sequence.
+            block_size (int): Number of tokens to generate per step.
+            MCMC_steps (int): Number of MCMC steps to use for Power Sampling.
             token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
             aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
         
@@ -402,8 +428,8 @@ class AutoregressiveSampler:
             None
         """
         # Check if chain sampling has already been enabled. If so replace it with Power Sampling.
-        if(self.power_sampling is not None):
-            print("Warning: Current Chain Sampling Strategy is being replaced with Power Sampling.")
+        if(self.token_sampling is not None):
+            print("Warning: Current Token Sampling Strategy is being replaced with Power Sampling.")
         
         # Check if the engine/LLM is set up for Power Sampling
         if(token_metric == "PRM"):
@@ -417,32 +443,4 @@ class AutoregressiveSampler:
             raise ValueError(f"{token_metric} not supported for Power Sampling.")
 
         # Create the Power Sampling Class
-        self.token_sampling = Power_Sampling(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
-
-class Output:
-    """ Output object for any LLM sampling.
-    
-    Attributes:
-        tokens (list[int] | list[list[int]]): The generated token IDs.
-        top_k_logits (list[float] | list[list[float]] | None): The top_k logits (if logits_per_token is set).
-        top_k_logprobs (list[float] | list[list[float]] | None): The top_k logprobs (if logprobs is set).
-        unprocessed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Unprocessed) for each token.
-        temp_processed_log_normalization_constant (list[float] | list[list[float]]): The log(Normalization Constants - Temperature Processed) for each token.
-        entropy (list[float] | list[list[float]]): The entropy for each token.
-    """
-    def __init__(
-        self,
-        tokens: list[int] | list[list[int]] = None,
-        top_k_logits: list[float] | list[list[float]] | None = None,
-        top_k_logprobs: list[float] | list[list[float]] | None = None,
-        unprocessed_log_normalization_constant: list[float] | list[list[float]] = None,
-        temp_processed_log_normalization_constant: list[float] | list[list[float]] = None,
-        entropy: list[float] | list[list[float]] = None,
-    ):
-        self.tokens = tokens
-        self.top_k_logits = top_k_logits
-        self.top_k_logprobs = top_k_logprobs
-        self.unprocessed_log_normalization_constant = unprocessed_log_normalization_constant
-        self.temp_processed_log_normalization_constant = temp_processed_log_normalization_constant
-        self.entropy = entropy
-
+        self.token_sampling = Power_Sampling(block_size, MCMC_steps, token_metric)

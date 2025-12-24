@@ -3,6 +3,7 @@ from vllm import LLM, SamplingParams
 
 # vLLM Custom Logit Processor Library
 from pita.inference.vllm_logits_processor import LogitsLoggingProcessor
+from pita.inference.LLM_backend import AutoregressiveSampler, Output
 
 # Memory Libraries
 import redis
@@ -15,7 +16,6 @@ from pita.utils.redis_manager import RedisManager
 def sample(
         self, 
         context: str | list[str], 
-        max_new_tokens: int | list[int], 
         **kwargs 
     ) -> tuple[
             list[int] | list[list[int]], 
@@ -40,15 +40,6 @@ def sample(
         temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
         entropy: list[float] | list[list[float]]: The entropy for each token.
     """
-        
-    # Update the max tokens if needed
-    if(self.sampling_params.engine_params.max_tokens != max_new_tokens):
-        self.sampling_params.engine_params.max_tokens = max_new_tokens
-    
-    # Set the sampling_params logprobs to logits_per_token if needed. Always assume the users when using vLLM wants logits if logits_per_token is sets
-    if(self.sampling_params.logits_per_token is not None and self.sampling_params.logprobs is not None):
-        if(self.sampling_params.logits_per_token > self.sampling_params.logprobs ):
-            self.sampling_params.logprobs = self.sampling_params.logits_per_token
 
     # Generate a new response from the LLM
     llm_output = self.llm.generate(
@@ -60,20 +51,13 @@ def sample(
     # Get the generated tokens
     tokens = llm_output[0].outputs[0].token_ids
 
-    # Extract all logits/logprobs for each position (list of lists to handle variable lengths)
-    # Create a 2D array of Nones to hold the logits/logprobs
-    logits_logprobs = np.full((len(llm_output[0].outputs[0].logprobs), 1 + (self.sampling_params.logits_per_token if self.sampling_params.logits_per_token is not None else self.sampling_params.logprobs)), None)    
+    # Create a 2D array of NaNs to hold the logits
+    logits_expected = max(self.sampling_params.logprobs_per_token or 0, self.sampling_params.logits_per_token or 0)
+    logits = np.full((len(tokens), 1 + logits_expected), np.nan, dtype=float)
     for token_idx in range(len(tokens)):
         for logit_idx, values in enumerate(llm_output[0].outputs[0].logprobs[token_idx].values()):
-            logits_logprobs[token_idx][logit_idx] = values.logprob
-
-    if(self.sampling_params.logits_per_token is not None):
-        top_k_logits = logits_logprobs
-        top_k_logprobs = None
-    else:
-        top_k_logprobs = logits_logprobs
-        top_k_logits = None
-
+            logits[token_idx][logit_idx] = values.logprob
+    
     # Get the Normalization Constants from Redis
     unprocessed_log_normalization_constant = []
     temp_processed_log_normalization_constant = []
@@ -98,8 +82,21 @@ def sample(
             temp_processed_log_normalization_constant.append(float(parts[1]))
             entropy.append(float(parts[2]))
 
-    # Returns the generated token_ids, the chosen token logit/logprob, the top_k logits/logprobs, and the normalization constants
-    return tokens, top_k_logits, top_k_logprobs, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy
+    # Find the logprobs for each token with the logits and temp_processed_log_normalization_constant
+    logprobs = (logits / self.sampling_params.engine_params.temperature) - np.array(temp_processed_log_normalization_constant)[:, np.newaxis]    
+    
+    # Create the output object
+    output = Output(
+        tokens=tokens,
+        top_k_logits=logits[:, :self.sampling_params.logits_per_token],
+        top_k_logprobs=logprobs[:, :self.sampling_params.logprobs_per_token],
+        unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,
+        temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,
+        entropy=entropy
+    )
+
+    # Returns the output object
+    return output
 
 def create_LLM_object(
         model_name,
@@ -107,8 +104,7 @@ def create_LLM_object(
         dtype="auto", 
         gpu_memory_utilization=0.85, 
         max_model_len=2048, 
-        max_logprobs=1000, 
-        logits=True, 
+        max_probs=1000, 
         logits_processor=False,
         **kwargs
     ):
@@ -121,8 +117,7 @@ def create_LLM_object(
         dtype (str, optional): The data type to use. Defaults to "auto".
         gpu_memory_utilization (float, optional): The fraction of GPU memory to use. Defaults to 0.85.
         max_model_len (int, optional): The maximum length of the model context. Defaults to 2048.
-        max_logprobs (int, optional): Controls how many logprobs or logits are stored for each token. Defaults to 1000.
-        logits (bool, optional): Whether to output unprocessed logits. Defaults to True.
+        max_probs (int, optional): Controls how many logprobs or logits are stored for each token. Defaults to 1000.
         logits_processor (bool, optional): Whether to enable the Redis logging logits processor. Defaults to False.
         **kwargs: Additional keyword arguments passed to the LLM constructor.
 
@@ -130,18 +125,11 @@ def create_LLM_object(
         LLM: The initialized vLLM LLM object.
     """
 
-    if(logits):
-        # User wants unprocessed logits output
-        logprobs_mode = 'raw_logits'
-    else:
-        # Default to processed logprobs if the user does not want logits
-        logprobs_mode = 'processed_logprobs'
-
     if(logits_processor):
         # Enable the Redis logging logits processor by adding it to the kwargs
         kwargs["logits_processors"] = [LogitsLoggingProcessor]
         RedisManager.start()
-        print("Added LogitsLoggingProcessor to the vLLM LLM object for logging logits.")
+        print("LogitsLoggingProcessor enabled. Logits will be logged.")
     else:
         print("LogitsLoggingProcessor not enabled. Logits will not be logged.")
 
@@ -150,8 +138,8 @@ def create_LLM_object(
               dtype=dtype,
               gpu_memory_utilization=gpu_memory_utilization,
               max_model_len=max_model_len,
-              max_logprobs=max_logprobs, # Controls how many logprobs or logits are stored for each token
-              logprobs_mode=logprobs_mode,
+              max_logprobs=max_probs, # Controls how many logprobs or logits are stored for each token
+              logprobs_mode='raw_logits',
               **kwargs)
 
     return llm
@@ -207,8 +195,8 @@ def check_token_metric_compatibility(
 
     if(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
         # Make sure the user has actually set logits_per_token
-        if(sampler.sampling_params.logits_per_token is None):
-            raise ValueError("LLM engine logits_per_token must be set to enable power sampling.")
+        if(sampler.sampling_params.logits_per_token < 1):
+            raise ValueError("LLM engine logits_per_token must be set to at least 1 to enable power sampling.")
         
         # For vLLM, make sure that logprobs_mode is set to 'raw_logits' to get unprocessed logits
         if(sampler.llm.llm_engine.model_config.logprobs_mode != 'raw_logits'):
@@ -224,8 +212,12 @@ def check_token_metric_compatibility(
         if('req_id' not in sampler.sampling_params.engine_params.extra_args):
             raise ValueError("req_id must be set to use power sampling with vLLM.")
         
-        # Set the normalization constant in the extra_args of the vLLM SamplingParams to True 
-        sampler.sampling_params.engine_params.extra_args["normalization_constants"] = True
-        print("Enabled normalization constants in vLLM SamplingParams for power sampling.")
+        # Set the normalization constant in the extra_args of the vLLM SamplingParams to True
+        if(token_metric == "logprobs" or token_metric == "power_distribution"):
+            sampler.sampling_params.enable_normalization_constants = True
+            print("Enabled normalization constants in vLLM SamplingParams for power sampling.")
         
+        if(token_metric == "entropy"):
+            sampler.sampling_params.enable_entropy = True
+            print("Enabled entropy in vLLM SamplingParams for power sampling.")
     
