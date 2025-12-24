@@ -13,6 +13,7 @@ import json
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
+from pita.sampling.token_metrics import calc_token_metric
 
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
@@ -61,38 +62,108 @@ class Power_Sampling:
         logging: bool = False,
         log_file_path: str = None
     )-> Output:
-        pass
-        
-# TODO remove this function as it will be incorperated into the LLM_backend.py
-# Checks that the LLM and parameters are compatible with power sampling and enables power sampling
-def enable_power_sampling(sampler, block_size, MCMC_steps):
-    # Check if the sampler is initialized
-    if(sampler is None):
-        raise ValueError("Sampler must be initialized before enabling power sampling.")
+    """
+    Sample using power sampling.
+
+    Args:
+        sampler (AutoregressiveSampler): The sampler object containing sampling parameters and the LLM engine.
+        prompt (str): The prompt to sample from.
+        logging (bool, optional): Whether to log the sampling process. Defaults to False.
+        log_file_path (str, optional): The path to the log file. Defaults to None.
+    Returns:
+        Output (Output): The output of the sampling process.
+    """
+        # Set the random seed for reproducibility
+        if sampler.sampling_params.seed is not None:
+            np.random.seed(sampler.sampling_params.seed)
+            random.seed(sampler.sampling_params.seed)
+
+        # Statistic Logging in a CSV
+        if(logging):
+            #create or overwrite log file
+            power_sampling_log_path = log_file_path if log_file_path is not None else f"power_sampling_log_{time.strftime('%H%M%S_%d_%m_%Y')}.csv"
+            with open(power_sampling_log_path, "w") as log_file:
+                log_file.write(f'"{json.dumps(vars(sampler), default=str).replace("\"", "\"\"")}"\n')
+                log_file.write(f'"{prompt.replace("\"", "\"\"")}"\n')
+                log_file.write("proposed_power_sampling_logprob_norm,proposed_low_temp_logprob_norm,compared_power_sampling_logprob_norm,compared_low_temp_logprob_norm,new_power_sampling_logprob_norm,new_low_temp_logprob_norm,acceptance_ratio,accepted,starting_index,tokens_generated,\n")
+
+        # Intialize arrays to store the probabilities of the current tokens
+        current_target_distribution = [] # Current list of unscaled log probabilities of the new sample. Length of block_size
+        current_sampling_distribution = [] # Current list of tokens probabilities individually scaled by temperature. Length of block_size
+
+        # New Context Window to be changed
+        context = []
+
+        # Number of blocks to be sampled
+        block_count = sampler.sampling_params.max_tokens // sampler.power_sampling_params.block_size
+        for block_idx in range(block_count):
+            # Sample the initial new tokens for the block
+            output = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), sampler.power_sampling_params.block_size)
+            
+            # Calculate the log probabilities of the initial new tokens for the block
+            target_distribution = calc_token_metric(output, sampler, self.token_metric)
+            sampling_distribution = calc_token_metric(output, sampler, "logprobs")
+
+            # Extend the distributions
+            current_target_distribution = [*current_target_distribution, *target_distribution.tolist()]
+            current_sampling_distribution = [*current_sampling_distribution, *sampling_distribution.tolist()]
+
+            # Extend the context with the newly generated tokens
+            context.extend(output.tokens)
+
+            # Log Results
+            if(logging):
+                proposed_target_distribution = "None"
+                proposed_sampling_distribution = "None "
+                current_target_distribution = "None"
+                current_sampling_distribution = "None"
+                new_target_distribution_normalized = sum(target_distribution)/len(target_distribution)
+                new_sampling_distribution_normalized = sum(sampling_distribution)/len(sampling_distribution)
+                acceptance_ratio = "None"
+                accepted = "None"
+                tokens_generated = len(output.tokens)
+                starting_index = len(context)-tokens_generated
+                # Write initial generated block data to log
+                with open(power_sampling_log_path, "a") as log_file:
+                    log_file.write(f"{proposed_target_distribution},{proposed_sampling_distribution},{current_target_distribution},{current_sampling_distribution},{new_target_distribution_normalized},{new_sampling_distribution_normalized},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
+
+
+            # Perform the MCMC Steps to hone in on the target distribution
+            for _ in range(self.MCMC_steps), disable=True:
+                #Find a new point to start a proposal from. Generate idx tokens for the step.
+                idx = random.randint(0, len(context) - 1)
+
+                #Set the new context for the proposed block
+                context_proposed = context[:idx]
+                
+            #Generate proposed block of tokens
+            output = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
+
+            #Find the proposed probability distributions 
+            proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
+            proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")
+
+            # Calculate the Metro-Hastings acceptance ratio
+            # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
+            log_acceptance_ratio = sum(proposed_target_distribution) + sum(current_sampling_distribution[idx:idx+len(output.tokens)]) - sum(current_target_distribution[idx:idx+len(output.tokens)]) - sum(proposed_sampling_distribution)
+            
+            # Check to make sure we are comparing the correct number of elements
+            assert(len(proposed_target_distribution) == len(current_sampling_distribution[idx:idx+len(output.tokens)]) == len(current_target_distribution[idx:idx+len(output.tokens)]) == len(proposed_sampling_distribution))
+
+            # Log the logprobs and acceptance ratio
+            if(logging):
+                proposed_target_distribution = sum(proposed_logprob)
+                proposed_sampling_distribution = sum(proposed_logprob_temp_scaled)
+                current_target_distribution = sum(logprob[idx:idx+len(proposed_tokens_list)])
+                current_sampling_distribution = sum(logprob_temp_scaled[idx:idx+len(proposed_tokens_list)])
     
-    # Check that you have a logit space to operate in
-    if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token <= 0:
-        raise ValueError("Sampler must be initialized with logits_per_token to enable power sampling.")
-
-    # Check the individual engine compatibility for power sampling
-    if sampler.engine == "vllm":
-        backend = _get_vllm_backend()
-        backend.check_vllm_power_sampling_compatibility(sampler)
-
-    elif sampler.engine == "llama_cpp":
-        backend = _get_llama_cpp_backend()
-        backend.check_llama_cpp_power_sampling_compatibility(sampler)
-        
-    else:
-        raise ValueError(f"Engine {sampler.engine} not supported for Power Sampling.")
-
-    # Set the power sampling parameters
-    sampler.power_sampling_params = Power_Sampling_Params(
-        block_size=block_size,
-        MCMC_steps=MCMC_steps
-    )
-    
-    print(f"Power Sampling Enabled: Logits Consider = {sampler.sampling_params.logits_per_token}, Total Output Tokens = {sampler.sampling_params.max_tokens}, Block Size = {block_size}, MCMC Steps = {MCMC_steps}, Temperature (1/alpha) = {sampler.sampling_params.temperature}")
+                # Write initial generated block data to log
+                with open(power_sampling_log_path, "a") as log_file:
+                    log_file.write(f"{proposed_target_distribution},{proposed_sampling_distribution},{current_target_distribution},{current_sampling_distribution},")
+                
+            acceptance = False
+            # Accept or reject the proposed block based on the acceptance ratio
+            if np.random.rand() < np.exp(log_acceptance_ratio):
 
 # TODO remove this function or incorperate it into the sample() function in the Power_Sampling Class
 # Find the output log probabilities of the token sequences for both the p_temp and p_power distributions
