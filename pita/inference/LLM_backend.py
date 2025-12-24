@@ -422,7 +422,6 @@ class AutoregressiveSampler:
             block_size (int): Number of tokens to generate per step.
             MCMC_steps (int): Number of MCMC steps to use for Power Sampling.
             token_metric (str): Token metric to use to grade each particle. Can be logprobs, power_distribution, entropy, or PRM
-            aggregation (str): Aggregation method of the scores of each particle. Can be the last, minimum, product, or model_aggregate.
         
         Returns:
             None
