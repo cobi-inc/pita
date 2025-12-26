@@ -3,7 +3,7 @@ import numpy as np
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler
-from pita.sampling.token_metrics import process_top_k_probs, low_temp_logprobs, power_sampling_logprobs
+from pita.sampling.token_metrics import calc_token_metric
 
 # SMC Class
 class Sequential_Monte_Carlo:
