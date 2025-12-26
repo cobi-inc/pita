@@ -1,7 +1,7 @@
 import pytest
 
 # PITA Libraries
-from pita.inference.LLM_backend import AutoregressiveSampler, Output
+from pita.inference.LLM_backend import Output, AutoregressiveSampler
 from pita.sampling.power_sample import Power_Sampling
 
 # Huggingface Libraries
@@ -81,7 +81,7 @@ def test_power_sampling_enable(sampler, token_metric):
 def test_power_sampling_sample(sampler, token_metric):
     sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
     prompt = tokenizer_chat_template(sampler.tokenizer, False, "You are a helpful assistant.", "Hello, how are you?")
-    output = sampler.token_sampling.sample(sampler, prompt)
+    output = sampler.token_sample(prompt)
     # Check that the output is a valid Output object
     assert isinstance(output, Output)
 
@@ -97,7 +97,11 @@ def test_power_sampling_sample(sampler, token_metric):
     assert hasattr(output, "entropy")
 
     # Check that logging works
-    sampler.token_sampling.sample(sampler, prompt, logging=True, log_file_path="power_sampling_log.csv")
+    args = {
+        "logging": True,
+        "log_file_path": "power_sampling_log.csv"
+    }
+    sampler.token_sample(prompt, **args)
 
     try:
         # Check that the output has the correct values
