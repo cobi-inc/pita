@@ -176,12 +176,18 @@ class Power_Sampling:
             if np.random.rand() < np.exp(log_acceptance_ratio):
                 # Ensure the context is updated with the accepted proposal
                 context[idx:] = output.tokens
-                # Extend the other Output attributes along with the context
-                logits[idx:] = output.logits
-                logprobs[idx:] = output.logprobs
-                unprocessed_log_normalization_constant[idx:] = output.unprocessed_log_normalization_constant
-                temp_processed_log_normalization_constant[idx:] = output.temp_processed_log_normalization_constant
-                entropy[idx:] = output.entropy
+                # Replace the tail of the other Output attributes along with the context
+                logits = np.concatenate([logits[:idx], output.logits], axis=0)
+                logprobs = np.concatenate([logprobs[:idx], output.logprobs], axis=0)
+                unprocessed_log_normalization_constant = np.concatenate(
+                    [unprocessed_log_normalization_constant[:idx], output.unprocessed_log_normalization_constant],
+                    axis=0,
+                )
+                temp_processed_log_normalization_constant = np.concatenate(
+                    [temp_processed_log_normalization_constant[:idx], output.temp_processed_log_normalization_constant],
+                    axis=0,
+                )
+                entropy = np.concatenate([entropy[:idx], output.entropy], axis=0)
 
                 # Update the logprob lists with the accepted proposal's log probabilities
                 current_target_distribution = [*current_target_distribution[:idx], *proposed_target_distribution]
