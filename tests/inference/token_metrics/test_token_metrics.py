@@ -64,7 +64,7 @@ def test_entropy(sampler):
         temp_processed_log_normalization_constant=np.array([5,6,7]), 
         entropy=np.array([6,7,8])
     )
-    entropy = calc_token_metric(output,sampler,"entropy")
+    entropy = calc_token_metric(output, sampler, "entropy")
     assert entropy.shape == (3,)
     assert np.allclose(entropy, output.entropy)
     
