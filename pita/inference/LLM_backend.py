@@ -21,12 +21,7 @@ def _get_llama_cpp_backend():
     return llama_cpp_backend
 
 # Utils
-from pita.utils.system_utils import detect_model_type
 import time
-from pita.utils.constants import REDIS_HOST, REDIS_PORT
-
-# Memory Management
-import redis
 
 # Engine-specific parameter mappings
 # llama_cpp does not have a separate engine_params class, so it is not included here
@@ -406,7 +401,14 @@ class AutoregressiveSampler:
             raise ValueError(f"{aggregation} not supported for SMC.")
 
         # Create the SMC Class
-        self.chain_sampling = Sequential_Monte_Carlo(num_particles, tokens_per_step, stop_on_eos, token_metric, aggregation)
+        from pita.sampling.smc import Sequential_Monte_Carlo
+        self.chain_sampling = Sequential_Monte_Carlo(
+            num_particles=num_particles,
+            tokens_per_step=tokens_per_step,
+            stop_on_eos=stop_on_eos,
+            token_metric=token_metric,
+            aggregation=aggregation
+        )
 
     # Token Sampling Methods
     def enable_power_sampling(
@@ -442,4 +444,9 @@ class AutoregressiveSampler:
             raise ValueError(f"{token_metric} not supported for Power Sampling.")
 
         # Create the Power Sampling Class
-        self.token_sampling = Power_Sampling(block_size, MCMC_steps, token_metric)
+        from pita.sampling.power_sample import Power_Sampling
+        self.token_sampling = Power_Sampling(
+            block_size=block_size,
+            MCMC_steps=MCMC_steps,
+            token_metric=token_metric
+        )
