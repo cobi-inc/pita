@@ -1,6 +1,6 @@
 import pytest
 
-#PITA Libraries
+# PITA Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 from pita.sampling.power_sample import Power_Sampling
 
