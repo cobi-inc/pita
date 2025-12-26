@@ -1,7 +1,16 @@
 import pytest
-from pita.inference.LLM_backend import AutoregressiveSampler
-from transformers import AutoTokenizer
+
+#PITA Libraries
+from pita.inference.LLM_backend import AutoregressiveSampler, Output
+from pita.sampling.power_sample import Power_Sampling
 import pita.inference.vllm_backend as vllm_backend
+
+# Huggingface Libraries
+from transformers import AutoTokenizer
+
+# Standard Libraries
+import os
+
 # Constants
 MODEL = "Qwen/Qwen3-4B-AWQ"
 
@@ -55,13 +64,54 @@ def sampler():
     del sampler.tokenizer
     del sampler
 
-def test_power_sampling_enable(sampler):
+METRICS = ["logprobs", "power_distribution", "entropy"]
+
+@pytest.mark.parametrize("token_metric", METRICS)
+def test_power_sampling_enable(sampler, token_metric):
     # Enable power sampling
-    sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric="power_distribution")
+    sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
     # Check to see if power sampling is enabled
     assert sampler.token_sampling.block_size == 192
     assert sampler.token_sampling.MCMC_steps == 8
-    assert sampler.token_sampling.token_metric == "power_distribution"
+    assert sampler.token_sampling.token_metric == token_metric
 
     # Check to see if sampler.token_sampling is a Power_Sampling object
     assert isinstance(sampler.token_sampling, Power_Sampling)
+
+@pytest.mark.parametrize("token_metric", METRICS)
+def test_power_sampling_sample(sampler, token_metric):
+    sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
+    prompt = tokenizer_chat_template(sampler.tokenizer, False, "You are a helpful assistant.", "Hello, how are you?")
+    output = sampler.token_sampling.sample(sampler, prompt)
+    # Check that the output is a valid Output object
+    assert isinstance(output, Output)
+
+    # Check that the output has the correct values
+    assert len(output.tokens) == len(output.top_k_logits) == len(output.top_k_logprobs) == len(output.unprocessed_log_normalization_constant) == len(output.temp_processed_log_normalization_constant) == len(output.entropy)
+
+    # Check that the output has the correct attributes
+    assert hasattr(output, "tokens")
+    assert hasattr(output, "top_k_logits")
+    assert hasattr(output, "top_k_logprobs")
+    assert hasattr(output, "unprocessed_log_normalization_constant")
+    assert hasattr(output, "temp_processed_log_normalization_constant")
+    assert hasattr(output, "entropy")
+
+    # Check that logging works
+    sampler.token_sampling.sample(sampler, prompt, logging=True, log_file_path="power_sampling_log.txt")
+
+    # Check that the output has the correct values
+    assert len(output.tokens) == len(output.top_k_logits) == len(output.top_k_logprobs) == len(output.unprocessed_log_normalization_constant) == len(output.temp_processed_log_normalization_constant) == len(output.entropy)
+
+    # Check that the output has the correct attributes
+    assert hasattr(output, "tokens")
+    assert hasattr(output, "top_k_logits")
+    assert hasattr(output, "top_k_logprobs")
+    assert hasattr(output, "unprocessed_log_normalization_constant")
+    assert hasattr(output, "temp_processed_log_normalization_constant")
+    assert hasattr(output, "entropy")
+
+    # Check for the log files
+    assert os.path.exists("power_sampling_log.txt")
+    os.remove("power_sampling_log.txt")
+
