@@ -1,4 +1,3 @@
-import pytest
 import pita
 
 def test_library_installed():
