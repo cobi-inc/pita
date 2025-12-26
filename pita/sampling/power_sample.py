@@ -5,7 +5,6 @@ import time
 
 # Math Libraries
 import numpy as np
-from scipy.special import logsumexp
 
 # Helper Library
 from tqdm import tqdm
