@@ -27,3 +27,7 @@ def calc_token_metric(
         return (1/sampler.sampling_params.temperature) * (output.top_k_logits[:, 0] - output.unprocessed_normalization_constant)
     elif metric == "entropy":
         return output.entropy
+    else:
+        raise ValueError(
+            f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', or 'entropy'."
+        )
