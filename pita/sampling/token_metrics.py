@@ -24,7 +24,9 @@ def calc_token_metric(
     if metric == "logprobs":
         return output.top_k_logprobs[:, 0]
     elif metric == "power_distribution":
-        return (1/sampler.sampling_params.temperature) * (output.top_k_logits[:, 0] - output.unprocessed_normalization_constant)
+        return (1 / sampler.sampling_params.temperature) * (
+            output.top_k_logits[:, 0] - np.asarray(output.unprocessed_log_normalization_constant)
+        )
     elif metric == "entropy":
         return output.entropy
     else:
