@@ -3,7 +3,6 @@ import pytest
 #PITA Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 from pita.sampling.power_sample import Power_Sampling
-import pita.inference.vllm_backend as vllm_backend
 
 # Huggingface Libraries
 from transformers import AutoTokenizer
