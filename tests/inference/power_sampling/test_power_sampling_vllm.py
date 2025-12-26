@@ -99,18 +99,21 @@ def test_power_sampling_sample(sampler, token_metric):
     # Check that logging works
     sampler.token_sampling.sample(sampler, prompt, logging=True, log_file_path="power_sampling_log.txt")
 
-    # Check that the output has the correct values
-    assert len(output.tokens) == len(output.top_k_logits) == len(output.top_k_logprobs) == len(output.unprocessed_log_normalization_constant) == len(output.temp_processed_log_normalization_constant) == len(output.entropy)
+    try:
+        # Check that the output has the correct values
+        assert len(output.tokens) == len(output.top_k_logits) == len(output.top_k_logprobs) == len(output.unprocessed_log_normalization_constant) == len(output.temp_processed_log_normalization_constant) == len(output.entropy)
 
-    # Check that the output has the correct attributes
-    assert hasattr(output, "tokens")
-    assert hasattr(output, "top_k_logits")
-    assert hasattr(output, "top_k_logprobs")
-    assert hasattr(output, "unprocessed_log_normalization_constant")
-    assert hasattr(output, "temp_processed_log_normalization_constant")
-    assert hasattr(output, "entropy")
+        # Check that the output has the correct attributes
+        assert hasattr(output, "tokens")
+        assert hasattr(output, "top_k_logits")
+        assert hasattr(output, "top_k_logprobs")
+        assert hasattr(output, "unprocessed_log_normalization_constant")
+        assert hasattr(output, "temp_processed_log_normalization_constant")
+        assert hasattr(output, "entropy")
 
-    # Check for the log files
-    assert os.path.exists("power_sampling_log.txt")
-    os.remove("power_sampling_log.txt")
+        # Check for the log files
+        assert os.path.exists("power_sampling_log.txt")
+    finally:
+        if os.path.exists("power_sampling_log.txt"):
+            os.remove("power_sampling_log.txt")
 
