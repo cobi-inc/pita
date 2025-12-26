@@ -129,6 +129,7 @@ def benchmark_sampling(
     question_list: list[str],
     answer_list: list[str],
     enable_thinking: bool, 
+    chat_template: bool,
     sampling_techniques: list[bool], # greedy sampling, low temp sampling, power sampling, smc, best of n, power sampling and smc
     max_questions: int = 0, 
     output_file_name: str = "math500_power_sampling_results.csv",
@@ -155,7 +156,7 @@ def benchmark_sampling(
         answer = answer_list[question_index]
         
         # Prepare prompt based on whether LLM has chat template or not
-        if hasattr(llm.tokenizer, "apply_chat_template"):
+        if chat_template:
             formatted_prompt = tokenizer_chat_template(llm.tokenizer, enable_thinking, system_message, question)
         else:
             formatted_prompt = system_message + "\n\n" + question
@@ -174,9 +175,10 @@ def benchmark_sampling(
             # Setup Logging file paths
             if(power_sampling_logging != False):
                 os.makedirs(power_sampling_logging_path, exist_ok=True)
-
+        
+            # TODO Adjust the Power Sampling Benchmark to use the new paramaterizations
             # Send the prompt to the sliding window power sampling function
-            power_sampling_output = power_sampling(
+            power_sampling_output = llm.token_sampler.sample(
                 llm, # Autoregressive Sampler Object
                 formatted_prompt, # Template prompt
                 logging = power_sampling_logging, # Enable logging to CSV file
@@ -187,13 +189,13 @@ def benchmark_sampling(
             end_time = time.time()
 
             # Parse the answer
-            power_sampling_answer = parse_answer(power_sampling_output, answer)
+            power_sampling_answer = parse_answer(power_sampling_output)
 
             # Save the results
-            result_row["power_sampling_output"] = power_sampling_output
-            result_row["power_sampling_answer"] = power_sampling_answer
-            result_row["power_sampling_output_token_count"] = len(llm.tokenizer.encode(power_sampling_output))
-            result_row["power_sampling_time_to_solution"] = end_time - start_time
+            result_row["mcmc_completion"] = power_sampling_output
+            result_row["mcmc_output_token_count"] = len(llm.tokenizer.encode(power_sampling_output))
+            result_row["mcmc_time_to_solution"] = end_time - start_time
+            result_row["mcmc_answer"] = power_sampling_answer
 
         # Generate a response with just low temperature sampling
         if(sampling_techniques[1]): # Low Temperature Sampling
@@ -201,20 +203,20 @@ def benchmark_sampling(
             start_time = time.time()
 
             # Prompt the LLM and get the output/answer
-            low_temp_tokens_list, _, _, _, _ = llm.sample(formatted_prompt, llm.sampling_params.max_tokens)
+            output = llm.sample(formatted_prompt)
             
             # Find the end time of the low temperature sampling
             end_time = time.time()
 
             # Parse the answer
-            low_temp_sampling_answer = parse_answer(llm.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False), answer)
+            low_temp_sampling_answer = parse_answer(llm.tokenizer.decode(output.tokens, skip_special_tokens=False))
 
             # Save the results
-            result_row["low_temp_sampling_output"] = llm.tokenizer.decode(low_temp_tokens_list, skip_special_tokens=False)
-            result_row["low_temp_sampling_output_token_count"] = len(low_temp_tokens_list)
-            result_row["low_temp_sampling_time_to_solution"] = end_time - start_time
-            result_row["low_temp_sampling_answer"] = low_temp_sampling_answer
-
+            result_row["naive_completion"] = llm.tokenizer.decode(output.tokens, skip_special_tokens=False)
+            result_row["naive_sampling_output_token_count"] = len(output.tokens)
+            result_row["naive_sampling_time_to_solution"] = end_time - start_time
+            result_row["naive_answer"] = low_temp_sampling_answer
+        
         if(sampling_techniques[0]): # Naive Sampling
             # Save and change the temperature to 1.0 for naive sampling
             saved_temperature = llm.sampling_params.temperature
@@ -224,18 +226,18 @@ def benchmark_sampling(
             start_time = time.time()
 
             # Prompt the LLM and get the output/answer
-            naive_tokens_list, _, _, _, _ = llm.sample(formatted_prompt, llm.sampling_params.max_tokens)
+            output = llm.sample(formatted_prompt)
             
             # Find the end time of the naive sampling
             end_time = time.time()
 
             # Parse the answer
-            naive_sampling_answer = parse_answer(llm.tokenizer.decode(naive_tokens_list, skip_special_tokens=False), answer)
+            std_sampling_answer = parse_answer(llm.tokenizer.decode(output.tokens, skip_special_tokens=False))
             # Save the results
-            result_row["naive_sampling_output"] = llm.tokenizer.decode(naive_tokens_list, skip_special_tokens=False)
-            result_row["naive_sampling_output_token_count"] = len(naive_tokens_list)
-            result_row["naive_sampling_time_to_solution"] = end_time - start_time
-            result_row["naive_sampling_answer"] = naive_sampling_answer
+            result_row["std_completion"] = llm.tokenizer.decode(output.tokens, skip_special_tokens=False)
+            result_row["std_sampling_output_token_count"] = len(output.tokens)
+            result_row["std_sampling_time_to_solution"] = end_time - start_time
+            result_row["std_answer"] = std_sampling_answer
             
             # Set the temperature back to original
             llm.sampling_params.temperature = saved_temperature
