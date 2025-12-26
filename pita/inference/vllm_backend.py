@@ -170,7 +170,7 @@ def check_token_metric_compatibility(
         ValueError: If vLLM engine logprobs_mode is not 'raw_logits'.
         ValueError: If 'req_id' is not in extra_args.
     """
-    if(token_metric is "logprobs" or token_metric is "power_distribution" or token_metric is "entropy"):
+    if (token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
         # Make sure the user has actually set logits_per_token
         if(sampler.sampling_params.logits_per_token < 1):
             raise ValueError("LLM engine logits_per_token must be set to at least 1 to enable power sampling.")
