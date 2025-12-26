@@ -97,7 +97,7 @@ def test_power_sampling_sample(sampler, token_metric):
     assert hasattr(output, "entropy")
 
     # Check that logging works
-    sampler.token_sampling.sample(sampler, prompt, logging=True, log_file_path="power_sampling_log.txt")
+    sampler.token_sampling.sample(sampler, prompt, logging=True, log_file_path="power_sampling_log.csv")
 
     try:
         # Check that the output has the correct values
@@ -112,8 +112,8 @@ def test_power_sampling_sample(sampler, token_metric):
         assert hasattr(output, "entropy")
 
         # Check for the log files
-        assert os.path.exists("power_sampling_log.txt")
+        assert os.path.exists("power_sampling_log.csv")
     finally:
-        if os.path.exists("power_sampling_log.txt"):
-            os.remove("power_sampling_log.txt")
+        if os.path.exists("power_sampling_log.csv"):
+            os.remove("power_sampling_log.csv")
 
