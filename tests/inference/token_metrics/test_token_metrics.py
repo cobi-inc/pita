@@ -51,7 +51,7 @@ def test_power_distribution(sampler):
     power_distribution = calc_token_metric(output, sampler, "power_distribution")
     assert power_distribution.shape == (3,)
     # Find the power distribution for the first token
-    # Divide the logits by the unprocessed_log_normalization_constant
+    # Subtract the unprocessed_log_normalization_constant from the logits and scale by the inverse temperature
     calc_power_distribution = (1./sampler.sampling_params.temperature) * (output.top_k_logits[:, 0] - output.unprocessed_log_normalization_constant)
     assert np.allclose(power_distribution, calc_power_distribution)
 
