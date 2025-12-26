@@ -48,7 +48,7 @@ def test_power_distribution(sampler):
         temp_processed_log_normalization_constant=np.array([5,6,7]), 
         entropy=np.array([6,7,8])
     )
-    power_distribution = calc_token_metric(output,sampler,"power_distribution")
+    power_distribution = calc_token_metric(output, sampler, "power_distribution")
     assert power_distribution.shape == (3,)
     # Find the power distribution for the first token
     # Divide the logits by the unprocessed_log_normalization_constant
