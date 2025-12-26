@@ -23,12 +23,12 @@ def sample(
             list[float] | list[list[float]]  
         ]:
     """
-    Generate text from the given context using the vLLM engine.
+    Generate text from the given context using the llama.cpp backend.
 
     Args:
         context (str | list[str]): The input context string to generate from.
         max_new_tokens (int | list[int]): The maximum number of new tokens to generate.
-        **kwargs: Additional keyword arguments passed to the vLLM generate function.
+        **kwargs: Additional keyword arguments passed to the underlying llama.cpp generation function.
 
     Returns:
         tokens: list[int] | list[list[int]]: The generated token IDs.
