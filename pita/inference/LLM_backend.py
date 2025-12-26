@@ -160,16 +160,16 @@ class Sampling_Params:
         if self.engine_params is None:
             raise ValueError("engine_params Class must be set in Sampling_Params to sync parameters to engine_params.")
         
-        # Check if engine is vLLM and logprobs is being changed
+        # Check if engine is vLLM and logprobs/logits are being changed
         if self.engine == "vllm":
             if(param_name == "logprobs_per_token"):
                 if(value < self.logits_per_token):
                     # Do not overwrite the vLLM engine parameter "logprobs" as logits_per_token will fail
                     return
-                elif(param_name == "logits_per_token"):
-                    if(value < self.logprobs_per_token):
-                        # Do not overwrite the vLLM engine parameter "logits_per_token" as logprobs_per_token will fail
-                        return
+            if(param_name == "logits_per_token"):
+                if(value < self.logprobs_per_token):
+                    # Do not overwrite the vLLM engine parameter "logits_per_token" as logprobs_per_token will fail
+                    return
         
         # Sync logic here
         engine_map = ENGINE_PARAM_MAPS.get(self.engine, {})
