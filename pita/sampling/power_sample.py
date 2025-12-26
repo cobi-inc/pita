@@ -85,7 +85,7 @@ class Power_Sampling:
             with open(power_sampling_log_path, "w") as log_file:
                 log_file.write(f'"{json.dumps(vars(sampler), default=str).replace("\"", "\"\"")}"\n')
                 log_file.write(f'"{prompt.replace("\"", "\"\"")}"\n')
-                log_file.write("proposed_power_sampling_logprob_norm,proposed_low_temp_logprob_norm,compared_power_sampling_logprob_norm,compared_low_temp_logprob_norm,new_power_sampling_logprob_norm,new_low_temp_logprob_norm,acceptance_ratio,accepted,starting_index,tokens_generated,\n")
+                log_file.write("proposed_target_distribution_sum,proposed_sampling_distribution_sum,current_target_distribution_sum,current_sampling_distribution_sum,new_target_distribution_normalized,new_sampling_distribution_normalized,acceptance_ratio,accepted,starting_index,tokens_generated,\n")
 
         # Intialize arrays to store the probabilities of the current tokens
         current_target_distribution = [] # Current list of unscaled log probabilities of the new sample. Length of block_size
@@ -124,10 +124,10 @@ class Power_Sampling:
 
             # Log Results
             if(logging):
-                proposed_target_distribution = "None"
-                proposed_sampling_distribution = "None "
-                current_target_distribution = "None"
-                current_sampling_distribution = "None"
+                proposed_target_distribution_sum = "None"
+                proposed_sampling_distribution_sum = "None "
+                current_target_distribution_sum = "None"
+                current_sampling_distribution_sum = "None"
                 new_target_distribution_normalized = sum(target_distribution)/len(target_distribution)
                 new_sampling_distribution_normalized = sum(sampling_distribution)/len(sampling_distribution)
                 acceptance_ratio = "None"
@@ -136,7 +136,7 @@ class Power_Sampling:
                 starting_index = len(context)-tokens_generated
                 # Write initial generated block data to log
                 with open(power_sampling_log_path, "a") as log_file:
-                    log_file.write(f"{proposed_target_distribution},{proposed_sampling_distribution},{current_target_distribution},{current_sampling_distribution},{new_target_distribution_normalized},{new_sampling_distribution_normalized},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
+                    log_file.write(f"{proposed_target_distribution_sum},{proposed_sampling_distribution_sum},{current_target_distribution_sum},{current_sampling_distribution_sum},{new_target_distribution_normalized},{new_sampling_distribution_normalized},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
 
             # Perform the MCMC Steps to hone in on the target distribution
             for _ in range(self.MCMC_steps):
