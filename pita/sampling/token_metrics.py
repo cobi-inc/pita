@@ -2,39 +2,34 @@
 import numpy as np
 import numpy.typing as npt
 
-# process the top_k_probs to find just the probs of the chosen tokens
-# can be either the logits or logprobs outputted by the LLM inference engine
-# top_k_probs is a np.array of the top_k_probs returned from a LLM inference engine
-# tokens_list is a np.array of the chosen tokens
-def process_top_k_probs(
-    top_k_probs: npt.NDArray[np.float64],
-    tokens_list: npt.NDArray[np.int_]
-) -> npt.NDArray[np.float64]:
-    # Initialize chosen_token_prob_list with zeros (shape: num_tokens)
-    chosen_token_prob_list = np.zeros(len(tokens_list))
-    # Iterate through the tokens_list and find the probs of the chosen tokens
-    for i in range(len(tokens_list)):
-        if(len(top_k_probs[i]) > 1):
-            chosen_token_prob_list[i] = top_k_probs[i][0] - np.max(top_k_probs[i][:2])
-    # Return the chosen token logits
-    return chosen_token_prob_list
+# PITA Libraries
+from pita.inference.LLM_backend import AutoregressiveSampler, Output
 
-# Takes in an array of raw logits of a chosen token sequence, an array of the unprocessed normalization constants, and the power sampling temperature
-# Returns the power sampling log probabilities of the chosen token sequence
-def power_sampling_logprobs(
-    token_logit_list: npt.NDArray[np.float64],
-    unprocessed_normalization_constant: float,
-    power_sampling_temperature: float
+def calc_token_metric(
+    output: Output,
+    sampler: AutoregressiveSampler,
+    metric: str
 ) -> npt.NDArray[np.float64]:
-    # P(x) ^ 1/T = P(x) ^ alpha = 1/T * softmax(logit_selected)
-    return (1/power_sampling_temperature) * (token_logit_list - unprocessed_normalization_constant)
+    """
+    Calculate the token metric for the given output and sampler.
 
-# Takes in an array of raw logits of a chosen token sequence, an array of the low-temperature processed normalization constants, and the low temperature sampling temperature
-# Returns the low temperature log probabilities of the chosen token sequence
-def low_temp_logprobs(
-    token_logit_list: npt.NDArray[np.float64],
-    temp_processed_normalization_constant: float,
-    low_temp_sampling_temperature: float
-) -> npt.NDArray[np.float64]:
-    # P(x/T) = softmax(logit_selected / T)
-    return (1/low_temp_sampling_temperature) * token_logit_list - temp_processed_normalization_constant
+    Args:
+        output (Output): The output object containing the token metrics.
+        sampler (AutoregressiveSampler): The sampler object containing the sampling parameters.
+        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", or "entropy".
+
+    Returns:
+        npt.NDArray[np.float64]: The calculated token metric.
+    """
+    if metric == "logprobs":
+        return output.top_k_logprobs[:, 0]
+    elif metric == "power_distribution":
+        return (1 / sampler.sampling_params.temperature) * (
+            output.top_k_logits[:, 0] - np.asarray(output.unprocessed_log_normalization_constant)
+        )
+    elif metric == "entropy":
+        return output.entropy
+    else:
+        raise ValueError(
+            f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', or 'entropy'."
+        )

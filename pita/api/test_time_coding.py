@@ -1,6 +1,6 @@
-from pita.sampling.power_sample import Power_Sampling_Params
-from pita.sampling.smc import SequentialMonteCarlo_Params
-from pita.sampling.best_of import Best_of_Params
+from pita.sampling.power_sample import Power_Sampling
+from pita.sampling.smc import Sequential_Monte_Carlo
+from pita.sampling.best_of import Best_of_N
 
 # Encode the parameters into a single string that can be passed as context (e.g., system prompt) during the API call
 def encode(Power_Sampling_Params = None, SMC_Sampling_Params = None, Best_of_Sampling_Params = None):

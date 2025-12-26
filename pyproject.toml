@@ -168,3 +168,6 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["pita"]
+
+[tool.pytest.ini_options]
+norecursedirs = ["pita/old_tests"]

@@ -14,9 +14,9 @@ import datasets
 #Import Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler
 from pita.utils.parse_utils import parse_answer
-from pita.sampling.power_sample import power_sampling
-from pita.sampling.smc import SequentialMonteCarlo
-from pita.sampling.best_of import best_of_n_logprob
+from pita.sampling.power_sample import Power_Sampling
+from pita.sampling.smc import Sequential_Monte_Carlo
+from pita.sampling.best_of import Best_of_N
 
 # Prompting constants and templates
 MATH_SYSTEM_MESSAGE = "You are a very knowledgeable math expert. Think and respond with confidence."

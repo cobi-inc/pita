@@ -1,5 +1,5 @@
 #Library Code
-from pita.sampling.power_sample import Power_Sampling_Params
+from pita.sampling.power_sample import Power_Sampling
 from pita.api.test_time_coding import encode
 # Standard Libraries
 import requests

@@ -6,7 +6,8 @@ __pycache__/
 *.csv
 *.egg-info
 /build/*
-.vscode/*
+.vscode
 *.out
 *.json
 site/
+.pytest_cache

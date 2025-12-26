@@ -7,15 +7,37 @@ from pita.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
 # Logits Processor Functions
 # Calculate and Store Normalization Constant
 
+# TODO update the llama cpp sample function to take in the standard variables and return the Output object
 # Take in the context (string) and max_new_tokens (int)
 # Returns arrays of the generated token_ids, the chosen token logits, and all the logits as lists to the user
 def sample(
         self, 
-        context, # The input context string to generate from
-        max_new_tokens, # The maximum number of new tokens to generate
-        **kwargs # Additional keyword arguments passed to the backend Llama create_completion function
-    ):
+        context: str | list[str], 
+        max_new_tokens: int | list[int], 
+        **kwargs 
+    ) -> tuple[
+            list[int] | list[list[int]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]], 
+            list[float] | list[list[float]]  
+        ]:
+    """
+    Generate text from the given context using the llama.cpp backend.
 
+    Args:
+        context (str | list[str]): The input context string to generate from.
+        max_new_tokens (int | list[int]): The maximum number of new tokens to generate.
+        **kwargs: Additional keyword arguments passed to the underlying llama.cpp generation function.
+
+    Returns:
+        tokens: list[int] | list[list[int]]: The generated token IDs.
+        top_k_logits: list[float] | list[list[float]] | None: The top_k logits (if logits_per_token is set).
+        top_k_logprobs: list[float] | list[list[float]] | None: The top_k logprobs (if logprobs is set).
+        unprocessed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Unprocessed) for each token.
+        temp_processed_log_normalization_constant: list[float] | list[list[float]]: The log(Normalization Constants - Temperature Processed) for each token.
+        entropy: list[float] | list[list[float]]: The entropy for each token.
+    """
     # Update the max tokens if needed
     if(self.sampling_params.max_tokens != max_new_tokens):
         self.sampling_params.max_tokens = max_new_tokens
@@ -79,8 +101,9 @@ def sample(
             return tokens, chosen_token_logit, top_k_logits
 
     # Return Lists as arrays
-    return token_lists, chosen_logit_token_lists, top_k_logits_lists
+    return tokens, top_k_logits, top_k_logprobs, unprocessed_log_normalization_constant, temp_processed_log_normalization_constant, entropy
 
+# TODO Instead of using logits_all = True, use a logits processor
 # Create the LLM object given the model name and engine parameters
 def create_LLM_object(
         model_name,  # Model name that will be used to load the LLM (Hugging Face only currently)
@@ -161,3 +184,7 @@ def check_llama_cpp_power_sampling_compatibility(sampler):
     # Give a warning that logprobs gives log-probabilities to the user dramatically slowing down inference
     if(sampler.sampling_params.logprobs is not None):
         print("Warning: llama.cpp backend logprobs parameter is set to output log-probabilities which may dramatically slow down inference. It is recommended to set logprobs=None when using power sampling with llama.cpp backend.")
+# TODO Implement the token metric compatibility check after implementing the token metrics in the logit processor
+def check_token_metric_compatibility(sampler, token_metric):
+    if(token_metric == "power_distribution"):
+        check_llama_cpp_power_sampling_compatibility(sampler)

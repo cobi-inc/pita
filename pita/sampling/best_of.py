@@ -2,7 +2,8 @@
 import numpy as np
 from scipy.special import logsumexp
 
-class Best_of_Params:
+# TODO Update the Best_of_N Function to look similar to the other sampling functions
+class Best_of_N:
     def __init__(
         self, 
         sequence_n, # Number of sequences to sample and choose the best from
