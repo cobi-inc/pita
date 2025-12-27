@@ -4,7 +4,8 @@ from pita.inference.LLM_backend import AutoregressiveSampler
 
 # Pytorch Library
 import torch
-
+#Numpy Library
+import numpy as np
 #Standard Libraries
 import random
 import time
@@ -17,6 +18,7 @@ if __name__ == "__main__":
     seed = time.time_ns() % (2**32 - 1)
     torch.manual_seed(seed)
     random.seed(seed)
+    np.random.seed(seed)
 
     engine_name = "vllm"
 
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     # Set sampling parameters
     llm.sampling_params.temperature = 0.25
     llm.sampling_params.max_tokens = 3072
-
+    llm.sampling_params.seed = seed
     # Enable Power Sampling
     # Power Sampling Hyperparameters
     block_size = 192 # tokens per block. Number of blocks = token_count / block_size
@@ -83,6 +85,7 @@ if __name__ == "__main__":
     "power_sampling_logging": True,
     "power_sampling_logging_path": "results/power_sampling_logs"
     }
+    output_file_name = "results/math500_power_sampling_results_{}.csv".format(seed)
     # Run the benchmark
     benchmark_sampling(
         llm=llm,
@@ -93,6 +96,6 @@ if __name__ == "__main__":
         chat_template=False,
         sampling_techniques=sampling_techniques, 
         max_questions=500, 
-        output_file_name="results/math500_power_sampling_results.csv",
+        output_file_name=output_file_name,
         **kwargs
     )
