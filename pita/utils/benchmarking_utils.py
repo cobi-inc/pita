@@ -19,10 +19,11 @@ from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.sampling.best_of import Best_of_N
 
 # Prompting constants and templates
-MATH_SYSTEM_MESSAGE = "You are a very knowledgeable math expert. Think and respond with confidence."
-MATH_PRE_QUESTION = "Solve the following math problem. "
+#MATH_SYSTEM_MESSAGE = "You are a very knowledgeable math expert. Think and respond with confidence."
+MATH_SYSTEM_MESSAGE = ""
+MATH_PRE_QUESTION = "Can you solve the following math problem? "
 AIME_PRE_QUESTION = "The solution to the math problem is an integer between 0 and 999. "
-MATH_ANSWER_FORMAT = "Put your final answer within \\boxed{{}}. "
+MATH_ANSWER_FORMAT = " Put your final answer within \\boxed{{}}."
 COT = "Reason step by step, and put your last and final answer within \\boxed{{}}. "
 COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution, and present your last and final answer within \\boxed{{}}. "
 
@@ -96,7 +97,7 @@ def load_benchmark(
 
             # Create the system message, pre, and post question templates
             system_message = MATH_SYSTEM_MESSAGE
-            pre_question = MATH_PRE_QUESTION + AIME_PRE_QUESTION + MATH_ANSWER_FORMAT
+            pre_question = MATH_PRE_QUESTION + MATH_ANSWER_FORMAT
             post_question = ""
 
         elif(dataset_name == "AIME"):
@@ -112,8 +113,8 @@ def load_benchmark(
             
             # Create the system message, pre, and post question templates
             system_message = MATH_SYSTEM_MESSAGE
-            pre_question = MATH_PRE_QUESTION + MATH_ANSWER_FORMAT
-            post_question = ""
+            pre_question = MATH_PRE_QUESTION
+            post_question = MATH_ANSWER_FORMAT
 
         else: 
             raise ValueError(f"Dataset {dataset_name} not supported for benchmarking.")

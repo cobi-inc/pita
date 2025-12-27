@@ -63,6 +63,7 @@ if __name__ == "__main__":
     llm.sampling_params.temperature = 0.25
     llm.sampling_params.max_tokens = 3072
     llm.sampling_params.seed = seed
+    llm.sampling_params.top_k = 50
     # Enable Power Sampling
     # Power Sampling Hyperparameters
     block_size = 192 # tokens per block. Number of blocks = token_count / block_size
