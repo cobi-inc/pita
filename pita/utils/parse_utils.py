@@ -1,6 +1,3 @@
-import json
-import numpy as np
-
 def remove_boxed(s):
     left = "\\boxed{"
     try:
