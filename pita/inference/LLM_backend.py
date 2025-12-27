@@ -365,7 +365,7 @@ class AutoregressiveSampler:
         Returns:
             Output: The output of the sample function.
         """
-        if(self.token_sample_name == "Power Sampling"):
+        if getattr(self, "token_sample_name", None) == "Power Sampling":
             return self.token_sample_fn(self, context, **kwargs)
         else:
             raise ValueError("Token sampling is not enabled for this LLM/Engine.")
