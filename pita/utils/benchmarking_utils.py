@@ -169,7 +169,7 @@ def benchmark_sampling(
 
         # Generate a response using the sampler
         if(sampling_techniques[2]): # Power Sampling
-            #Add the question numbe to the kwargs log_file_path
+            #Add the question number to the kwargs log_file_path
             kwargs["log_file_path"] = log_file_path_template.format(question_index)
 
             #Time how long it takes to get a response
