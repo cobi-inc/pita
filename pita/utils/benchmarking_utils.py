@@ -97,8 +97,8 @@ def load_benchmark(
 
             # Create the system message, pre, and post question templates
             system_message = MATH_SYSTEM_MESSAGE
-            pre_question = MATH_PRE_QUESTION + MATH_ANSWER_FORMAT
-            post_question = ""
+            pre_question = MATH_PRE_QUESTION 
+            post_question = MATH_ANSWER_FORMAT
 
         elif(dataset_name == "AIME"):
             #Load both parts of the AIME tests and concatenate them
@@ -136,15 +136,14 @@ def benchmark_sampling(
     output_file_name: str = "math500_power_sampling_results.csv",
     **kwargs
 ) -> None:
-    # Extract kwargs
-    if("power_sampling_logging" in kwargs):
-        power_sampling_logging = kwargs["power_sampling_logging"]
-    if("power_sampling_logging_path" in kwargs):
-        power_sampling_logging_path = kwargs["power_sampling_logging_path"]
     # Store results
     results = []    
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     output_file = open(output_file_name, "w")
+
+    # Create a template for the log file path, defaulting to the output file directory if not provided
+    log_base_dir = kwargs.get("log_file_path", os.path.dirname(output_file_name) or ".")
+    log_file_path_template = os.path.join(log_base_dir, "question_{}.csv")
 
     # Iterate over the dataset
     for question_index, question in tqdm(enumerate(question_list), disable=True):
@@ -160,7 +159,7 @@ def benchmark_sampling(
         if chat_template:
             formatted_prompt = tokenizer_chat_template(llm.tokenizer, enable_thinking, system_message, question)
         else:
-            formatted_prompt = system_message + "\n\n" + question
+            formatted_prompt = system_message +  question
 
         # Store the prompt and answers in the results csv
         result_row = {
@@ -170,31 +169,24 @@ def benchmark_sampling(
 
         # Generate a response using the sampler
         if(sampling_techniques[2]): # Power Sampling
+            #Add the question number to the kwargs log_file_path
+            kwargs["log_file_path"] = log_file_path_template.format(question_index)
+
             #Time how long it takes to get a response
             start_time = time.time()
 
-            # Setup Logging file paths
-            if(power_sampling_logging != False):
-                os.makedirs(power_sampling_logging_path, exist_ok=True)
-        
-            # TODO Adjust the Power Sampling Benchmark to use the new paramaterizations
             # Send the prompt to the sliding window power sampling function
-            power_sampling_output = llm.token_sampler.sample(
-                llm, # Autoregressive Sampler Object
-                formatted_prompt, # Template prompt
-                logging = power_sampling_logging, # Enable logging to CSV file
-                log_file_path = f"{power_sampling_logging_path}/power_sampling_log_question_{question_index}.csv"
-            )
+            output = llm.token_sample(formatted_prompt, **kwargs)
 
             # Find the end time of the power sampling
             end_time = time.time()
 
             # Parse the answer
-            power_sampling_answer = parse_answer(power_sampling_output)
+            power_sampling_answer = parse_answer(llm.tokenizer.decode(output.tokens, skip_special_tokens=False))
 
             # Save the results
-            result_row["mcmc_completion"] = power_sampling_output
-            result_row["mcmc_output_token_count"] = len(llm.tokenizer.encode(power_sampling_output))
+            result_row["mcmc_completion"] = llm.tokenizer.decode(output.tokens, skip_special_tokens=False)
+            result_row["mcmc_output_token_count"] = len(output.tokens)
             result_row["mcmc_time_to_solution"] = end_time - start_time
             result_row["mcmc_answer"] = power_sampling_answer
 

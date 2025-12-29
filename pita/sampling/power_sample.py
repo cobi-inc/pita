@@ -32,19 +32,26 @@ def _get_llama_cpp_backend():
         llama_cpp_backend = _llama_cpp_backend
     return llama_cpp_backend
 
+# Safer concatenation helper logic
+def safe_concat(current_list, new_array, idx):
+    new_part = new_array.tolist() if hasattr(new_array, "tolist") else list(new_array)
+    if idx == 0:
+        return new_part
+    return current_list[:idx] + new_part
 # Power Sampling Parameters
+
 class Power_Sampling:
     """
     Power Sampling Class that stores the parameters and methods used for power sampling.
     
     Attributes:
-        block_size (int): How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        block_size (int): How many tokens to divide the total output tokens into for power sampling. number of blocks = (sampler.sampling_params.max_tokens)/block_size. Smaller block sizes = better quality but slower
         MCMC_steps (int): Number of MCMC steps to perform per block. More steps = better quality but slower
         token_metric (str): Metric to use for token selection. Can be "logprobs", "power_distribution", or "entropy"
     """
     def __init__(
         self, 
-        block_size: int = 192, # How many blocks to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
+        block_size: int = 192, # How many tokens to divide the total output tokens into for power sampling. Smaller block sizes = better quality but slower
         MCMC_steps: int = 8, # Number of MCMC steps to perform per block. More steps = better quality but slower
         token_metric: str = "power_distribution"
     ):
@@ -52,7 +59,6 @@ class Power_Sampling:
         self.MCMC_steps = MCMC_steps
         self.token_metric = token_metric
 
-    # TODO Implement the power sampling method in the Power_Sampling class
     # Power Sampling method 
     def sample(
         self, 
@@ -100,9 +106,13 @@ class Power_Sampling:
 
         # Number of blocks to be sampled
         block_count = sampler.sampling_params.max_tokens // self.block_size
+        sampler_max_tokens = sampler.sampling_params.max_tokens
         for block_idx in range(block_count):
+            # Set the max tokens for the block
+            sampler.sampling_params.max_tokens = self.block_size
+
             # Sample the initial new tokens for the block
-            output = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False), self.block_size)
+            output = sampler.sample(prompt +  sampler.tokenizer.decode(context, skip_special_tokens=False))
             
             # Calculate the log probabilities of the initial new tokens for the block
             target_distribution = calc_token_metric(output, sampler, self.token_metric)
@@ -115,8 +125,8 @@ class Power_Sampling:
             # Extend the context with the newly generated tokens
             context.extend(output.tokens)
             # Extend the other Output attributes along
-            logits.extend(output.logits)
-            logprobs.extend(output.logprobs)
+            logits.extend(output.top_k_logits)
+            logprobs.extend(output.top_k_logprobs)
             unprocessed_log_normalization_constant.extend(output.unprocessed_log_normalization_constant)
             temp_processed_log_normalization_constant.extend(output.temp_processed_log_normalization_constant)
             entropy.extend(output.entropy)
@@ -144,75 +154,76 @@ class Power_Sampling:
 
                 #Set the new context for the proposed block
                 context_proposed = context[:idx]
+
+                # Set the tokens to generate
+                sampler.sampling_params.max_tokens = len(context) - idx
+                #Generate proposed block of tokens
+                output = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False))
+                #Find the proposed probability distributions 
+                proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
+                proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")
+
+                # Calculate the Metro-Hastings acceptance ratio
+                # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
+                log_acceptance_ratio = sum(proposed_target_distribution) + sum(current_sampling_distribution[idx:idx+len(output.tokens)]) - sum(current_target_distribution[idx:idx+len(output.tokens)]) - sum(proposed_sampling_distribution)
                 
-            #Generate proposed block of tokens
-            output = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False), len(context) - idx)
+                # Check to make sure we are comparing the correct number of elements
+                assert(len(proposed_target_distribution) == len(current_sampling_distribution[idx:idx+len(output.tokens)]) == len(current_target_distribution[idx:idx+len(output.tokens)]) == len(proposed_sampling_distribution))
 
-            #Find the proposed probability distributions 
-            proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
-            proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")
-
-            # Calculate the Metro-Hastings acceptance ratio
-            # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
-            log_acceptance_ratio = sum(proposed_target_distribution) + sum(current_sampling_distribution[idx:idx+len(output.tokens)]) - sum(current_target_distribution[idx:idx+len(output.tokens)]) - sum(proposed_sampling_distribution)
-            
-            # Check to make sure we are comparing the correct number of elements
-            assert(len(proposed_target_distribution) == len(current_sampling_distribution[idx:idx+len(output.tokens)]) == len(current_target_distribution[idx:idx+len(output.tokens)]) == len(proposed_sampling_distribution))
-
-            # Log the logprobs and acceptance ratio
-            if(logging):
-                proposed_target_distribution_sum = sum(proposed_target_distribution)
-                proposed_sampling_distribution_sum = sum(proposed_sampling_distribution)
-                current_target_distribution_sum = sum(current_target_distribution[idx:idx+len(output.tokens)])
-                current_sampling_distribution_sum = sum(current_sampling_distribution[idx:idx+len(output.tokens)])
-    
-                # Write initial generated block data to log
-                with open(power_sampling_log_path, "a") as log_file:
-                    log_file.write(f"{proposed_target_distribution_sum},{proposed_sampling_distribution_sum},{current_target_distribution_sum},{current_sampling_distribution_sum},")
-                
-            acceptance = False
-            # Accept or reject the proposed block based on the acceptance ratio
-            if np.random.rand() < np.exp(log_acceptance_ratio):
-                # Ensure the context is updated with the accepted proposal
-                context[idx:] = output.tokens
-                # Replace the tail of the other Output attributes along with the context
-                logits = np.concatenate([logits[:idx], output.logits], axis=0)
-                logprobs = np.concatenate([logprobs[:idx], output.logprobs], axis=0)
-                unprocessed_log_normalization_constant = np.concatenate(
-                    [unprocessed_log_normalization_constant[:idx], output.unprocessed_log_normalization_constant],
-                    axis=0,
-                )
-                temp_processed_log_normalization_constant = np.concatenate(
-                    [temp_processed_log_normalization_constant[:idx], output.temp_processed_log_normalization_constant],
-                    axis=0,
-                )
-                entropy = np.concatenate([entropy[:idx], output.entropy], axis=0)
-
-                # Update the logprob lists with the accepted proposal's log probabilities
-                current_target_distribution = [*current_target_distribution[:idx], *proposed_target_distribution]
-                current_sampling_distribution = [*current_sampling_distribution[:idx], *proposed_sampling_distribution]
-                
-                # Flag acceptance
-                acceptance = True
-
-            # Log the new distributions and acceptance ratio
-            if(logging):
-                current_target_distribution_norm = sum(current_target_distribution)/len(current_target_distribution)
-                current_sampling_distribution_norm = sum(current_sampling_distribution)/len(current_sampling_distribution)
-                acceptance_ratio = np.exp(log_acceptance_ratio)
-                accepted = acceptance
-                tokens_generated = len(output.tokens)
-                starting_index = idx
-                with open(power_sampling_log_path, "a") as log_file:
-                    log_file.write(f"{current_target_distribution_norm},{current_sampling_distribution_norm},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
+                # Log the logprobs and acceptance ratio
+                if(logging):
+                    proposed_target_distribution_sum = sum(proposed_target_distribution)
+                    proposed_sampling_distribution_sum = sum(proposed_sampling_distribution)
+                    current_target_distribution_sum = sum(current_target_distribution[idx:idx+len(output.tokens)])
+                    current_sampling_distribution_sum = sum(current_sampling_distribution[idx:idx+len(output.tokens)])
         
-        # Check if an EOS token has been generated and end the process if so
-        if(sampler.tokenizer.eos_token_id in context):
-            decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
-            if logging:
-                with open(power_sampling_log_path, "a") as log_file:
-                    log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
-            return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)
+                    # Write initial generated block data to log
+                    with open(power_sampling_log_path, "a") as log_file:
+                        log_file.write(f"{proposed_target_distribution_sum},{proposed_sampling_distribution_sum},{current_target_distribution_sum},{current_sampling_distribution_sum},")
+                    
+                acceptance = False
+                # Accept or reject the proposed block based on the acceptance ratio
+                if np.random.rand() < np.exp(log_acceptance_ratio):
+                    # Ensure the context is updated with the accepted proposal
+                    context[idx:] = output.tokens
+                    # Replace the tail of the other Output attributes along with the context
+                    logits = safe_concat(logits, output.top_k_logits, idx)
+                    logprobs = safe_concat(logprobs, output.top_k_logprobs, idx)
+                    unprocessed_log_normalization_constant = safe_concat(
+                        unprocessed_log_normalization_constant, output.unprocessed_log_normalization_constant, idx
+                    )
+                    temp_processed_log_normalization_constant = safe_concat(
+                        temp_processed_log_normalization_constant, output.temp_processed_log_normalization_constant, idx
+                    )
+                    entropy = safe_concat(entropy, output.entropy, idx)
+
+                    # Update the logprob lists with the accepted proposal's log probabilities
+                    current_target_distribution = [*current_target_distribution[:idx], *proposed_target_distribution]
+                    current_sampling_distribution = [*current_sampling_distribution[:idx], *proposed_sampling_distribution]
+                    
+                    # Flag acceptance
+                    acceptance = True
+
+                # Log the new distributions and acceptance ratio
+                if(logging):
+                    current_target_distribution_norm = sum(current_target_distribution)/len(current_target_distribution)
+                    current_sampling_distribution_norm = sum(current_sampling_distribution)/len(current_sampling_distribution)
+                    acceptance_ratio = np.exp(log_acceptance_ratio)
+                    accepted = acceptance
+                    tokens_generated = len(output.tokens)
+                    starting_index = idx
+                    with open(power_sampling_log_path, "a") as log_file:
+                        log_file.write(f"{current_target_distribution_norm},{current_sampling_distribution_norm},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
+            
+            # Check if an EOS token has been generated and end the process if so
+            if(sampler.tokenizer.eos_token_id in context):
+                decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
+                if logging:
+                    with open(power_sampling_log_path, "a") as log_file:
+                        log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
+                # Set the max_new_tokens back to the original value
+                sampler.sampling_params.max_tokens = sampler_max_tokens 
+                return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)
 
 
         # EOS never found, just return the full generated context
@@ -220,5 +231,6 @@ class Power_Sampling:
         if logging:
             with open(power_sampling_log_path, "a") as log_file:
                 log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
-        
+        # Set the max_tokens back to the original value
+        sampler.sampling_params.max_tokens = sampler_max_tokens 
         return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)

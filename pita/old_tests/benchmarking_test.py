@@ -9,6 +9,7 @@ import numpy as np
 #Standard Libraries
 import random
 import time
+import os
 
 # Main function to test power sampling
 if __name__ == "__main__":
@@ -28,7 +29,7 @@ if __name__ == "__main__":
         _dtype = "auto"
         _tokenizer_path = None
         _gpu_memory_utilization = 0.85
-        _max_model_len = 3072
+        _max_model_len = 4032
         _max_probs = 1
 
     elif(engine_name == "llama_cpp"):
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         _dtype = "Q5_K_M"
         _tokenizer_path="Qwen/Qwen3-4B-Instruct-2507"
         _gpu_memory_utilization = 0.85
-        _max_model_len = 3072
+        _max_model_len = 4032
         _max_probs = None
         
         # Tell Pytorch to use the GPU if available
@@ -80,13 +81,19 @@ if __name__ == "__main__":
     # Load dataset to test
     system_message, question_list, answer_list = load_benchmark("MATH500")
     # Define sampling techniques to benchmark
-    sampling_techniques = [True, True, False, False, False] # temp=1 sampling, low temp sampling, power sampling, smc, best of n
+    sampling_techniques = [True, True, True, False, False] # temp=1 sampling, low temp sampling, power sampling, smc, best of n
+    
     # Define the **kwargs for the benchmark
     kwargs = {
-    "power_sampling_logging": True,
-    "power_sampling_logging_path": "results/power_sampling_logs"
+    "logging": True,
+    "log_file_path": "results/power_sampling_logs"
     }
-    output_file_name = "results/math500_power_sampling_results_{}.csv".format(seed)
+
+    # Make sure the logging directory exists
+    os.makedirs(kwargs["log_file_path"], exist_ok=True)
+
+    # Create the output file name with a standard, sortable timestamp format (YYYYMMDD_HHMM)
+    output_file_name = "results/math500_power_sampling_results_{}_{}.csv".format(seed, time.strftime("%Y%m%d_%H%M"))
     # Run the benchmark
     benchmark_sampling(
         llm=llm,
