@@ -147,14 +147,8 @@ class Power_Sampling:
                 with open(power_sampling_log_path, "a") as log_file:
                     log_file.write(f"{proposed_target_distribution_sum},{proposed_sampling_distribution_sum},{current_target_distribution_sum},{current_sampling_distribution_sum},{new_target_distribution_normalized},{new_sampling_distribution_normalized},{acceptance_ratio},{accepted},{starting_index},{tokens_generated}\n")
 
-            # Print Context
-            print("Block Index: ", block_idx)
-            print("Context Length: ", len(context))
-
             # Perform the MCMC Steps to hone in on the target distribution
             for _ in range(self.MCMC_steps):
-                print("MCMC Step: ", _)
-
                 #Find a new point to start a proposal from. Generate idx tokens for the step.
                 idx = random.randint(0, len(context) - 1)
 
@@ -163,11 +157,8 @@ class Power_Sampling:
 
                 # Set the tokens to generate
                 sampler.sampling_params.max_tokens = len(context) - idx
-                print("Max tokens: ", sampler.sampling_params.max_tokens)
-                print("Engine max tokens: ", sampler.sampling_params.engine_params.max_tokens)
                 #Generate proposed block of tokens
                 output = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False))
-                print("Number of output tokens: ", len(output.tokens))
                 #Find the proposed probability distributions 
                 proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
                 proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")
@@ -177,7 +168,6 @@ class Power_Sampling:
                 log_acceptance_ratio = sum(proposed_target_distribution) + sum(current_sampling_distribution[idx:idx+len(output.tokens)]) - sum(current_target_distribution[idx:idx+len(output.tokens)]) - sum(proposed_sampling_distribution)
                 
                 # Check to make sure we are comparing the correct number of elements
-                print("Lengths of the compared distributions: ", len(proposed_target_distribution), len(current_sampling_distribution[idx:idx+len(output.tokens)]), len(current_target_distribution[idx:idx+len(output.tokens)]), len(proposed_sampling_distribution))
                 assert(len(proposed_target_distribution) == len(current_sampling_distribution[idx:idx+len(output.tokens)]) == len(current_target_distribution[idx:idx+len(output.tokens)]) == len(proposed_sampling_distribution))
 
                 # Log the logprobs and acceptance ratio
