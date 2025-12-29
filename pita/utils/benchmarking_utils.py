@@ -143,7 +143,7 @@ def benchmark_sampling(
 
     # Create a template for the log file path, defaulting to the output file directory if not provided
     log_base_dir = kwargs.get("log_file_path", os.path.dirname(output_file_name) or ".")
-    log_file_path_template = os.path.join(log_base_dir, "question_{}")
+    log_file_path_template = os.path.join(log_base_dir, "question_{}.csv")
 
     # Iterate over the dataset
     for question_index, question in tqdm(enumerate(question_list), disable=True):
