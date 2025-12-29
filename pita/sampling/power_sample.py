@@ -159,6 +159,7 @@ class Power_Sampling:
                 sampler.sampling_params.max_tokens = len(context) - idx
                 #Generate proposed block of tokens
                 output = sampler.sample(prompt +  sampler.tokenizer.decode(context_proposed, skip_special_tokens=False))
+                # TODO: Only log probability metrics are currently supported. Need to implement entropy/other metrics
                 #Find the proposed probability distributions 
                 proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
                 proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")

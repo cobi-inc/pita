@@ -205,6 +205,35 @@ class Output:
         self.temp_processed_log_normalization_constant = temp_processed_log_normalization_constant
         self.entropy = entropy
 
+    def append(self, other: 'Output'):
+        """
+        Appends the data from another Output object to this one by extending internal lists.
+        
+        Args:
+            other (Output): The other output object to append.
+        """
+        if other is None:
+            return
+
+        # Helper function to extend list attributes safely
+        def _extend_field(field_name):
+            self_val = getattr(self, field_name)
+            other_val = getattr(other, field_name)
+            
+            if other_val is not None:
+                if self_val is None:
+                    # If we don't have the list yet, shallow copy it from the other
+                    setattr(self, field_name, other_val.copy() if isinstance(other_val, list) else other_val)
+                elif isinstance(self_val, list) and isinstance(other_val, list):
+                    self_val.extend(other_val)
+
+        _extend_field('tokens')
+        _extend_field('top_k_logits')
+        _extend_field('top_k_logprobs')
+        _extend_field('unprocessed_log_normalization_constant')
+        _extend_field('temp_processed_log_normalization_constant')
+        _extend_field('entropy')
+
 class AutoregressiveSampler:
     """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
 
