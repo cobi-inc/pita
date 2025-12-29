@@ -241,6 +241,6 @@ class Power_Sampling:
         if logging:
             with open(power_sampling_log_path, "a") as log_file:
                 log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
-        # Set the max_new_tokens back to the original value
+        # Set the max_tokens back to the original value
         sampler.sampling_params.max_tokens = sampler_max_tokens 
         return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)
