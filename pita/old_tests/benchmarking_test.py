@@ -92,8 +92,8 @@ if __name__ == "__main__":
     # Make sure the logging directory exists
     os.makedirs(kwargs["log_file_path"], exist_ok=True)
 
-    # Create the output file name
-    output_file_name = "results/math500_power_sampling_results_{}_{}.csv".format(seed, time.strftime("%H_%M_%d_%m_%y"))
+    # Create the output file name with a standard, sortable timestamp format (YYYYMMDD_HHMM)
+    output_file_name = "results/math500_power_sampling_results_{}_{}.csv".format(seed, time.strftime("%Y%m%d_%H%M"))
     # Run the benchmark
     benchmark_sampling(
         llm=llm,
