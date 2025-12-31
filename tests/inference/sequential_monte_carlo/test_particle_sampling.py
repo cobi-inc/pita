@@ -96,7 +96,6 @@ class TestParticleSampling:
         new_particles = smc.particle_sampling(particle_scores, finished)
         # With high score, particle 0 should be selected for all/most slots
         # Since logic presumably samples with replacement
-        unique_particles = np.unique(new_particles)
         assert new_particles[0] == 0
         assert new_particles[8] == 8
         # It's probabilistic, but with 100.0 vs 0.0 in exp space, it's deterministic for all practical purposes
