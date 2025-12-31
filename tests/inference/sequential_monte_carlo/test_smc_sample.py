@@ -45,7 +45,7 @@ def test_smc_sample_basic_flow(mock_sampler, mock_output):
          patch.object(smc, 'score_update', wraps=smc.score_update) as mock_score_update, \
          patch.object(smc, 'particle_sampling', wraps=smc.particle_sampling) as mock_particle_sampling:
         
-        mock_calc.side_effect = lambda output, sampler, metric: [0.9] # Return a high score
+        mock_calc.side_effect = lambda output, sampler, metric: [0.9] * len(output.tokens)  # Return a high score per token
         
         # Run sample
         prompt = "Hello"
