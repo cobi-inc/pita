@@ -68,10 +68,10 @@ class TestUpdateParticles:
         assert outputs[2] is not outputs[1] # Deep copy check
 
         # Verify the token_metric scores changed correctly
-        token_metric_scores = [[0.2, 0.22], [0.2, 0.22], [0.2, 0.22]]
+        assert token_metric_scores == [[0.2, 0.22], [0.2, 0.22], [0.2, 0.22]]
 
         # Verify the step scores changed correctly
-        step_scores = [[2.0, 2.2], [2.0, 2.2], [2.0, 2.2]]
+        assert step_scores == [[2.0, 2.2], [2.0, 2.2], [2.0, 2.2]]
 
     def test_update_particles_basic_finished(self):
         """
@@ -125,10 +125,10 @@ class TestUpdateParticles:
         assert outputs[2] is not outputs[1] # Deep copy check
 
         # Verify the token_metric scores changed correctly
-        token_metric_scores = [[0.1, 0.11], [0.2, 0.22], [0.2, 0.22]]
+        assert token_metric_scores == [[0.1, 0.11], [0.2, 0.22], [0.2, 0.22]]
 
         # Verify the step scores changed correctly
-        step_scores = [[1.0, 1.1], [2.0, 2.2], [2.0, 2.2]]
+        assert step_scores == [[1.0, 1.1], [2.0, 2.2], [2.0, 2.2]]
 
     def test_update_particles_cyclic(self):
         """

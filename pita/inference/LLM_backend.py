@@ -217,13 +217,14 @@ class Output:
 
         # Helper function to extend list attributes safely
         def _extend_field(field_name):
+            import copy
             self_val = getattr(self, field_name)
             other_val = getattr(other, field_name)
             
             if other_val is not None:
                 if self_val is None:
-                    # If we don't have the list yet, shallow copy it from the other
-                    setattr(self, field_name, other_val.copy() if isinstance(other_val, list) else other_val)
+                    # Use deepcopy for consistency
+                    setattr(self, field_name, copy.deepcopy(other_val) if isinstance(other_val, list) else other_val)
                 elif isinstance(self_val, list) and isinstance(other_val, list):
                     self_val.extend(other_val)
 
@@ -273,7 +274,7 @@ class AutoregressiveSampler:
             tokenizer_path (str): Path to a model with a tokenizer if the model path doesn't include a tokenizer.
             gpu_memory_utilization (float): GPU memory utilization to use.
             max_model_len (int): Max model context length (context window = prompt + generated tokens).
-            max_probs (int): Number of top ranked probabilites (logits & logprobs) to store per output token.
+            max_probs (int): Number of top ranked probabilities (logits & logprobs) to store per output token.
             logits_processor (bool): Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
             trust_remote_code (bool): Whether to trust remote code when loading the model.
             sampling_params (Sampling_Params): General sampling parameters to use (Sampling_Params Class).

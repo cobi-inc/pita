@@ -70,8 +70,8 @@ class TestScoreUpdate:
         token_count = 3
         step_scores = [1, -2.0] 
         
-        # New step val: (2+2+2)/3 = 2.0
-        # Product of [1, -2.0, 2.0] = -4.0
+        # New step val: (-2.0 + -2.0 + -2.0)/3 = -2.0
+        # Product of [1, -2.0, -2.0] = -4.0
         # Return: -1 * abs(-4.0) = -4.0
         
         new_score = smc.score_update(token_values, token_count, step_scores)

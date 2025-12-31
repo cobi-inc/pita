@@ -243,10 +243,11 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 
 
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
+# Uses Qwen/Qwen3-4B-AWQ model
 
 @pytest.fixture(scope="module")
 def real_sampler():
-    # Initialize the sampler
+    # Initialize the sampler with Qwen/Qwen3-4B-AWQ
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
