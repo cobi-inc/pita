@@ -10,7 +10,7 @@ from pita.sampling.token_metrics import calc_token_metric
 # SMC Class
 class Sequential_Monte_Carlo:
     """
-    Sequential Monte Carlo (SMC) is a multi-particle sampling method that is uses a probability metric to iteratively update a set of particles.
+    Sequential Monte Carlo (SMC) is a multi-particle sampling method that uses a probability metric to iteratively update a set of particles.
 
     Args:
         num_particles (int): The number of particles to use.
