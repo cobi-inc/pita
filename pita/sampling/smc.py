@@ -1,12 +1,11 @@
 # Math Libraries
 import numpy as np
 import math
+import copy
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 from pita.sampling.token_metrics import calc_token_metric
-
-
 
 # SMC Class
 class Sequential_Monte_Carlo:
@@ -35,6 +34,7 @@ class Sequential_Monte_Carlo:
         self.stop_on_eos = stop_on_eos
         self.token_metric = token_metric
         self.aggregation = aggregation
+        self.token_sampling_method = token_sampling_method
 
     def score_update(
         self, 
@@ -71,16 +71,16 @@ class Sequential_Monte_Carlo:
         elif(self.token_metric == "entropy"):
             # As a high entropy is less desirable, we negate the value or take the maximum value before negating
             if(self.aggregation == "last"):
-                step_scores.append(sum(token_values[-token_count:])/token_count)
-                return -1 * step_scores[-1]
+                step_scores.append(-1 * sum(token_values[-token_count:])/token_count)
+                return step_scores[-1]
             elif(self.aggregation == "minimum"):
-                step_scores.append(sum(token_values[-token_count:])/token_count)
-                return -1 * max(step_scores)
+                step_scores.append(-1 * sum(token_values[-token_count:])/token_count)
+                return min(step_scores)
             elif(self.aggregation == "product"):
-                step_scores.append(sum(token_values[-token_count:])/token_count)
-                return -1 * math.prod(step_scores)
+                step_scores.append(-1 * sum(token_values[-token_count:])/token_count)
+                return -1 * abs(math.prod(step_scores))
             elif(self.aggregation == "model_aggregate"):
-                step_scores.append(sum(token_values[-token_count:])/token_count)
+                step_scores.append(-1 * sum(token_values[-token_count:])/token_count)
                 return -1 * sum(token_values)/len(token_values)
             else:
                 raise ValueError(f"Invalid aggregation method: {self.aggregation}")
@@ -101,7 +101,7 @@ class Sequential_Monte_Carlo:
             finished (list[bool]): The list of finished flags.
 
         Returns:
-            list[int]: The list of new particles to use.
+            list[int]: A list that with each element being the new index of the particle to use.
         """
         # Find the indices of the unfinished particles
         unfinished_indices = np.where(np.array(finished) == False)[0]
@@ -121,6 +121,12 @@ class Sequential_Monte_Carlo:
 
         # Choose the new particle with multinomial sampling skipping any finished particles
         new_particles = np.random.choice(unfinished_indices, size=self.num_particles, p=normalized_scores)
+        
+        # Make sure the finished particles are propagated forward
+        for i in range(self.num_particles):
+            if(finished[i] == True):
+                new_particles[i] = i
+        
 
         return new_particles.tolist()
 
@@ -134,14 +140,40 @@ class Sequential_Monte_Carlo:
         
     ) -> None:
         """
-        Update the particles based on the new particles.
+        Update the particles based on the newly SMC sampled particles by updating the outputs, token_metric_scores, and step_scores 
 
         Args:
-            new_particles (list[int]): The list of new particles to use.
-        """
-        self.particles = new_particles
+            new_particles (list[int]): The list of indices of the new particles to use.
+            outputs (list[Output]): The current list of outputs to be updated.
+            finished (list[bool]): The current list of finished flags to be updated.
+            token_metric_scores (list[float]): The current list of token metric scores to be updated.
+            step_scores (list[float]): The current list of step scores to be updated.
 
-    # TODO implement the sample function
+        """
+        # Save the particles that are will be carried forward
+        # Find the unique indices in new_particles avoiding any finished particles
+        unique_indices = np.unique(new_particles)
+        for i in range(self.num_particles):
+            if(finished[i] == True):
+                unique_indices = unique_indices[unique_indices != i]
+
+        # Save the outputs, finished, token_metric_scores, and step_scores for the unique indices in dictionaries
+        saved_outputs = {i: outputs[i] for i in unique_indices}
+        saved_finished = {i: finished[i] for i in unique_indices}
+        saved_token_metric_scores = {i: token_metric_scores[i] for i in unique_indices}
+        saved_step_scores = {i: step_scores[i] for i in unique_indices}
+
+        for i in range(self.num_particles):
+            source_idx = new_particles[i]
+            # Check to see if the particle is different
+            if(source_idx != i):
+                # Set the current particle to the new saved particle
+                # Use deepcopy to avoid shared mutable state
+                outputs[i] = copy.deepcopy(saved_outputs[source_idx])
+                finished[i] = saved_finished[source_idx]
+                token_metric_scores[i] = copy.deepcopy(saved_token_metric_scores[source_idx])
+                step_scores[i] = copy.deepcopy(saved_step_scores[source_idx])
+
     # TODO add support for a PRM token metric
     def sample(
         self,
@@ -223,16 +255,24 @@ class Sequential_Monte_Carlo:
                 if self.stop_on_eos and eos_id in sample_output.tokens:
                     finished[particle] = True
 
-            
             # Find the new list of particles to use
             new_particles = self.particle_sampling(particle_scores, finished)
-    
-            # Update the particles
+            
+            # Check if all particles are finished
+            if np.all(finished):
+                break
 
+            # Update the particles if not finished
+            self.update_particles(new_particles, outputs, finished, token_metric_scores, step_scores)
 
+        # Greedily select the best particle
+        best_particle = np.argmax(particle_scores)
 
-                        
-        return Output(tokens,logits,logprobs,unprocessed_log_normalization_constant,temp_processed_log_normalization_constant,entropy)
+        # Restore the sampling parameters
+        sampler.sampling_params.max_tokens = total_tokens
+
+        # Return the best particle
+        return outputs[best_particle]
 
 # TODO Remove this function as it will be incorperated into the LLM_backend.py
 # Enable SMC Sampling Function

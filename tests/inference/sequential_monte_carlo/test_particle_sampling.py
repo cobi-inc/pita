@@ -46,7 +46,19 @@ class TestParticleSampling:
         
         new_particles = smc.particle_sampling(particle_scores, finished)
         
+        # Test to make sure the number of particles returned is the same as the number of particles
         assert len(new_particles) == num_particles
+
+        # Test to make sure the finished particles are propagated forward
+        for i in range(num_particles):
+            if(finished[i]):
+                assert new_particles[i] == i
+
+        # Test to make sure that the unfished particles are not assigned to finished particles
+        for i in range(num_particles):
+            if(not finished[i]):
+                assert new_particles[i] != finished[1]
+                assert new_particles[i] != finished[3]
 
     def test_particle_sampling_normalization(self):
         """
@@ -68,3 +80,31 @@ class TestParticleSampling:
         assert 0 in unique_particles
         # It's probabilistic, but with 100.0 vs 0.0 in exp space, it's deterministic for all practical purposes
         assert np.all(np.array(new_particles) == 0)
+
+    def test_particle_sampling_normalization_with_finished(self):
+        """
+        Test that probabilities are normalized correctly before sampling.
+        We can infer this by setting one score very high and checking if it's selected.
+        """
+        num_particles = 10
+        smc = Sequential_Monte_Carlo(num_particles=num_particles)
+        
+        particle_scores = np.zeros(num_particles)
+        particle_scores[1] = 100.0 # High score for particle 1
+        finished = [True, False, False, False, False, False, False, False, True, False]
+        
+        new_particles = smc.particle_sampling(particle_scores, finished)
+        # With high score, particle 0 should be selected for all/most slots
+        # Since logic presumably samples with replacement
+        unique_particles = np.unique(new_particles)
+        assert new_particles[0] == 0
+        assert new_particles[8] == 8
+        # It's probabilistic, but with 100.0 vs 0.0 in exp space, it's deterministic for all practical purposes
+        # Check that every particle is either finished or is particle 1
+        for i in range(num_particles):
+            if(finished[i]):
+                assert new_particles[i] == i
+            else:
+                assert new_particles[i] != 0
+                assert new_particles[i] != 8
+                assert new_particles[i] == 1
