@@ -1,6 +1,5 @@
 
 import pytest
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output
 
