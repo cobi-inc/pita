@@ -139,7 +139,7 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     # Test with custom token sampling method
     smc = Sequential_Monte_Carlo(
         num_particles=1,
-        tokens_per_step=1,
+        tokens_per_step=2,
         token_sampling_method="token_sample"
     )
     
