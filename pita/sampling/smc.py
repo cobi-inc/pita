@@ -90,8 +90,8 @@ class Sequential_Monte_Carlo:
     # TODO Add type hints
     def particle_sampling(
         self,
-        particle_scores,
-        finished
+        particle_scores: list[float] | np.ndarray,
+        finished: list[bool] | np.ndarray,
     )-> list[int]:
         """
         Given a list of particle scores (particle_score), return a list of the new particles to use based off the softmax of the particle scores and multinomial sampling.
