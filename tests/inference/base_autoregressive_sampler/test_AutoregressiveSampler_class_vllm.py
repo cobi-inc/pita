@@ -38,7 +38,7 @@ def tokenizer_chat_template(
     return prompt
 
 
-# Initalize the AutoregressiveSampler
+# Initialize the AutoregressiveSampler
 # Do it once for all the tests in this file
 @pytest.fixture(scope="module")
 def sampler():

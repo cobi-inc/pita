@@ -33,3 +33,15 @@ def calc_token_metric(
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', or 'entropy'."
         )
+
+# TODO: Implement calc_token_score that returns a score for a sequence of tokens based on the token metric
+def calc_token_score():
+    pass
+
+# TODO: Implement calc_token_prob that returns a probability for a sequence of tokens based on the token metric
+def calc_token_prob():
+    pass
+
+# TODO: Implement calc_token_log_prob that returns a log probability for a sequence of tokens based on the token metric
+def calc_token_log_prob():
+    pass

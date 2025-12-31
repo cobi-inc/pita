@@ -1,6 +1,9 @@
 #Tokenizers
 from transformers import AutoTokenizer
 
+# Standard Libraries
+import copy
+
 # Custom Libraries
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
@@ -205,6 +208,35 @@ class Output:
         self.temp_processed_log_normalization_constant = temp_processed_log_normalization_constant
         self.entropy = entropy
 
+    def append(self, other: 'Output'):
+        """
+        Appends the data from another Output object to this one by extending internal lists.
+        
+        Args:
+            other (Output): The other output object to append.
+        """
+        if other is None:
+            return
+
+        # Helper function to extend list attributes safely
+        def _extend_field(field_name):
+            self_val = getattr(self, field_name)
+            other_val = getattr(other, field_name)
+            
+            if other_val is not None:
+                if self_val is None:
+                    # Use deepcopy for consistency
+                    setattr(self, field_name, copy.deepcopy(other_val) if isinstance(other_val, list) else other_val)
+                elif isinstance(self_val, list) and isinstance(other_val, list):
+                    self_val.extend(other_val)
+
+        _extend_field('tokens')
+        _extend_field('top_k_logits')
+        _extend_field('top_k_logprobs')
+        _extend_field('unprocessed_log_normalization_constant')
+        _extend_field('temp_processed_log_normalization_constant')
+        _extend_field('entropy')
+
 class AutoregressiveSampler:
     """Stores parameters concerning the LLM, autoregressive sampling, and power sampling.
 
@@ -217,6 +249,7 @@ class AutoregressiveSampler:
         sampling_params (object): Parameters to use for standard sampling.
         chain_sampling (object): Chain Sampling Object used for chain level test time scaling (i.e Best-of-N, SMC, etc.)
         token_sampling (object): Token Sampling Object used for token level test time scaling (i.e Metropolis-Hastings Sampling)
+        chain_sample_fn (object): The chain sampling function to use for chain level test time scaling.
         token_sample_fn (object): The token sampling function to use for token level test time scaling.
     """
     def __init__(
@@ -243,7 +276,7 @@ class AutoregressiveSampler:
             tokenizer_path (str): Path to a model with a tokenizer if the model path doesn't include a tokenizer.
             gpu_memory_utilization (float): GPU memory utilization to use.
             max_model_len (int): Max model context length (context window = prompt + generated tokens).
-            max_probs (int): Number of top ranked probabilites (logits & logprobs) to store per output token.
+            max_probs (int): Number of top ranked probabilities (logits & logprobs) to store per output token.
             logits_processor (bool): Whether to enable the internal logits processor that allows for normalization constants and entropy to be calculated.
             trust_remote_code (bool): Whether to trust remote code when loading the model.
             sampling_params (Sampling_Params): General sampling parameters to use (Sampling_Params Class).
@@ -340,7 +373,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
+        """Samples programmatically from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
 
         Args:
             context (str): The input context.
@@ -369,6 +402,24 @@ class AutoregressiveSampler:
             return self.token_sample_fn(self, context, **kwargs)
         else:
             raise ValueError("Token sampling is not enabled for this LLM/Engine.")
+
+    def chain_sample(self, 
+        context: str,
+        **kwargs
+    )-> Output:
+        """Samples programmatically from the LLM using the chain sampling function
+
+        Args:
+            context (str): The input context.
+            **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
+
+        Returns:
+            Output: The output of the sample function.
+        """
+        if getattr(self, "chain_sample_name", None) == "SMC":
+            return self.chain_sample_fn(self, context, **kwargs)
+        else:
+            raise ValueError("Chain sampling is not enabled for this LLM/Engine.")
 
     # Chain Sampling Methods
     def enable_smc(
@@ -422,6 +473,10 @@ class AutoregressiveSampler:
             token_metric=token_metric,
             aggregation=aggregation
         )
+
+        # Set the chain sampling function to the SMC sample function
+        self.chain_sample_fn = self.chain_sampling.sample
+        self.chain_sample_name = "SMC"
 
     # Token Sampling Methods
     def enable_power_sampling(

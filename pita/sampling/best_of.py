@@ -72,7 +72,7 @@ def enable_best_of_sampling(
     if(sequence_top_k > sequence_n):
         raise ValueError("sequence_top_k must be less than or equal to sequences in best_of sampling.")
 
-    # Initalize the best_of sampling parameters
+    # Initialize the best_of sampling parameters
     best_of_sampler = Best_of_Params(
         sequence_n = sequence_n,
         sequence_top_k = sequence_top_k

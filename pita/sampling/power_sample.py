@@ -59,6 +59,9 @@ class Power_Sampling:
         self.MCMC_steps = MCMC_steps
         self.token_metric = token_metric
 
+    # TODO Implement entropy as a MCMC acceptance ratio metric
+    # TODO Implement a PRM as a MCMC acceptance ratio metric
+    # TODO Implement a separate temperature for the Power Distribution metric
     # Power Sampling method 
     def sample(
         self, 
