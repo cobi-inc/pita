@@ -104,7 +104,7 @@ class Sequential_Monte_Carlo:
             list[int]: A list with each element being the new index of the particle to use.
         """
         # Find the indices of the unfinished particles
-        unfinished_indices = np.where(np.array(finished) == False)[0]
+        unfinished_indices = np.where(~np.array(finished, dtype=bool))[0]
         
         # If all particles are finished, return the current particles
         if len(unfinished_indices) == 0:
