@@ -48,7 +48,7 @@ class Sequential_Monte_Carlo:
         Args:
             token_values (list[float]): All of the token values so far. Could be logprobs, power_distribution, or entropy
             token_count (int): The number of tokens to use.
-            step_scores (list[list[float]]): The stored step scores.
+            step_scores (list[float]): The stored step scores.
 
         Returns:
             float: The new particle score.
