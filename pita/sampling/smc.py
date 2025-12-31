@@ -101,7 +101,7 @@ class Sequential_Monte_Carlo:
             finished (list[bool]): The list of finished flags.
 
         Returns:
-            list[int]: A list that with each element being the new index of the particle to use.
+            list[int]: A list with each element being the new index of the particle to use.
         """
         # Find the indices of the unfinished particles
         unfinished_indices = np.where(np.array(finished) == False)[0]
