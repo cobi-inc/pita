@@ -93,7 +93,7 @@ class TestParticleSampling:
         finished = [True, False, False, False, False, False, False, False, True, False]
         
         new_particles = smc.particle_sampling(particle_scores, finished)
-        # With high score, particle 0 should be selected for all/most slots
+        # With high score, particle 1 should be selected for all unfinished slots
         # Since logic presumably samples with replacement
         assert new_particles[0] == 0
         assert new_particles[8] == 8
