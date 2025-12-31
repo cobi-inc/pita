@@ -61,7 +61,7 @@ class Power_Sampling:
 
     # TODO Implement entropy as a MCMC acceptance ratio metric
     # TODO Implement a PRM as a MCMC acceptance ratio metric
-    # TODO Implement a seperate temperature for the Power Distribution metric
+    # TODO Implement a separate temperature for the Power Distribution metric
     # Power Sampling method 
     def sample(
         self, 
