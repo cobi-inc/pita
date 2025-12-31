@@ -246,7 +246,9 @@ class Sequential_Monte_Carlo:
                 outputs[particle].append(sample_output)
 
                 # Calculate the token metric probabilities
-                token_metric_scores[particle].extend(calc_token_metric(sample_output, sampler, self.token_metric))
+                token_metric_scores[particle].extend(
+                    np.ravel(calc_token_metric(sample_output, sampler, self.token_metric)).tolist()
+                )
 
                 # Calculate the current particle probability
                 particle_scores[particle] = self.score_update(token_metric_scores[particle], self.tokens_per_step, step_scores[particle]) 
