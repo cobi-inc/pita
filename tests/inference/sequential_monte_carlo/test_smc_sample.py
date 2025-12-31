@@ -284,7 +284,7 @@ def test_smc_with_real_sampler(real_sampler):
     assert isinstance(result, Output)
     assert len(result.tokens) > 0
     # Basic check that we got some valid text or tokens back
-    # With OPT-125m, output might be repetitive but should exist.
+    # With this small model, output might be repetitive but should exist.
     decoded_text = real_sampler.tokenizer.decode(result.tokens)
     print(f"SMC Generated Text: {decoded_text}")
     
