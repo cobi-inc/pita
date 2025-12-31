@@ -404,7 +404,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM using the chain sampling function
+        """Samples programmatically from the LLM using the chain sampling function
 
         Args:
             context (str): The input context.
