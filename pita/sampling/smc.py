@@ -18,7 +18,7 @@ class Sequential_Monte_Carlo:
         tokens_per_step (int): The number of tokens to generate per step.
         stop_on_eos (bool): Whether to stop sampling when the end of the sequence is reached.
         token_metric (str): The probability metric to use.
-        aggregation (str): The aggregation method to use. Can be the last, minimum, product, or model_aggregate.
+        aggregation (str): The aggregation method to use. Can be 'last', 'minimum', 'product', or 'model_aggregate'.
         token_sampling_method (str): The token sampling method to use. By default, the standard token sampling method is used. However, token_sample can be used instead. 
     """
     def __init__(
