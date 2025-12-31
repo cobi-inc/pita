@@ -255,13 +255,12 @@ class Sequential_Monte_Carlo:
                 if self.stop_on_eos and eos_id in sample_output.tokens:
                     finished[particle] = True
 
-            # Find the new list of particles to use
-            new_particles = self.particle_sampling(particle_scores, finished)
-            
-            # Check if all particles are finished
+            # Check if all particles are finished; if so, skip resampling and stop
             if np.all(finished):
                 break
 
+            # Find the new list of particles to use
+            new_particles = self.particle_sampling(particle_scores, finished)
             # Update the particles if not finished
             self.update_particles(new_particles, outputs, finished, token_metric_scores, step_scores)
 
