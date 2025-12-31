@@ -135,8 +135,7 @@ class Sequential_Monte_Carlo:
         outputs: list[Output],
         finished: list[bool],
         token_metric_scores: list[list[float]],
-        step_scores: list[list[float]],
-        
+        step_scores: list[list[float]]
     ) -> None:
         """
         Update the particles based on the newly SMC sampled particles by updating the outputs, token_metric_scores, and step_scores 
