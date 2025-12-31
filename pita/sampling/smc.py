@@ -146,8 +146,8 @@ class Sequential_Monte_Carlo:
             new_particles (list[int]): The list of indices of the new particles to use.
             outputs (list[Output]): The current list of outputs to be updated.
             finished (list[bool]): The current list of finished flags to be updated.
-            token_metric_scores (list[float]): The current list of token metric scores to be updated.
-            step_scores (list[float]): The current list of step scores to be updated.
+            token_metric_scores (list[list[float]]): The current list of token metric scores to be updated for each particle.
+            step_scores (list[list[float]]): The current list of step scores to be updated for each particle.
 
         """
         # Save the particles that will be carried forward
