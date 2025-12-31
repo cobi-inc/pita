@@ -1,6 +1,5 @@
 import pytest
 import math
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 
 class TestScoreUpdate:
