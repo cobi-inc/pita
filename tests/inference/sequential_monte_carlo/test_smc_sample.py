@@ -1,7 +1,6 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output, AutoregressiveSampler, Sampling_Params
 
