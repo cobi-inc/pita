@@ -76,8 +76,7 @@ class TestParticleSampling:
         
         # With high score, particle 0 should be selected for all/most slots
         # Since logic presumably samples with replacement
-        unique_particles = np.unique(new_particles)
-        assert 0 in unique_particles
+        assert 0 in new_particles
         # It's probabilistic, but with 100.0 vs 0.0 in exp space, it's deterministic for all practical purposes
         assert np.all(np.array(new_particles) == 0)
 

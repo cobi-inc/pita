@@ -2,6 +2,7 @@
 import numpy as np
 import math
 import copy
+import warnings
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
@@ -104,7 +105,7 @@ class Sequential_Monte_Carlo:
             list[int]: A list with each element being the new index of the particle to use.
         """
         # Find the indices of the unfinished particles
-        unfinished_indices = np.where(~np.array(finished, dtype=bool))[0]
+        unfinished_indices = np.where(np.logical_not(finished))[0]
         
         # If all particles are finished, return the current particles
         if len(unfinished_indices) == 0:
@@ -124,7 +125,7 @@ class Sequential_Monte_Carlo:
         
         # Make sure the finished particles are propagated forward
         for i in range(self.num_particles):
-            if(finished[i] == True):
+            if finished[i]:
                 new_particles[i] = i
         
 
@@ -152,7 +153,7 @@ class Sequential_Monte_Carlo:
         # Find the unique indices in new_particles avoiding any finished particles
         unique_indices = np.unique(new_particles)
         for i in range(self.num_particles):
-            if(finished[i] == True):
+            if finished[i]:
                 unique_indices = unique_indices[unique_indices != i]
 
         # Save the outputs, finished, token_metric_scores, and step_scores for the unique indices in dictionaries
@@ -164,8 +165,8 @@ class Sequential_Monte_Carlo:
         for i in range(self.num_particles):
             source_idx = new_particles[i]
             # Check to see if the particle is different
-            if(source_idx != i):
-                # Set the current particle to the new saved particle
+            if source_idx != i:
+                # Copy the saved particle to the current particle
                 # Use deepcopy to avoid shared mutable state
                 outputs[i] = copy.deepcopy(saved_outputs[source_idx])
                 finished[i] = saved_finished[source_idx]
@@ -188,12 +189,12 @@ class Sequential_Monte_Carlo:
             Output: Standard output object for the PITA library.
         """
         # Check the token sampling method
-        if(self.token_sampling_method == "standard"):
+        if self.token_sampling_method == "standard":
             token_sampling = sampler.sample 
-        elif(self.token_sampling_method == "token_sample"):
+        elif self.token_sampling_method == "token_sample":
             token_sampling = sampler.token_sample
         else:
-            print("Warning: Invalid token sampling method. Using standard token sampling method.")
+            warnings.warn("Invalid token sampling method. Using standard token sampling method.")
             token_sampling = sampler.sample
 
         # Save the total number of tokens to generate
@@ -204,7 +205,6 @@ class Sequential_Monte_Carlo:
         # SMC Steps
         smc_steps = total_tokens // self.tokens_per_step
 
-        # Create Output objects for each particle and store them in a list
         # Initialize each particle with an empty Output object configured for appending
         outputs = [
             Output(
@@ -218,7 +218,7 @@ class Sequential_Monte_Carlo:
             for _ in range(self.num_particles)
         ]
 
-        # Create a list of the token metric probabilities for each particle and store them in a list
+        # Create a list of the token metric scores for each particle
         token_metric_scores = [[] for i in range(self.num_particles)]
         step_scores = [[] for i in range(self.num_particles)]
         # Create a list of the current particle probability
@@ -355,8 +355,8 @@ def power_sampling_logprobability_metric(
 
 # Use negative entropy as a comparison metric for the SMC sampling
 
-# TODO incorperate this function into the Sequential_Monte_Carlo class
-# Perform SMC Sampling Function based on the log probabilites of the tokens generated
+# TODO incorporate this function into the Sequential_Monte_Carlo class
+# Perform SMC Sampling Function based on the log probabilities of the tokens generated
 def sequential_monte_carlo(
     sampler: AutoregressiveSampler, 
     prompt: str
