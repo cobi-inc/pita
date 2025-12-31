@@ -110,10 +110,10 @@ class Sequential_Monte_Carlo:
         if len(unfinished_indices) == 0:
             return list(range(self.num_particles))
 
-        # Find the normalization constant of the particle scores 
+        # Exponentiate the scores of unfinished particles (softmax numerator)
         particle_score_exp = np.exp(np.array(particle_scores)[unfinished_indices])
         
-        # Find the normalization constant of the particle scores
+        # Calculate the sum of exponentiated scores for normalization
         particle_score_normalization_constant = np.sum(particle_score_exp)
         
         # Normalize the particle scores
