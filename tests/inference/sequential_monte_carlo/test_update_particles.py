@@ -58,7 +58,7 @@ class TestUpdateParticles:
         assert outputs[1].entropy == [0.0001, 0.0001]
         assert outputs[1] is not outputs[0] # Deep copy check
 
-        # P2 should be P2 data
+        # P2 should be P1 data
         assert outputs[2].tokens == [1, 1]
         assert outputs[2].top_k_logits == [1.0, 1.0]
         assert outputs[2].top_k_logprobs == [0.1, 0.1]
