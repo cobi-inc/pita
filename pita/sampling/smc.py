@@ -249,7 +249,7 @@ class Sequential_Monte_Carlo:
                 )
 
                 # Calculate the current particle probability
-                particle_scores[particle] = self.score_update(token_metric_scores[particle], self.tokens_per_step, step_scores[particle]) 
+                particle_scores[particle] = self.score_update(token_metric_scores[particle], len(sample_output.tokens), step_scores[particle]) 
 
                 # Check if the particle has finished 
                 if self.stop_on_eos and eos_id in sample_output.tokens:
