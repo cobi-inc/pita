@@ -150,7 +150,7 @@ class Sequential_Monte_Carlo:
             step_scores (list[float]): The current list of step scores to be updated.
 
         """
-        # Save the particles that are will be carried forward
+        # Save the particles that will be carried forward
         # Find the unique indices in new_particles avoiding any finished particles
         unique_indices = np.unique(new_particles)
         for i in range(self.num_particles):
