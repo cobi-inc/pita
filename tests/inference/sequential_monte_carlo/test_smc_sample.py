@@ -247,7 +247,7 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 
 @pytest.fixture(scope="module")
 def real_sampler():
-    # Initalize the sampler
+    # Initialize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
