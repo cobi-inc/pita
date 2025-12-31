@@ -219,13 +219,13 @@ class Sequential_Monte_Carlo:
         ]
 
         # Create a list of the token metric scores for each particle
-        token_metric_scores = [[] for i in range(self.num_particles)]
-        step_scores = [[] for i in range(self.num_particles)]
+        token_metric_scores = [[] for _ in range(self.num_particles)]
+        step_scores = [[] for _ in range(self.num_particles)]
         # Create a list of the current particle probability
-        particle_scores = [0 for i in range(self.num_particles)]
+        particle_scores = [0 for _ in range(self.num_particles)]
 
         # Create a list to track if a particle has finished
-        finished = [False for i in range(self.num_particles)]
+        finished = [False for _ in range(self.num_particles)]
         
         # Find the EOS token ID
         eos_id = sampler.tokenizer.eos_token_id
