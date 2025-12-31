@@ -2,6 +2,7 @@
 import numpy as np
 import math
 import copy
+import warnings
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
@@ -150,19 +151,18 @@ class Sequential_Monte_Carlo:
             step_scores (list[list[float]]): The current list of step scores to be updated for each particle.
 
         """
-        # Save the states that will be carried forward
-        # Only save states for particles that are actually used in new_particles
-        saved_outputs = {}
-        saved_finished = {}
-        saved_token_metric_scores = {}
-        saved_step_scores = {}
-        
-        for source_idx in new_particles:
-            if source_idx not in saved_outputs:
-                saved_outputs[source_idx] = outputs[source_idx]
-                saved_finished[source_idx] = finished[source_idx]
-                saved_token_metric_scores[source_idx] = token_metric_scores[source_idx]
-                saved_step_scores[source_idx] = step_scores[source_idx]
+        # Save the particles that will be carried forward
+        # Find the unique indices in new_particles avoiding any finished particles
+        unique_indices = np.unique(new_particles)
+        for i in range(self.num_particles):
+            if finished[i]:
+                unique_indices = unique_indices[unique_indices != i]
+
+        # Save the outputs, finished, token_metric_scores, and step_scores for the unique indices in dictionaries
+        saved_outputs = {i: outputs[i] for i in unique_indices}
+        saved_finished = {i: finished[i] for i in unique_indices}
+        saved_token_metric_scores = {i: token_metric_scores[i] for i in unique_indices}
+        saved_step_scores = {i: step_scores[i] for i in unique_indices}
 
         for i in range(self.num_particles):
             source_idx = new_particles[i]
@@ -196,7 +196,6 @@ class Sequential_Monte_Carlo:
         elif self.token_sampling_method == "token_sample":
             token_sampling = sampler.token_sample
         else:
-            import warnings
             warnings.warn("Invalid token sampling method. Using standard token sampling method.")
             token_sampling = sampler.sample
 

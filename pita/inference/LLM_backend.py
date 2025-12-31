@@ -1,6 +1,9 @@
 #Tokenizers
 from transformers import AutoTokenizer
 
+# Standard Libraries
+import copy
+
 # Custom Libraries
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
@@ -217,7 +220,6 @@ class Output:
 
         # Helper function to extend list attributes safely
         def _extend_field(field_name):
-            import copy
             self_val = getattr(self, field_name)
             other_val = getattr(other, field_name)
             
