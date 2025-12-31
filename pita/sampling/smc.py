@@ -276,7 +276,7 @@ class Sequential_Monte_Carlo:
         # Return the best particle
         return outputs[best_particle]
 
-# TODO Remove this function as it will be incorperated into the LLM_backend.py
+# TODO Remove this function as it will be incorporated into the LLM_backend.py
 # Enable SMC Sampling Function
 # Take in the default parameters for SMC sampling and set them in the sampler object
 def enable_smc_sampling(
