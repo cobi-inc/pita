@@ -244,7 +244,6 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 
 
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
-from transformers import AutoTokenizer
 
 @pytest.fixture(scope="module")
 def real_sampler():
