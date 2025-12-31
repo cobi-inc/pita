@@ -59,7 +59,7 @@ class Power_Sampling:
         self.MCMC_steps = MCMC_steps
         self.token_metric = token_metric
 
-    # TODO Implment entropy as a MCMC acceptance ratio metric
+    # TODO Implement entropy as a MCMC acceptance ratio metric
     # TODO Implement a PRM as a MCMC acceptance ratio metric
     # TODO Implement a seperate temperature for the Power Distribution metric
     # Power Sampling method 
