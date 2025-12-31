@@ -56,8 +56,9 @@ class TestParticleSampling:
         # Test to make sure that the unfished particles are not assigned to finished particles
         for i in range(num_particles):
             if(not finished[i]):
-                assert new_particles[i] != finished[1]
-                assert new_particles[i] != finished[3]
+                # new_particles[i] should not point to any finished particle index (1 or 3)
+                assert new_particles[i] != 1
+                assert new_particles[i] != 3
 
     def test_particle_sampling_normalization(self):
         """
