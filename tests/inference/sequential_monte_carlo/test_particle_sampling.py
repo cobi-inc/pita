@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 
