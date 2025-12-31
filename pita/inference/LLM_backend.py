@@ -246,6 +246,7 @@ class AutoregressiveSampler:
         sampling_params (object): Parameters to use for standard sampling.
         chain_sampling (object): Chain Sampling Object used for chain level test time scaling (i.e Best-of-N, SMC, etc.)
         token_sampling (object): Token Sampling Object used for token level test time scaling (i.e Metropolis-Hastings Sampling)
+        chain_sample_fn (object): The chain sampling function to use for chain level test time scaling.
         token_sample_fn (object): The token sampling function to use for token level test time scaling.
     """
     def __init__(
@@ -399,6 +400,24 @@ class AutoregressiveSampler:
         else:
             raise ValueError("Token sampling is not enabled for this LLM/Engine.")
 
+    def chain_sample(self, 
+        context: str,
+        **kwargs
+    )-> Output:
+        """Samples programmatical from the LLM using the chain sampling function
+
+        Args:
+            context (str): The input context.
+            **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
+
+        Returns:
+            Output: The output of the sample function.
+        """
+        if getattr(self, "chain_sample_name", None) == "SMC":
+            return self.chain_sample_fn(self, context, **kwargs)
+        else:
+            raise ValueError("Chain sampling is not enabled for this LLM/Engine.")
+
     # Chain Sampling Methods
     def enable_smc(
         self,
@@ -451,6 +470,10 @@ class AutoregressiveSampler:
             token_metric=token_metric,
             aggregation=aggregation
         )
+
+        # Set the chain sampling function to the SMC sample function
+        self.chain_sample_fn = self.chain_sampling.sample
+        self.chain_sample_name = "SMC"
 
     # Token Sampling Methods
     def enable_power_sampling(

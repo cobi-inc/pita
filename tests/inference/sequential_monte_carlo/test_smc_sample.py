@@ -248,22 +248,26 @@ from transformers import AutoTokenizer
 
 @pytest.fixture(scope="module")
 def real_sampler():
-    try:
-        import vllm
-    except ImportError:
-        pytest.skip("vllm not installed, skipping integration test")
-
+    # Initalize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
-        model="facebook/opt-125m",
+        model="Qwen/Qwen3-4B-AWQ",
         dtype="auto",
         tokenizer_path=None,
-        gpu_memory_utilization=0.6, # Lower memory utilization to avoid OOM
+        gpu_memory_utilization=0.85,
         max_model_len=1024,
         max_probs=10,
         logits_processor=True,
         trust_remote_code=True,
         sampling_params=None
+    )
+    sampler.sampling_params.max_tokens = 500
+    sampler.enable_smc(
+        num_particles=4,
+        tokens_per_step=100,
+        stop_on_eos=True,
+        token_metric="logprobs",
+        aggregation="last"
     )
     yield sampler
     # Cleanup if needed
@@ -271,19 +275,10 @@ def real_sampler():
         del sampler.llm
 
 def test_smc_with_real_sampler(real_sampler):
-    # Setup SMC
-    smc = Sequential_Monte_Carlo(
-        num_particles=2,
-        tokens_per_step=3,
-        stop_on_eos=True,
-        token_metric="logprobs",
-        aggregation="last"
-    )
-
     prompt = "The capital of France is"
     
     # Run sample
-    result = smc.sample(real_sampler, prompt)
+    result = real_sampler.chain_sample(prompt)
 
     # Assertions
     assert isinstance(result, Output)
@@ -296,3 +291,5 @@ def test_smc_with_real_sampler(real_sampler):
     # Verify structure
     assert result.top_k_logprobs is not None
     assert result.top_k_logits is not None 
+
+# TODO: Add a test case where SMC uses the token_sample method with power sampling
