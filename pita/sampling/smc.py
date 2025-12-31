@@ -10,7 +10,7 @@ from pita.sampling.token_metrics import calc_token_metric
 # SMC Class
 class Sequential_Monte_Carlo:
     """
-    Sequential Monte Carlo (SMC) is a multi-particle sampling method that is uses a probability metric to iteratively update a set of particles.
+    Sequential Monte Carlo (SMC) is a multi-particle sampling method that uses a probability metric to iteratively update a set of particles.
 
     Args:
         num_particles (int): The number of particles to use.
@@ -48,7 +48,7 @@ class Sequential_Monte_Carlo:
         Args:
             token_values (list[float]): All of the token values so far. Could be logprobs, power_distribution, or entropy
             token_count (int): The number of tokens to use.
-            step_scores (list[list[float]]): The stored step scores.
+            step_scores (list[float]): The stored step scores.
 
         Returns:
             float: The new particle score.
@@ -101,19 +101,19 @@ class Sequential_Monte_Carlo:
             finished (list[bool]): The list of finished flags.
 
         Returns:
-            list[int]: A list that with each element being the new index of the particle to use.
+            list[int]: A list with each element being the new index of the particle to use.
         """
         # Find the indices of the unfinished particles
-        unfinished_indices = np.where(np.array(finished) == False)[0]
+        unfinished_indices = np.where(~np.array(finished, dtype=bool))[0]
         
         # If all particles are finished, return the current particles
         if len(unfinished_indices) == 0:
             return list(range(self.num_particles))
 
-        # Find the normalization constant of the particle scores 
+        # Exponentiate the scores of unfinished particles (softmax numerator)
         particle_score_exp = np.exp(np.array(particle_scores)[unfinished_indices])
         
-        # Find the normalization constant of the particle scores
+        # Calculate the sum of exponentiated scores for normalization
         particle_score_normalization_constant = np.sum(particle_score_exp)
         
         # Normalize the particle scores
@@ -144,8 +144,8 @@ class Sequential_Monte_Carlo:
             new_particles (list[int]): The list of indices of the new particles to use.
             outputs (list[Output]): The current list of outputs to be updated.
             finished (list[bool]): The current list of finished flags to be updated.
-            token_metric_scores (list[list[float]]): The current list of token metric scores to be updated.
-            step_scores (list[list[float]]): The current list of step scores to be updated.
+            token_metric_scores (list[list[float]]): The current list of token metric scores to be updated for each particle.
+            step_scores (list[list[float]]): The current list of step scores to be updated for each particle.
 
         """
         # Save the particles that will be carried forward
@@ -218,7 +218,7 @@ class Sequential_Monte_Carlo:
             for _ in range(self.num_particles)
         ]
 
-        # Create a list of the token metric probabilites for each particle and store them in a list
+        # Create a list of the token metric probabilities for each particle and store them in a list
         token_metric_scores = [[] for i in range(self.num_particles)]
         step_scores = [[] for i in range(self.num_particles)]
         # Create a list of the current particle probability
@@ -244,7 +244,9 @@ class Sequential_Monte_Carlo:
                 outputs[particle].append(sample_output)
 
                 # Calculate the token metric probabilities
-                token_metric_scores[particle].extend(calc_token_metric(sample_output, sampler, self.token_metric))
+                token_metric_scores[particle].extend(
+                    np.ravel(calc_token_metric(sample_output, sampler, self.token_metric)).tolist()
+                )
 
                 # Calculate the current particle probability
                 particle_scores[particle] = self.score_update(token_metric_scores[particle], self.tokens_per_step, step_scores[particle]) 
@@ -272,7 +274,7 @@ class Sequential_Monte_Carlo:
         # Return the best particle
         return outputs[best_particle]
 
-# TODO Remove this function as it will be incorperated into the LLM_backend.py
+# TODO Remove this function as it will be incorporated into the LLM_backend.py
 # Enable SMC Sampling Function
 # Take in the default parameters for SMC sampling and set them in the sampler object
 def enable_smc_sampling(

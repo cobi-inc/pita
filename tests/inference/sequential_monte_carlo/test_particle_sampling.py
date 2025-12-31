@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 
@@ -57,8 +56,9 @@ class TestParticleSampling:
         # Test to make sure that the unfished particles are not assigned to finished particles
         for i in range(num_particles):
             if(not finished[i]):
-                assert new_particles[i] != finished[1]
-                assert new_particles[i] != finished[3]
+                # new_particles[i] should not point to any finished particle index (1 or 3)
+                assert new_particles[i] != 1
+                assert new_particles[i] != 3
 
     def test_particle_sampling_normalization(self):
         """
@@ -96,7 +96,6 @@ class TestParticleSampling:
         new_particles = smc.particle_sampling(particle_scores, finished)
         # With high score, particle 0 should be selected for all/most slots
         # Since logic presumably samples with replacement
-        unique_particles = np.unique(new_particles)
         assert new_particles[0] == 0
         assert new_particles[8] == 8
         # It's probabilistic, but with 100.0 vs 0.0 in exp space, it's deterministic for all practical purposes

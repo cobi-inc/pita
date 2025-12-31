@@ -1,6 +1,5 @@
 
 import pytest
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output
 
@@ -35,7 +34,7 @@ class TestUpdateParticles:
         token_metric_scores = [[0.1, 0.11], [0.2, 0.22], [0.3, 0.33]]
         step_scores = [[1.0, 1.1], [2.0, 2.2], [3.0, 3.3]]
         
-        # New particles indices: particle 1 becomes copy of 0, particle 2 becomes copy of 0
+        # New particles indices: particles 0 and 2 become copies of particle 1
         new_particles = [1, 1, 1]
         
         smc.update_particles(new_particles, outputs, finished, token_metric_scores, step_scores)

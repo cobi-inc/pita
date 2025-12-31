@@ -1,6 +1,5 @@
 import pytest
 import math
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 
 class TestScoreUpdate:
@@ -35,8 +34,8 @@ class TestScoreUpdate:
         # Existing step_scores has a lower value
         step_scores = [-0.667, -0.667] 
         
-        # New step score calculation: (-0.2 + -0.3 + -0.4) / 3 = -0.3
-        # Minimum of [-0.1, -0.5, -0.3] is -0.5
+        # New step score calculation: average of last 3 tokens (-0.9 + -0.4 + -1.2) / 3 = -0.833333
+        # After update, step_scores = [-0.667, -0.667, -0.833333] and the minimum is -0.833333
         new_score = smc.score_update(token_values, token_count, step_scores)
 
         # Check step_scores updated correctly

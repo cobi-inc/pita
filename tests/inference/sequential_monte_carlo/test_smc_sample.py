@@ -1,7 +1,6 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output, AutoregressiveSampler, Sampling_Params
 
@@ -244,11 +243,10 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 
 
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
-from transformers import AutoTokenizer
 
 @pytest.fixture(scope="module")
 def real_sampler():
-    # Initalize the sampler
+    # Initialize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
@@ -284,7 +282,7 @@ def test_smc_with_real_sampler(real_sampler):
     assert isinstance(result, Output)
     assert len(result.tokens) > 0
     # Basic check that we got some valid text or tokens back
-    # With OPT-125m, output might be repetitive but should exist.
+    # With this small model, output might be repetitive but should exist.
     decoded_text = real_sampler.tokenizer.decode(result.tokens)
     print(f"SMC Generated Text: {decoded_text}")
     

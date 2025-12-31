@@ -370,7 +370,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
+        """Samples programmatically from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
 
         Args:
             context (str): The input context.
@@ -404,7 +404,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM using the chain sampling function
+        """Samples programmatically from the LLM using the chain sampling function
 
         Args:
             context (str): The input context.
