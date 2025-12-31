@@ -129,14 +129,13 @@ class Sequential_Monte_Carlo:
         
 
         return new_particles.tolist()
-    # TODO Add type hints
     def update_particles(
         self,
         new_particles: list[int],
-        outputs,
-        finished,
-        token_metric_scores,
-        step_scores,
+        outputs: list[Output],
+        finished: list[bool],
+        token_metric_scores: list[list[float]],
+        step_scores: list[list[float]],
         
     ) -> None:
         """
@@ -146,8 +145,8 @@ class Sequential_Monte_Carlo:
             new_particles (list[int]): The list of indices of the new particles to use.
             outputs (list[Output]): The current list of outputs to be updated.
             finished (list[bool]): The current list of finished flags to be updated.
-            token_metric_scores (list[float]): The current list of token metric scores to be updated.
-            step_scores (list[float]): The current list of step scores to be updated.
+            token_metric_scores (list[list[float]]): The current list of token metric scores to be updated.
+            step_scores (list[list[float]]): The current list of step scores to be updated.
 
         """
         # Save the particles that are will be carried forward
