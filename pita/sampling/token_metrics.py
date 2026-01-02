@@ -105,8 +105,8 @@ def calc_sequence_logprob(
         # Exponentiate the average negative entropy of the tokens in the sequence
         return -np.mean(output.entropy[starting_index:ending_index])
     elif(metric == "likelihood_confidence"):
-         # Add the log probability of the sequence and the negative entropy of the sequence log( p(x) * e^(-H(x)) ) = log(p(x)) + log(e^(-H(x))) = log(p(x)) - H(x)
-         return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) - np.mean(output.entropy[starting_index:ending_index])
+        # Add the log probability of the sequence and the negative entropy of the sequence log( p(x) * e^(-H(x)) ) = log(p(x)) + log(e^(-H(x))) = log(p(x)) - H(x)
+        return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) - np.mean(output.entropy[starting_index:ending_index])
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
