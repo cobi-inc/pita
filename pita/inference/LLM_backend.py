@@ -487,7 +487,7 @@ class AutoregressiveSampler:
         Args:
             sequence_n (int): Number of sequences to sample and choose the best from.
             sequence_top_k (int): Number of top_k sequences to choose from (top_k <= sequence_n). If top_k = 1, greedy selection is used.
-            token_metric (str): Token metric to use to grade each sequence. Can be "logprobs", "power_distribution", or "entropy". "PRM" is planned but not yet supported.
+            token_metric (str): Token metric to use to grade each sequence. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence". "PRM" is planned but not yet supported.
         
         Returns:
             None
@@ -510,7 +510,7 @@ class AutoregressiveSampler:
         # Check if the engine/LLM is set up for Best-of-N
         if(token_metric == "PRM"):
             raise ValueError("PRM is not supported YET for Best-of-N.")
-        elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
+        elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy" or token_metric == "likelihood_confidence"):
             if(self.engine == "vllm"):
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama.cpp"):
