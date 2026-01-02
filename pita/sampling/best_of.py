@@ -14,7 +14,7 @@ class Best_of_N:
     Attributes:
         sequence_n (int): Number of sequences to sample and choose the best from.
         sequence_top_k (int): Number of top_k sequences to choose from (top_k <= sequence_n). If top_k = 1, greedy selection is used.
-        token_metric (str): The token metric to use for evaluation. Can be "logprobs", "power_distribution", or "entropy".
+        token_metric (str): The token metric to use for evaluation. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence".
     """
     def __init__(
         self, 
