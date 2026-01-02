@@ -127,7 +127,7 @@ def calc_sequence_length_normalized_prob(
         sampler (AutoregressiveSampler): The sampler object containing the sampling parameters.
         starting_index (int): The starting index of the sequence.
         ending_index (int): The ending index of the sequence.
-        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", or "entropy".
+        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence".
 
     Returns:
         float: The calculated sequence probability.
