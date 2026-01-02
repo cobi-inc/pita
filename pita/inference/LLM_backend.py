@@ -487,7 +487,7 @@ class AutoregressiveSampler:
         Args:
             sequence_n (int): Number of sequences to sample and choose the best from.
             sequence_top_k (int): Number of top_k sequences to choose from (top_k <= sequence_n). If top_k = 1, greedy selection is used.
-            token_metric (str): Token metric to use to grade each sequence. Can be logprobs, power_distribution, entropy, or PRM.
+            token_metric (str): Token metric to use to grade each sequence. Can be "logprobs", "power_distribution", or "entropy". "PRM" is planned but not yet supported.
         
         Returns:
             None
