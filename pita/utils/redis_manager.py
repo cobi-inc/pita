@@ -5,12 +5,23 @@ import shutil
 import psutil
 import os
 from pita.utils.constants import REDIS_PORT
+from typing import Optional
 
 class RedisManager:
-    _process = None
+    """
+    Manager for starting and stopping a Redis server subprocess.
+
+    This class provides utilities to automatically manage a Redis server instance
+    for use by the PITA package. It can detect existing Redis instances and start
+    a new one if needed.
+
+    Attributes:
+        _process: The subprocess.Popen instance for the managed Redis server, or None.
+    """
+    _process: Optional[subprocess.Popen] = None
 
     @classmethod
-    def start(cls):
+    def start(cls) -> None:
         """Starts the Redis server if it is not already running."""
         # Check if we already started it
         if cls._process is not None:
@@ -50,8 +61,13 @@ class RedisManager:
             print(f"Failed to start redis-server: {e}")
 
     @classmethod
-    def stop(cls):
-        """Stops the Redis server if it was started by this manager."""
+    def stop(cls) -> None:
+        """
+        Stop the Redis server if it was started by this manager.
+
+        This method attempts to gracefully terminate the Redis process, waiting up to
+        2 seconds before forcefully killing it if necessary.
+        """
         if cls._process:
             print("Stopping redis-server...")
             cls._process.terminate()
@@ -62,7 +78,13 @@ class RedisManager:
             cls._process = None
 
     @classmethod
-    def _is_redis_running(cls):
+    def _is_redis_running(cls) -> bool:
+        """
+        Check if a Redis server process is currently running on the system.
+
+        Returns:
+            True if a redis-server process is found, False otherwise.
+        """
         for proc in psutil.process_iter(['name']):
             try:
                 if 'redis-server' in proc.info['name']:
@@ -74,7 +96,16 @@ class RedisManager:
         return False
         
     @classmethod
-    def _find_redis_executable(cls):
+    def _find_redis_executable(cls) -> Optional[str]:
+        """
+        Find the redis-server executable in various system locations.
+
+        This method searches for redis-server in the system PATH, conda environments,
+        and relative to the Python executable.
+
+        Returns:
+            The absolute path to the redis-server executable, or None if not found.
+        """
         import sys
         executable = shutil.which('redis-server')
         if executable:

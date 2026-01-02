@@ -19,7 +19,19 @@ def normalize_answer(answer: Optional[str]) -> Optional[str]:
         return answer
 
 
-def _fix_fracs(string):
+def _fix_fracs(string: str) -> str:
+    """
+    Fix LaTeX fraction notation to ensure proper formatting.
+
+    Converts shorthand fraction notation like \\frac12 to properly
+    formatted \\frac{1}{2}.
+
+    Args:
+        string: A string potentially containing LaTeX fraction commands.
+
+    Returns:
+        The string with properly formatted fraction notation.
+    """
     substrs = string.split("\\frac")
     new_str = substrs[0]
     if len(substrs) > 1:
@@ -51,7 +63,20 @@ def _fix_fracs(string):
     return string
 
 
-def _fix_a_slash_b(string):
+def _fix_a_slash_b(string: str) -> str:
+    """
+    Convert simple slash notation to LaTeX fraction format.
+
+    Converts fractions in the form "a/b" to LaTeX format "\\frac{a}{b}",
+    but only if both a and b are integers.
+
+    Args:
+        string: A string potentially containing a simple fraction.
+
+    Returns:
+        The string with fraction converted to LaTeX format, or the original
+        string if conversion is not applicable.
+    """
     if len(string.split("/")) != 2:
         return string
     a = string.split("/")[0]
@@ -66,7 +91,19 @@ def _fix_a_slash_b(string):
         return string
 
 
-def _remove_right_units(string):
+def _remove_right_units(string: str) -> str:
+    """
+    Remove unit descriptions from the right side of an expression.
+
+    Units are typically enclosed in \\text{ } commands. This function
+    removes such unit descriptions.
+
+    Args:
+        string: A string potentially containing unit descriptions.
+
+    Returns:
+        The string with right-side units removed.
+    """
     # "\\text{ " only ever occurs (at least in the val set) when describing units
     if "\\text{ " in string:
         splits = string.split("\\text{ ")
@@ -76,7 +113,19 @@ def _remove_right_units(string):
         return string
 
 
-def _fix_sqrt(string):
+def _fix_sqrt(string: str) -> str:
+    """
+    Fix LaTeX square root notation to ensure proper formatting.
+
+    Converts shorthand sqrt notation like \\sqrt3 to properly
+    formatted \\sqrt{3}.
+
+    Args:
+        string: A string potentially containing LaTeX sqrt commands.
+
+    Returns:
+        The string with properly formatted sqrt notation.
+    """
     if "\\sqrt" not in string:
         return string
     splits = string.split("\\sqrt")
@@ -91,7 +140,24 @@ def _fix_sqrt(string):
     return new_string
 
 
-def _strip_string(string):
+def _strip_string(string: str) -> str:
+    """
+    Perform comprehensive string normalization for mathematical expressions.
+
+    This function applies multiple normalization steps including:
+    - Removing linebreaks and special LaTeX spacing
+    - Normalizing fraction and sqrt notation
+    - Removing units, degrees, dollar signs, and percentages
+    - Fixing decimal notation
+    - Removing variable assignments (e.g., "k = ")
+    - Converting shorthand notation to proper LaTeX format
+
+    Args:
+        string: A LaTeX mathematical expression string.
+
+    Returns:
+        A normalized string with consistent formatting.
+    """
     # linebreaks
     string = string.replace("\n", "")
     # print(string)

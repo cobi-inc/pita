@@ -84,15 +84,14 @@ def calc_sequence_logprob(
     Calculate the log probability of a sequence of tokens based on the token metric.
 
     Args:
-        output (Output): The output object containing the token metrics.
-        token_metrics (npt.NDArray[np.float64]): The list of the calculated token metrics for the sequence.
-        sampler (AutoregressiveSampler): The sampler object containing the sampling parameters.
-        starting_index (int): The starting index of the sequence.
-        ending_index (int): The ending index of the sequence.
-        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", or "entropy".
+        output: The output object containing the token metrics.
+        sampler: The sampler object containing the sampling parameters.
+        starting_index: The starting index of the sequence.
+        ending_index: The ending index of the sequence.
+        metric: The metric to calculate. Can be "logprobs", "power_distribution", or "entropy".
 
     Returns:
-        float: The calculated sequence log probability.
+        The calculated sequence log probability.
     """
     if(metric == "logprobs"):
         # Sum the log probabilities of the tokens in the sequence

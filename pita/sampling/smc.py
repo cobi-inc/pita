@@ -86,12 +86,11 @@ class Sequential_Monte_Carlo:
                 raise ValueError(f"Invalid aggregation method: {self.aggregation}")
         else:
             raise ValueError(f"Invalid token metric: {self.token_metric}")
-    # TODO Add type hints
     def particle_sampling(
         self,
-        particle_scores,
-        finished
-    )-> list[int]:
+        particle_scores: list[float],
+        finished: list[bool]
+    ) -> list[int]:
         """
         Given a list of particle scores (particle_score), return a list of the new particles to use based off the softmax of the particle scores and multinomial sampling.
         Skip any particles that have finished.
@@ -129,15 +128,13 @@ class Sequential_Monte_Carlo:
         
 
         return new_particles.tolist()
-    # TODO Add type hints
     def update_particles(
         self,
         new_particles: list[int],
-        outputs,
-        finished,
-        token_metric_scores,
-        step_scores,
-        
+        outputs: list[Output],
+        finished: list[bool],
+        token_metric_scores: list[list[float]],
+        step_scores: list[list[float]]
     ) -> None:
         """
         Update the particles based on the newly SMC sampled particles by updating the outputs, token_metric_scores, and step_scores 
