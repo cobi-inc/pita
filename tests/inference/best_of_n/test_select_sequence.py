@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from pita.sampling.best_of import Best_of_N
 
