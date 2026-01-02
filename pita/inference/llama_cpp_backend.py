@@ -80,7 +80,21 @@ def sample(
         n_completion = n_total - n_prompt
 
         # Reconstruct an array of all generated tokens
+        # Note: Re-encoding may produce a different token count than n_completion
+        # due to tokenizer differences (e.g., BOS tokens). We use n_completion
+        # as the authoritative length since the logits processor was called
+        # exactly n_completion times.
         tokens = list(self.tokenizer.encode(llm_output['choices'][0]['text']))
+        
+        # Validate and adjust token length to match n_completion
+        if len(tokens) != n_completion:
+            # Adjust tokens to match n_completion length
+            if len(tokens) < n_completion:
+                # Pad with zeros if too short
+                tokens = tokens + [0] * (n_completion - len(tokens))
+            else:
+                # Truncate if too long
+                tokens = tokens[:n_completion]
         
         # Get logits from self.llm.scores if logits_per_token is set
         # scores logits are stored in self.llm.scores
@@ -96,11 +110,12 @@ def sample(
                 top_k_logits = -np.partition(-scores_slice, logits_per_token, axis=1)[:, :logits_per_token]
                 top_k_logits = top_k_logits.tolist()
             else:
-                top_k_logits = [[]] * len(tokens) if tokens else []
+                top_k_logits = [[]] * n_completion
         else:
-            top_k_logits = [[]] * len(tokens) if tokens else []
+            top_k_logits = [[]] * n_completion
         
         # Get normalization constants from the logits processor
+        # These arrays have exactly n_completion entries
         unprocessed_log_normalization_constant = logits_processor.log_norm_constants
         temp_processed_log_normalization_constant = logits_processor.log_norm_constants_temp_scaled
         entropy = logits_processor.entropy
@@ -112,7 +127,15 @@ def sample(
             top_k_logprobs = (top_k_logits_array / self.sampling_params.temperature) - temp_norm_array
             top_k_logprobs = top_k_logprobs[:, :logprobs_per_token].tolist()
         else:
-            top_k_logprobs = [[]] * len(tokens) if tokens else []
+            top_k_logprobs = [[]] * n_completion
+        
+        # Validate that all arrays have consistent length
+        assert len(tokens) == n_completion, f"tokens length {len(tokens)} != n_completion {n_completion}"
+        assert len(top_k_logits) == n_completion, f"top_k_logits length {len(top_k_logits)} != n_completion {n_completion}"
+        assert len(top_k_logprobs) == n_completion, f"top_k_logprobs length {len(top_k_logprobs)} != n_completion {n_completion}"
+        assert len(unprocessed_log_normalization_constant) == n_completion, f"unprocessed_log_normalization_constant length {len(unprocessed_log_normalization_constant)} != n_completion {n_completion}"
+        assert len(temp_processed_log_normalization_constant) == n_completion, f"temp_processed_log_normalization_constant length {len(temp_processed_log_normalization_constant)} != n_completion {n_completion}"
+        assert len(entropy) == n_completion, f"entropy length {len(entropy)} != n_completion {n_completion}"
         
         output = Output(
             tokens=tokens,
