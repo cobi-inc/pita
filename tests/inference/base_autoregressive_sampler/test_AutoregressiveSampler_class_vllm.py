@@ -4,6 +4,8 @@ import pytest
 # We need to check for both the vllm package AND the LLM class
 try:
     from vllm import LLM, SamplingParams
+    # Use the imported names in a no-op to satisfy static analysis tools
+    _ = (LLM, SamplingParams)
 except ImportError:
     pytest.skip("vLLM is not properly installed (LLM class not available)", allow_module_level=True)
 
