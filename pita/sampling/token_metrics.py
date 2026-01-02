@@ -102,7 +102,7 @@ def calc_sequence_logprob(
             output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         ))
     elif(metric == "entropy"):
-        # Exponentiate the average negative entropy of the tokens in the sequence
+        # Return the average negative entropy of the tokens in the sequence
         return -np.mean(output.entropy[starting_index:ending_index])
     elif(metric == "likelihood_confidence"):
         # Add the log probability of the sequence and the negative entropy of the sequence log( p(x) * e^(-H(x)) ) = log(p(x)) + log(e^(-H(x))) = log(p(x)) - H(x)
