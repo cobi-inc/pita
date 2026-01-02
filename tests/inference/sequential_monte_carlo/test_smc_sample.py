@@ -156,7 +156,7 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     mock_sampler.token_sample.assert_called()
     
     # Assertions
-    # Check call counts for 1 particle * 2 token_per_step * 5 steps
+    # Check call counts for 1 particle * 2 tokens_per_step * 5 steps
     # token_sample called 10 times (1 per step for 1 particle)
     assert mock_sampler.token_sample.call_count == 5
     
