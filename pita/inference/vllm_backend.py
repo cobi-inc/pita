@@ -170,7 +170,7 @@ def check_token_metric_compatibility(
         ValueError: If vLLM engine logprobs_mode is not 'raw_logits'.
         ValueError: If 'req_id' is not in extra_args.
     """
-    if (token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
+    if (token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy" or token_metric == "likelihood_confidence"):
         # Make sure the user has actually set logits_per_token
         if(sampler.sampling_params.logits_per_token < 1):
             raise ValueError("LLM engine logits_per_token must be set to at least 1 to enable power sampling.")
@@ -190,11 +190,11 @@ def check_token_metric_compatibility(
             raise ValueError("req_id must be set to use power sampling with vLLM.")
         
         # Set the normalization constant in the extra_args of the vLLM SamplingParams to True
-        if(token_metric == "logprobs" or token_metric == "power_distribution"):
+        if(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "likelihood_confidence"):
             sampler.sampling_params.enable_normalization_constants = True
             print("Enabled normalization constants in vLLM SamplingParams for power sampling.")
         
-        if(token_metric == "entropy"):
+        if(token_metric == "entropy" or token_metric == "likelihood_confidence"):
             sampler.sampling_params.enable_entropy = True
             print("Enabled entropy in vLLM SamplingParams for power sampling.")
     
