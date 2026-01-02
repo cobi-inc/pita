@@ -164,12 +164,16 @@ def test_logit_to_logprob_conversion(sampler):
     assert output.top_k_logprobs[0][0] == pytest.approx(expected_logprob_temp)
 
 def test_entropy(sampler):
-    # Enable entropy calculation
-    sampler.sampling_params.enable_entropy = True
-    output = sampler.sample("Hello")
-    assert output.entropy[0] != 0
-    
-    # Disable entropy calculation
-    sampler.sampling_params.enable_entropy = False
-    output = sampler.sample("Hello")
-    assert output.entropy[0] == 0
+    original_enable_entropy = sampler.sampling_params.enable_entropy
+    try:
+        # Enable entropy calculation
+        sampler.sampling_params.enable_entropy = True
+        output = sampler.sample("Hello")
+        assert output.entropy[0] != 0
+
+        # Disable entropy calculation
+        sampler.sampling_params.enable_entropy = False
+        output = sampler.sample("Hello")
+        assert output.entropy[0] == 0
+    finally:
+        sampler.sampling_params.enable_entropy = original_enable_entropy
