@@ -96,7 +96,7 @@ def sample(
                 top_k_logits = -np.partition(-scores_slice, logits_per_token, axis=1)[:, :logits_per_token]
                 top_k_logits = top_k_logits.tolist()
             else:
-                top_k_logits = []
+                top_k_logits = [[]] * len(tokens) if tokens else []
         else:
             top_k_logits = [[]] * len(tokens) if tokens else []
         
