@@ -92,7 +92,9 @@ def sample(
             # Use partition to find top logits_per_token indices
             scores_slice = self.llm.scores[n_prompt-1:n_total-1]
             if len(scores_slice) > 0:
-                top_k_logits = -np.partition(-scores_slice, logits_per_token, axis=1)[:, :logits_per_token]
+                scores_array = np.asarray(scores_slice)
+                kth = min(logits_per_token, scores_array.shape[1] - 1)
+                top_k_logits = -np.partition(-scores_array, kth, axis=1)[:, :logits_per_token]
                 top_k_logits = top_k_logits.tolist()
             else:
                 top_k_logits = [[]] * len(tokens) if tokens else []
