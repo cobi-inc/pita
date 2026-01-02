@@ -1,5 +1,6 @@
 # Math Libraries
 import numpy as np
+import numpy.typing as npt
 from scipy.special import logsumexp
 
 # Custom Libraries
@@ -28,13 +29,13 @@ class Best_of_N:
 
     def select_sequence(
         self,
-        sequence_scores: list[float]
+        sequence_scores: npt.NDArray[np.float64]
     ) -> int:
         """
         Select the best sequence based on the sequence scores.
 
         Args:
-            sequence_scores (list[float]): The list of sequence scores.
+            sequence_scores (npt.NDArray[np.float64]): The array of sequence scores.
 
         Returns:
             int: The index of the best sequence.
