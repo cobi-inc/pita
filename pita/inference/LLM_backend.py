@@ -495,8 +495,15 @@ class AutoregressiveSampler:
         # Check if chain sampling has already been enabled. If so replace it with Best-of-N.
         if(self.chain_sampling is not None):
             print("Warning: Current Chain Sampling Strategy is being replaced with Best-of-N.")
-        
-        # Check if sequence_top_k is valid
+
+        # Validate sequence_n and sequence_top_k
+        if not isinstance(sequence_n, int) or not isinstance(sequence_top_k, int):
+            raise TypeError("sequence_n and sequence_top_k must be integers greater than 0.")
+        if sequence_n <= 0:
+            raise ValueError("sequence_n must be a positive integer greater than 0.")
+        if sequence_top_k <= 0:
+            raise ValueError("sequence_top_k must be a positive integer greater than 0.")
+        # Check if sequence_top_k is valid relative to sequence_n
         if(sequence_top_k > sequence_n):
             raise ValueError("sequence_top_k must be less than or equal to sequence_n.")
         
