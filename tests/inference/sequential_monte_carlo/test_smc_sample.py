@@ -1,7 +1,6 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output, AutoregressiveSampler, Sampling_Params
 
@@ -46,7 +45,7 @@ def test_smc_sample_basic_flow(mock_sampler, mock_output):
          patch.object(smc, 'score_update', wraps=smc.score_update) as mock_score_update, \
          patch.object(smc, 'particle_sampling', wraps=smc.particle_sampling) as mock_particle_sampling:
         
-        mock_calc.side_effect = lambda output, sampler, metric: [0.9] # Return a high score
+        mock_calc.side_effect = lambda output, sampler, metric: [0.9] * len(output.tokens)  # Return a high score per token
         
         # Run sample
         prompt = "Hello"
@@ -140,7 +139,7 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     # Test with custom token sampling method
     smc = Sequential_Monte_Carlo(
         num_particles=1,
-        tokens_per_step=1,
+        tokens_per_step=2,
         token_sampling_method="token_sample"
     )
     
@@ -244,11 +243,11 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 
 
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
-from transformers import AutoTokenizer
+# Uses Qwen/Qwen3-4B-AWQ model
 
 @pytest.fixture(scope="module")
 def real_sampler():
-    # Initalize the sampler
+    # Initialize the sampler with Qwen/Qwen3-4B-AWQ
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
@@ -284,7 +283,7 @@ def test_smc_with_real_sampler(real_sampler):
     assert isinstance(result, Output)
     assert len(result.tokens) > 0
     # Basic check that we got some valid text or tokens back
-    # With OPT-125m, output might be repetitive but should exist.
+    # With this small model, output might be repetitive but should exist.
     decoded_text = real_sampler.tokenizer.decode(result.tokens)
     print(f"SMC Generated Text: {decoded_text}")
     
