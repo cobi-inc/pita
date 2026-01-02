@@ -85,12 +85,18 @@ def test_max_tokens(sampler):
     assert len(output.tokens) == 16
 
 def test_normalization_constants(sampler):
-    # Set normalization constants to True
-    sampler.sampling_params.enable_normalization_constants = True
-    assert sampler.sampling_params.enable_normalization_constants == True
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant[0] != 0
-    assert output.temp_processed_log_normalization_constant[0] != 0
+    # Preserve original setting to avoid leaking state to other tests
+    original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    try:
+        # Set normalization constants to True
+        sampler.sampling_params.enable_normalization_constants = True
+        assert sampler.sampling_params.enable_normalization_constants is True
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant[0] != 0
+        assert output.temp_processed_log_normalization_constant[0] != 0
+    finally:
+        # Restore original value to keep tests independent
+        sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
 
 def test_temperature(sampler):
     # Set temperature to 1 
@@ -106,22 +112,30 @@ def test_temperature(sampler):
     assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
     
 def test_prob_outputs(sampler):
-    # Set logprobs_per_token to 4
-    sampler.sampling_params.logprobs_per_token = 4
-    # set logits_per_token to 6
-    sampler.sampling_params.logits_per_token = 6
-    output = sampler.sample("Hello")
-    assert len(output.top_k_logprobs[0]) >= 4
-    assert len(output.top_k_logprobs[0]) < 6
-    assert len(output.top_k_logits[0]) >= 6
-    assert len(output.top_k_logits[0]) < 8
+    # Preserve original settings to avoid leaking state to other tests
+    original_logprobs_per_token = sampler.sampling_params.logprobs_per_token
+    original_logits_per_token = sampler.sampling_params.logits_per_token
+    try:
+        # Set logprobs_per_token to 4
+        sampler.sampling_params.logprobs_per_token = 4
+        # set logits_per_token to 6
+        sampler.sampling_params.logits_per_token = 6
+        output = sampler.sample("Hello")
+        assert len(output.top_k_logprobs[0]) >= 4
+        assert len(output.top_k_logprobs[0]) < 6
+        assert len(output.top_k_logits[0]) >= 6
+        assert len(output.top_k_logits[0]) < 8
 
-    # Set logprobs_per_token and logits_per_token to 0
-    sampler.sampling_params.logprobs_per_token = 0
-    sampler.sampling_params.logits_per_token = 0
-    output = sampler.sample("Hello")
-    assert len(output.top_k_logprobs[0]) == 0
-    assert len(output.top_k_logits[0]) == 0
+        # Test that disabling these parameters (setting to 0) works correctly
+        sampler.sampling_params.logprobs_per_token = 0
+        sampler.sampling_params.logits_per_token = 0
+        output = sampler.sample("Hello")
+        assert len(output.top_k_logprobs[0]) == 0
+        assert len(output.top_k_logits[0]) == 0
+    finally:
+        # Restore original values to keep tests independent
+        sampler.sampling_params.logprobs_per_token = original_logprobs_per_token
+        sampler.sampling_params.logits_per_token = original_logits_per_token
 
 def test_logit_to_logprob_conversion(sampler):
     # Set the temperature to 1
@@ -146,14 +160,18 @@ def test_logit_to_logprob_conversion(sampler):
 
 # TODO verify if the entropy calculation is actually mathematically correct
 def test_entropy(sampler):
-    # Enable entropy calculation
-    sampler.sampling_params.enable_entropy = True
-    output = sampler.sample("Hello")
-    assert output.entropy[0] != 0
-    
-    # Disable entropy calculation
-    sampler.sampling_params.enable_entropy = False
-    output = sampler.sample("Hello")
-    assert output.entropy[0] == 0
+    original_enable_entropy = sampler.sampling_params.enable_entropy
+    try:
+        # Enable entropy calculation
+        sampler.sampling_params.enable_entropy = True
+        output = sampler.sample("Hello")
+        assert output.entropy[0] != 0
+
+        # Disable entropy calculation
+        sampler.sampling_params.enable_entropy = False
+        output = sampler.sample("Hello")
+        assert output.entropy[0] == 0
+    finally:
+        sampler.sampling_params.enable_entropy = original_enable_entropy
 
 # TODO Test the tokenizer_path parameter
