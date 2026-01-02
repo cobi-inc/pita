@@ -1,10 +1,11 @@
 # Math Libraries
 import numpy as np
+import numpy.typing as npt
 from scipy.special import logsumexp
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
-from pita.sampling.token_metrics import calc_token_metric, calc_sequence_length_normalized_logprob
+from pita.sampling.token_metrics import calc_sequence_length_normalized_logprob
 
 
 class Best_of_N:
@@ -14,7 +15,7 @@ class Best_of_N:
     Attributes:
         sequence_n (int): Number of sequences to sample and choose the best from.
         sequence_top_k (int): Number of top_k sequences to choose from (top_k <= sequence_n). If top_k = 1, greedy selection is used.
-        token_metric (str): The token metric to use for evaluation. Can be "logprobs", "power_distribution", or "entropy".
+        token_metric (str): The token metric to use for evaluation. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence".
     """
     def __init__(
         self, 
@@ -28,13 +29,13 @@ class Best_of_N:
 
     def select_sequence(
         self,
-        sequence_scores: list[float]
+        sequence_scores: npt.NDArray[np.float64]
     ) -> int:
         """
         Select the best sequence based on the sequence scores.
 
         Args:
-            sequence_scores (list[float]): The list of sequence scores.
+            sequence_scores (npt.NDArray[np.float64]): The array of sequence scores.
 
         Returns:
             int: The index of the best sequence.
@@ -42,18 +43,18 @@ class Best_of_N:
         # Select the top_k sequences based on scores
         if self.sequence_top_k == self.sequence_n:
             # If top_k equals the number of sequences, sort all
-            top_k_indices = np.argsort(-sequence_scores)
+            top_k_indices = np.argsort(-sequence_scores)[:self.sequence_top_k]
         else:
             top_k_indices = np.argpartition(-sequence_scores, self.sequence_top_k)[:self.sequence_top_k]
 
         # Find the scores of the top_k sequences
-        top_k_scores = sequence_scores[top_k_indices[:self.sequence_top_k]]
+        top_k_scores = sequence_scores[top_k_indices]
         
         # Convert to relative probabilities using log-sum-exp trick for numerical stability
         top_k_relative_probs = np.exp(top_k_scores - logsumexp(top_k_scores))
 
         # Take a weighted random choice from the top_k sequences based on their relative probabilities
-        best_index = np.random.choice(top_k_indices[:self.sequence_top_k], p=top_k_relative_probs)
+        best_index = np.random.choice(top_k_indices, p=top_k_relative_probs)
         
         # Return the index of the best sequence
         return best_index

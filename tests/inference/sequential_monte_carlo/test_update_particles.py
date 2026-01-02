@@ -1,6 +1,5 @@
 
 import pytest
-import numpy as np
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.inference.LLM_backend import Output
 
@@ -35,7 +34,7 @@ class TestUpdateParticles:
         token_metric_scores = [[0.1, 0.11], [0.2, 0.22], [0.3, 0.33]]
         step_scores = [[1.0, 1.1], [2.0, 2.2], [3.0, 3.3]]
         
-        # New particles indices: particle 1 becomes copy of 0, particle 2 becomes copy of 0
+        # New particles indices: particles 0 and 2 become copies of particle 1
         new_particles = [1, 1, 1]
         
         smc.update_particles(new_particles, outputs, finished, token_metric_scores, step_scores)
@@ -59,7 +58,7 @@ class TestUpdateParticles:
         assert outputs[1].entropy == [0.0001, 0.0001]
         assert outputs[1] is not outputs[0] # Deep copy check
 
-        # P2 should be P2 data
+        # P2 should be P1 data
         assert outputs[2].tokens == [1, 1]
         assert outputs[2].top_k_logits == [1.0, 1.0]
         assert outputs[2].top_k_logprobs == [0.1, 0.1]
@@ -69,10 +68,10 @@ class TestUpdateParticles:
         assert outputs[2] is not outputs[1] # Deep copy check
 
         # Verify the token_metric scores changed correctly
-        token_metric_scores = [[0.2, 0.22], [0.2, 0.22], [0.2, 0.22]]
+        assert token_metric_scores == [[0.2, 0.22], [0.2, 0.22], [0.2, 0.22]]
 
         # Verify the step scores changed correctly
-        step_scores = [[2.0, 2.2], [2.0, 2.2], [2.0, 2.2]]
+        assert step_scores == [[2.0, 2.2], [2.0, 2.2], [2.0, 2.2]]
 
     def test_update_particles_basic_finished(self):
         """
@@ -126,10 +125,10 @@ class TestUpdateParticles:
         assert outputs[2] is not outputs[1] # Deep copy check
 
         # Verify the token_metric scores changed correctly
-        token_metric_scores = [[0.1, 0.11], [0.2, 0.22], [0.2, 0.22]]
+        assert token_metric_scores == [[0.1, 0.11], [0.2, 0.22], [0.2, 0.22]]
 
         # Verify the step scores changed correctly
-        step_scores = [[1.0, 1.1], [2.0, 2.2], [2.0, 2.2]]
+        assert step_scores == [[1.0, 1.1], [2.0, 2.2], [2.0, 2.2]]
 
     def test_update_particles_cyclic(self):
         """
