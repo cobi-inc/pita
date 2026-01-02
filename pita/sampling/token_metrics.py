@@ -54,18 +54,18 @@ def calc_sequence_prob(
     Returns:
         float: The calculated sequence probability.
     """
-    if(metric == "logprobs"):
+    if metric == "logprobs":
         # Sum the log probabilities of the tokens in the sequence and exponentiate
         return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]))
-    elif(metric == "power_distribution"):
+    elif metric == "power_distribution":
         # Sum the log power distribution of the tokens in the sequence and exponentiate
         return np.exp(np.sum((1 / sampler.sampling_params.temperature) * (
             output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         )))
-    elif(metric == "entropy"):
+    elif metric == "entropy":
         # Exponentiate the average negative entropy of the tokens in the sequence
         return np.exp(-np.mean(output.entropy[starting_index:ending_index]))
-    elif(metric == "likelihood_confidence"):
+    elif metric == "likelihood_confidence":
         # Multiply the probability of the sequence by the confidence of the sequence
         return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index])) * np.exp(-np.mean(output.entropy[starting_index:ending_index]))
     else:
