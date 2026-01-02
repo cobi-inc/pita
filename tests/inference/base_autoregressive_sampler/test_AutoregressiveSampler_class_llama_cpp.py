@@ -91,12 +91,18 @@ def test_max_tokens(sampler):
     assert len(output.tokens) >= 14 and len(output.tokens) <= 20
 
 def test_normalization_constants(sampler):
-    # Set normalization constants to True
-    sampler.sampling_params.enable_normalization_constants = True
-    assert sampler.sampling_params.enable_normalization_constants == True
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant[0] != 0
-    assert output.temp_processed_log_normalization_constant[0] != 0
+    # Preserve original setting to avoid leaking state to other tests
+    original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    try:
+        # Set normalization constants to True
+        sampler.sampling_params.enable_normalization_constants = True
+        assert sampler.sampling_params.enable_normalization_constants is True
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant[0] != 0
+        assert output.temp_processed_log_normalization_constant[0] != 0
+    finally:
+        # Restore original value to keep tests independent
+        sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
 
 def test_temperature(sampler):
     # Set temperature to 1 
