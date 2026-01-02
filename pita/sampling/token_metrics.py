@@ -144,8 +144,8 @@ def calc_sequence_length_normalized_prob(
         # Exponentiate the average negative entropy of the tokens in the sequence
         return np.exp(-np.mean(output.entropy[starting_index:ending_index]))
     elif(metric == "likelihood_confidence"):
-         # Multiply the probability of the sequence by the confidence of the sequence
-         return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index)) * np.exp(-np.mean(output.entropy[starting_index:ending_index]))
+        # Multiply the probability of the sequence by the confidence of the sequence
+        return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index)) * np.exp(-np.mean(output.entropy[starting_index:ending_index]))
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
