@@ -85,7 +85,6 @@ def calc_sequence_logprob(
 
     Args:
         output (Output): The output object containing the token metrics.
-        token_metrics (npt.NDArray[np.float64]): The list of the calculated token metrics for the sequence.
         sampler (AutoregressiveSampler): The sampler object containing the sampling parameters.
         starting_index (int): The starting index of the sequence.
         ending_index (int): The ending index of the sequence.
