@@ -77,7 +77,6 @@ def sample(
         # We need to know where the prompt ends and the generation begins.
         n_prompt = llm_output['usage']['prompt_tokens']
         n_total = llm_output['usage']['total_tokens']
-        n_completion = n_total - n_prompt
 
         # Reconstruct an array of all generated tokens
         tokens = list(self.tokenizer.encode(llm_output['choices'][0]['text']))
