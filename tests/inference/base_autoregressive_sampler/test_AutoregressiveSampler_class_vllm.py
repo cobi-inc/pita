@@ -1,7 +1,11 @@
 import pytest
 
-# Skip this entire module if vllm is not installed
-vllm = pytest.importorskip("vllm", reason="vLLM is required for these tests")
+# Skip this entire module if vllm is not properly installed
+# We need to check for both the vllm package AND the LLM class
+try:
+    from vllm import LLM, SamplingParams
+except ImportError:
+    pytest.skip("vLLM is not properly installed (LLM class not available)", allow_module_level=True)
 
 from pita.inference.LLM_backend import AutoregressiveSampler
 from transformers import AutoTokenizer
