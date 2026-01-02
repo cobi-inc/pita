@@ -257,7 +257,7 @@ except ImportError:
 def real_sampler():
     if not HAS_VLLM:
         pytest.skip("vLLM is required for this integration test")
-    # Initalize the sampler
+    # Initialize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
