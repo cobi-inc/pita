@@ -90,10 +90,13 @@ def sample(
         if len(tokens) != n_completion:
             # Adjust tokens to match n_completion length
             if len(tokens) < n_completion:
-                # Pad with zeros if too short
-                tokens = tokens + [0] * (n_completion - len(tokens))
+                # This indicates a serious problem with generation or re-encoding
+                raise ValueError(
+                    f"Re-encoded tokens ({len(tokens)}) is fewer than n_completion ({n_completion}). "
+                    f"This indicates a problem with text generation or tokenization."
+                )
             else:
-                # Truncate if too long
+                # Truncate if too long (common case: tokenizer adds BOS during re-encoding)
                 tokens = tokens[:n_completion]
         
         # Get logits from self.llm.scores if logits_per_token is set
@@ -130,12 +133,19 @@ def sample(
             top_k_logprobs = [[]] * n_completion
         
         # Validate that all arrays have consistent length
-        assert len(tokens) == n_completion, f"tokens length {len(tokens)} != n_completion {n_completion}"
-        assert len(top_k_logits) == n_completion, f"top_k_logits length {len(top_k_logits)} != n_completion {n_completion}"
-        assert len(top_k_logprobs) == n_completion, f"top_k_logprobs length {len(top_k_logprobs)} != n_completion {n_completion}"
-        assert len(unprocessed_log_normalization_constant) == n_completion, f"unprocessed_log_normalization_constant length {len(unprocessed_log_normalization_constant)} != n_completion {n_completion}"
-        assert len(temp_processed_log_normalization_constant) == n_completion, f"temp_processed_log_normalization_constant length {len(temp_processed_log_normalization_constant)} != n_completion {n_completion}"
-        assert len(entropy) == n_completion, f"entropy length {len(entropy)} != n_completion {n_completion}"
+        # Using RuntimeError instead of assert for production-safe validation
+        if len(tokens) != n_completion:
+            raise RuntimeError(f"tokens length {len(tokens)} != n_completion {n_completion}")
+        if len(top_k_logits) != n_completion:
+            raise RuntimeError(f"top_k_logits length {len(top_k_logits)} != n_completion {n_completion}")
+        if len(top_k_logprobs) != n_completion:
+            raise RuntimeError(f"top_k_logprobs length {len(top_k_logprobs)} != n_completion {n_completion}")
+        if len(unprocessed_log_normalization_constant) != n_completion:
+            raise RuntimeError(f"unprocessed_log_normalization_constant length {len(unprocessed_log_normalization_constant)} != n_completion {n_completion}")
+        if len(temp_processed_log_normalization_constant) != n_completion:
+            raise RuntimeError(f"temp_processed_log_normalization_constant length {len(temp_processed_log_normalization_constant)} != n_completion {n_completion}")
+        if len(entropy) != n_completion:
+            raise RuntimeError(f"entropy length {len(entropy)} != n_completion {n_completion}")
         
         output = Output(
             tokens=tokens,
