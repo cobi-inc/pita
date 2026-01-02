@@ -96,4 +96,9 @@ def parse_answer(input_str: Optional[str]) -> Optional[str]:
         The extracted answer content (without the \\boxed{} wrapper), or None
         if no boxed answer is found or the input is None.
     """
-    return remove_boxed(last_boxed_only_string(input_str))
+    if input_str is None:
+        return None
+    last_boxed = last_boxed_only_string(input_str)
+    if last_boxed is None:
+        return None
+    return remove_boxed(last_boxed)
