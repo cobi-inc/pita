@@ -80,23 +80,23 @@ def sample(
         n_completion = n_total - n_prompt
 
         # Reconstruct an array of all generated tokens
-        # Note: Re-encoding may produce a different token count than n_completion
-        # due to tokenizer differences (e.g., BOS tokens). We use n_completion
-        # as the authoritative length since the logits processor was called
-        # exactly n_completion times.
+        # Note: Encoding the generated text may produce a different token count
+        # than n_completion due to tokenizer differences (e.g., BOS tokens).
+        # We use n_completion as the authoritative length since the logits
+        # processor was called exactly n_completion times.
         tokens = list(self.tokenizer.encode(llm_output['choices'][0]['text']))
         
         # Validate and adjust token length to match n_completion
         if len(tokens) != n_completion:
             # Adjust tokens to match n_completion length
             if len(tokens) < n_completion:
-                # This indicates a serious problem with generation or re-encoding
+                # This indicates a serious problem with generation or token encoding
                 raise ValueError(
-                    f"Re-encoded tokens ({len(tokens)}) is fewer than n_completion ({n_completion}). "
+                    f"Encoded tokens ({len(tokens)}) is fewer than n_completion ({n_completion}). "
                     f"This indicates a problem with text generation or tokenization."
                 )
             else:
-                # Truncate if too long (common case: tokenizer adds BOS during re-encoding)
+                # Truncate if too long (common case: tokenizer adds BOS when encoding)
                 tokens = tokens[:n_completion]
         
         # Get logits from self.llm.scores if logits_per_token is set
