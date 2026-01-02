@@ -134,6 +134,7 @@ def sample(
         
         # Validate that all arrays have consistent length
         # Using RuntimeError instead of assert for production-safe validation
+        # Note: tokens validation is defensive - should never fail after adjustment above
         if len(tokens) != n_completion:
             raise RuntimeError(f"tokens length {len(tokens)} != n_completion {n_completion}")
         if len(top_k_logits) != n_completion:
