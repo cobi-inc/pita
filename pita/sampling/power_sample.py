@@ -166,6 +166,7 @@ class Power_Sampling:
                 proposed_target_distribution = calc_token_metric(output, sampler, self.token_metric)
                 proposed_sampling_distribution = calc_token_metric(output, sampler, "logprobs")
 
+                #TODO Compare the log_acceptance_ratio summations to those calculated using calc_sequence_logprob
                 # Calculate the Metro-Hastings acceptance ratio
                 # Power Scaled Sequence Log Probability + Temperature Scaled Sequence Log Probability - Current Power Scaled Sequence Log Probability - Current Temperature Scaled Sequence Log Probability
                 log_acceptance_ratio = sum(proposed_target_distribution) + sum(current_sampling_distribution[idx:idx+len(output.tokens)]) - sum(current_target_distribution[idx:idx+len(output.tokens)]) - sum(proposed_sampling_distribution)

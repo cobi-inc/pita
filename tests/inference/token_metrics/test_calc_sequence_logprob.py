@@ -84,30 +84,23 @@ def test_power_distribution_full_sequence(sampler):
     assert result == pytest.approx(expected)
 
 def test_power_distribution_partial_sequence(sampler):
-    """Test calc_sequence_logprob with power_distribution metric for partial sequence.
-    
-    Note: The current implementation has a bug where it doesn't slice 
-    unprocessed_log_normalization_constant, which causes broadcasting errors
-    when starting_index != 0 or ending_index != len(tokens).
-    This test uses a workaround to test the intended behavior.
-    """
+    """Test calc_sequence_logprob with power_distribution metric for partial sequence."""
     sampler.sampling_params.temperature = 0.8
-    # Use a smaller array to test partial sequence without broadcasting issues
     output = Output(
-        tokens=[1, 2], 
-        top_k_logits=np.array([[2.0, 1.5, 1.0], [3.0, 2.5, 2.0]]), 
-        top_k_logprobs=np.array([[-0.5, -1.0, -1.5], [-0.3, -0.8, -1.3]]), 
-        unprocessed_log_normalization_constant=np.array([1.5, 2.5]), 
-        temp_processed_log_normalization_constant=np.array([2.0, 3.0]), 
-        entropy=np.array([1.5, 1.2])
+        tokens=[1, 2, 3, 4, 5], 
+        top_k_logits=np.array([[2.0, 1.5, 1.0], [3.0, 2.5, 2.0], [4.0, 3.5, 3.0], [5.0, 4.5, 4.0], [6.0, 5.5, 5.0]]), 
+        top_k_logprobs=np.array([[-0.5, -1.0, -1.5], [-0.3, -0.8, -1.3], [-0.2, -0.7, -1.2], [-0.4, -0.9, -1.4], [-0.6, -1.1, -1.6]]), 
+        unprocessed_log_normalization_constant=np.array([1.5, 2.5, 3.5, 4.5, 5.5]), 
+        temp_processed_log_normalization_constant=np.array([2.0, 3.0, 4.0, 5.0, 6.0]), 
+        entropy=np.array([1.5, 1.2, 1.0, 1.3, 1.6])
     )
     
-    # Test with indices 0 to 2 (full sequence) to avoid broadcasting bug
+    # Test partial sequence from index 1 to 4
     power_dist = (1 / sampler.sampling_params.temperature) * (
-        output.top_k_logits[:, 0][0:2] - np.asarray(output.unprocessed_log_normalization_constant)
+        output.top_k_logits[:, 0][1:4] - np.asarray(output.unprocessed_log_normalization_constant)[1:4]
     )
     expected = np.sum(power_dist)
-    result = calc_sequence_logprob(output, sampler, 0, 2, "power_distribution")
+    result = calc_sequence_logprob(output, sampler, 1, 4, "power_distribution")
     
     assert isinstance(result, (float, np.floating))
     assert result == pytest.approx(expected)
@@ -297,3 +290,66 @@ def test_logprob_vs_prob_relationship(sampler):
     logprob_result = calc_sequence_logprob(output, sampler, 0, 3, "likelihood_confidence")
     prob_result = calc_sequence_prob(output, sampler, 0, 3, "likelihood_confidence")
     assert logprob_result == pytest.approx(np.log(prob_result))
+
+def test_calc_sequence_logprob_matches_token_metric_sum(sampler):
+    """Test that calc_sequence_logprob returns the same value as summing calc_token_metric for logprobs and power_distribution."""
+    from pita.sampling.token_metrics import calc_token_metric
+    
+    sampler.sampling_params.temperature = 0.7
+    output = Output(
+        tokens=[1, 2, 3, 4, 5], 
+        top_k_logits=np.array([[2.0, 1.5, 1.0], [3.0, 2.5, 2.0], [4.0, 3.5, 3.0], [5.0, 4.5, 4.0], [6.0, 5.5, 5.0]]), 
+        top_k_logprobs=np.array([[-0.5, -1.0, -1.5], [-0.3, -0.8, -1.3], [-0.2, -0.7, -1.2], [-0.4, -0.9, -1.4], [-0.6, -1.1, -1.6]]), 
+        unprocessed_log_normalization_constant=np.array([1.5, 2.5, 3.5, 4.5, 5.5]), 
+        temp_processed_log_normalization_constant=np.array([2.0, 3.0, 4.0, 5.0, 6.0]), 
+        entropy=np.array([1.5, 1.2, 1.0, 1.3, 1.6])
+    )
+    
+    # Test logprobs metric: calc_sequence_logprob should equal sum of calc_token_metric
+    token_metrics_logprobs = calc_token_metric(output, sampler, "logprobs")
+    sequence_logprob = calc_sequence_logprob(output, sampler, 0, 5, "logprobs")
+    expected_logprobs = np.sum(token_metrics_logprobs[0:5])
+    assert sequence_logprob == pytest.approx(expected_logprobs)
+    
+    # Test partial sequence for logprobs
+    sequence_logprob_partial = calc_sequence_logprob(output, sampler, 1, 4, "logprobs")
+    expected_logprobs_partial = np.sum(token_metrics_logprobs[1:4])
+    assert sequence_logprob_partial == pytest.approx(expected_logprobs_partial)
+    
+    # Test power_distribution metric: calc_sequence_logprob should equal sum of calc_token_metric
+    token_metrics_power = calc_token_metric(output, sampler, "power_distribution")
+    sequence_logprob_power = calc_sequence_logprob(output, sampler, 0, 5, "power_distribution")
+    expected_power = np.sum(token_metrics_power[0:5])
+    assert sequence_logprob_power == pytest.approx(expected_power)
+    
+    # Test partial sequence for power_distribution
+    sequence_logprob_power_partial = calc_sequence_logprob(output, sampler, 2, 5, "power_distribution")
+    expected_power_partial = np.sum(token_metrics_power[2:5])
+    assert sequence_logprob_power_partial == pytest.approx(expected_power_partial)
+
+def test_calc_sequence_logprob_likelihood_confidence_matches_token_metrics(sampler):
+    """Test that calc_sequence_logprob for likelihood_confidence equals sum(logprobs) - mean(entropy)."""
+    from pita.sampling.token_metrics import calc_token_metric
+    
+    output = Output(
+        tokens=[1, 2, 3, 4], 
+        top_k_logits=np.array([[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]]), 
+        top_k_logprobs=np.array([[-0.5, -1.0, -1.5], [-0.3, -0.8, -1.3], [-0.2, -0.7, -1.2], [-0.4, -0.9, -1.4]]), 
+        unprocessed_log_normalization_constant=np.array([4, 5, 6, 7]), 
+        temp_processed_log_normalization_constant=np.array([5, 6, 7, 8]), 
+        entropy=np.array([1.5, 1.2, 1.0, 1.3])
+    )
+    
+    # likelihood_confidence = sum(logprobs) - mean(entropy)
+    token_metrics_logprobs = calc_token_metric(output, sampler, "logprobs")
+    token_metrics_entropy = calc_token_metric(output, sampler, "entropy")
+    
+    # Full sequence
+    sequence_logprob = calc_sequence_logprob(output, sampler, 0, 4, "likelihood_confidence")
+    expected = np.sum(token_metrics_logprobs[0:4]) - np.mean(token_metrics_entropy[0:4])
+    assert sequence_logprob == pytest.approx(expected)
+    
+    # Partial sequence
+    sequence_logprob_partial = calc_sequence_logprob(output, sampler, 1, 3, "likelihood_confidence")
+    expected_partial = np.sum(token_metrics_logprobs[1:3]) - np.mean(token_metrics_entropy[1:3])
+    assert sequence_logprob_partial == pytest.approx(expected_partial)

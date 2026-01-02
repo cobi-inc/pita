@@ -4,7 +4,7 @@ from scipy.special import logsumexp
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
-from pita.sampling.token_metrics import calc_token_metric
+from pita.sampling.token_metrics import calc_token_metric, calc_sequence_length_normalized_logprob
 
 
 class Best_of_N:
@@ -25,29 +25,6 @@ class Best_of_N:
         self.sequence_n = sequence_n
         self.sequence_top_k = sequence_top_k
         self.token_metric = token_metric
-
-    def sequence_scoring(
-        self,
-        sequence_scores: list[float],
-        seq_index: int,
-        token_metrics: list[float]
-    ):
-        """
-        Score the sequence based on the token metric.
-
-        Args:
-            sequence_scores (list[float]): The list of sequence scores.
-            seq_index (int): The index of the current sequence.
-            token_metrics (list[float]): The current sequence token metrics.
-
-        Returns:
-            None
-        """
-        # Handle entropy differently (lower is better, so negate)
-        if self.token_metric == "entropy":
-            sequence_scores[seq_index] = -np.sum(token_metrics) / len(token_metrics)
-        else:
-            sequence_scores[seq_index] = np.sum(token_metrics) / len(token_metrics)
 
     def select_sequence(
         self,
@@ -106,9 +83,7 @@ class Best_of_N:
         sequence_scores = np.zeros(self.sequence_n)
         for seq_index in range(self.sequence_n):
             # Calculate the token metric for the sequence
-            token_metrics = calc_token_metric(outputs[seq_index], sampler, self.token_metric)
-            # Score the sequence
-            self.sequence_scoring(sequence_scores, seq_index, token_metrics)
+            sequence_scores[seq_index] = calc_sequence_length_normalized_logprob(outputs[seq_index], sampler, 0, len(outputs[seq_index].tokens), self.token_metric)
 
         # Select the best sequence
         best_index = self.select_sequence(sequence_scores)
