@@ -1,20 +1,48 @@
 import pandas as pd
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Tuple
 from math_grader import grade_answer
 from parse_utils import parse_answer
 import argparse
 
 
-def safe_grade(ans, correct_ans):
+def safe_grade(ans: str, correct_ans: str) -> int:
+    """
+    Safely grade an answer against the correct answer.
+
+    Attempts to grade the given answer using the grade_answer function.
+    Returns 0 if any exception occurs during grading.
+
+    Args:
+        ans: The student's answer to grade.
+        correct_ans: The correct answer to compare against.
+
+    Returns:
+        1 if the answer is correct, 0 if incorrect or if an exception occurred.
+    """
     try:
         return int(grade_answer(ans, correct_ans))
     except Exception:
         return 0
 
 
-def eval_math(fname):
+def eval_math(fname: str) -> Tuple[int, int, int, int, int]:
+    """
+    Evaluate math answers from a CSV file using different sampling methods.
+
+    Reads a CSV file containing answers from different sampling strategies
+    and grades them against the correct answers.
+
+    Args:
+        fname: Path to the CSV file containing answers and correct solutions.
+
+    Returns:
+        A tuple containing (naive_sampling_correct, low_temp_sampling_correct,
+        power_sampling_sliding_window_correct, power_sampling_correct, total),
+        where each value represents the count of correct answers for that method
+        and total is the number of questions evaluated.
+    """
     print(fname)
     df = pd.read_csv(fname)
     naive_sampling_correct = 0
@@ -33,7 +61,23 @@ def eval_math(fname):
     return naive_sampling_correct, low_temp_sampling_correct, power_sampling_sliding_window_correct, power_sampling_correct, total
 
 
-def math_results(fnames):
+def math_results(fnames: List[str]) -> Dict[str, float]:
+    """
+    Compute and display aggregate math results across multiple CSV files.
+
+    Evaluates answers from multiple CSV files using different sampling strategies
+    and computes accuracy metrics for each strategy.
+
+    Args:
+        fnames: List of paths to CSV files containing answers and correct solutions.
+
+    Returns:
+        A dictionary containing accuracy metrics for each sampling strategy:
+        - naive_sampling_acc: Accuracy of naive sampling method.
+        - low_temp_sampling_acc: Accuracy of low temperature sampling method.
+        - power_sampling_sliding_window_acc: Accuracy of power sampling with sliding window.
+        - power_sampling_acc: Accuracy of power sampling method.
+    """
     naive_sampling_total = 0
     low_temp_sampling_total = 0
     power_sampling_sliding_window_total = 0

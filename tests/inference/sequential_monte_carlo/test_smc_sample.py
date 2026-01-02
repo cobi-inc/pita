@@ -245,9 +245,18 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
 # Uses Qwen/Qwen3-4B-AWQ model
 
+# Check if vllm is available for integration tests
+try:
+    import vllm
+    HAS_VLLM = hasattr(vllm, "__version__")
+except ImportError:
+    HAS_VLLM = False
+# TODO Modify the following test cases to use either vLLM or llama_cpp depending on the availability of the backend
 @pytest.fixture(scope="module")
 def real_sampler():
-    # Initialize the sampler with Qwen/Qwen3-4B-AWQ
+    if not HAS_VLLM:
+        pytest.skip("vLLM is required for this integration test")
+    # Initialize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
         model="Qwen/Qwen3-4B-AWQ",
@@ -273,6 +282,7 @@ def real_sampler():
     if hasattr(sampler, 'llm'):
         del sampler.llm
 
+@pytest.mark.skipif(not HAS_VLLM, reason="vLLM is required for this integration test")
 def test_smc_with_real_sampler(real_sampler):
     prompt = "The capital of France is"
     

@@ -10,3 +10,4 @@ __pycache__/
 *.json
 site/
 .pytest_cache
+GEMINI.md

@@ -1,7 +1,7 @@
 import pytest
 
-# Skip this entire module if vllm is not installed
-vllm = pytest.importorskip("vllm", reason="vLLM is required for these tests")
+# Skip this entire module if llama_cpp is not installed
+llama_cpp = pytest.importorskip("llama_cpp", reason="llama-cpp-python is required for these tests")
 
 # PITA Libraries
 from pita.inference.LLM_backend import Output, AutoregressiveSampler
@@ -14,7 +14,9 @@ from transformers import AutoTokenizer
 import os
 
 # Constants
-MODEL = "Qwen/Qwen3-4B-AWQ"
+# Using TheBloke's TinyLlama GGUF model which has actual GGUF files
+MODEL = "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF"
+TOKENIZER_MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 # Test Utils
 def tokenizer_chat_template(
@@ -50,16 +52,17 @@ def tokenizer_chat_template(
 @pytest.fixture(scope="module")
 def sampler():
     sampler = AutoregressiveSampler(
-        engine="vllm",
+        engine="llama_cpp",
         model=MODEL,
-        dtype="auto",
-        tokenizer_path=None,
+        dtype="Q4_K_M",  # Use Q4_K_M quantization for GGUF
+        tokenizer_path=TOKENIZER_MODEL,  # Need to specify tokenizer separately for GGUF models
         gpu_memory_utilization=0.85,
         max_model_len=1024,
         max_probs=10,
         logits_processor=True,
         trust_remote_code=True,
-        sampling_params=None
+        sampling_params=None,
+        model_type="gguf"  # Explicitly specify GGUF model type
     )
     yield sampler
     del sampler.llm
@@ -83,7 +86,8 @@ def test_power_sampling_enable(sampler, token_metric):
 @pytest.mark.parametrize("token_metric", METRICS)
 def test_power_sampling_sample(sampler, token_metric):
     sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
-    prompt = tokenizer_chat_template(sampler.tokenizer, False, "You are a helpful assistant.", "Hello, how are you?")
+    # Use a simple prompt since OPT models don't have chat templates
+    prompt = "Hello, how are you?"
     output = sampler.token_sample(prompt)
     # Check that the output is a valid Output object
     assert isinstance(output, Output)
@@ -102,7 +106,7 @@ def test_power_sampling_sample(sampler, token_metric):
     # Check that logging works
     args = {
         "logging": True,
-        "log_file_path": "power_sampling_log.csv"
+        "log_file_path": "power_sampling_log_llama_cpp.csv"
     }
     sampler.token_sample(prompt, **args)
 
@@ -119,8 +123,7 @@ def test_power_sampling_sample(sampler, token_metric):
         assert hasattr(output, "entropy")
 
         # Check for the log files
-        assert os.path.exists("power_sampling_log.csv")
+        assert os.path.exists("power_sampling_log_llama_cpp.csv")
     finally:
-        if os.path.exists("power_sampling_log.csv"):
-            os.remove("power_sampling_log.csv")
-
+        if os.path.exists("power_sampling_log_llama_cpp.csv"):
+            os.remove("power_sampling_log_llama_cpp.csv")

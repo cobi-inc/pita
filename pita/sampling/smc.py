@@ -87,7 +87,6 @@ class Sequential_Monte_Carlo:
                 raise ValueError(f"Invalid aggregation method: {self.aggregation}")
         else:
             raise ValueError(f"Invalid token metric: {self.token_metric}")
-    # TODO Add type hints
     def particle_sampling(
         self,
         particle_scores: list[float] | np.ndarray,

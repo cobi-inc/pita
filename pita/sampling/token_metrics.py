@@ -91,7 +91,7 @@ def calc_sequence_logprob(
         metric (str): The metric to calculate. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence".
 
     Returns:
-        float: The calculated sequence log probability.
+        The calculated sequence log probability.
     """
     if(metric == "logprobs"):
         # Sum the log probabilities of the tokens in the sequence

@@ -31,9 +31,21 @@ COT_ALT = " Please explain your reasoning with a detailed, step-by-step solution
 def tokenizer_chat_template(
     tokenizer: AutoTokenizer,
     enable_thinking: bool,
-    system_message: str, 
+    system_message: str,
     user_message: str,
 ) -> str:
+    """
+    Format messages for chat models using the tokenizer's chat template.
+
+    Args:
+        tokenizer: The AutoTokenizer instance to use for formatting.
+        enable_thinking: Whether to enable thinking mode in the chat template.
+        system_message: The system message content to include.
+        user_message: The user message content to include.
+
+    Returns:
+        The formatted prompt string ready for the model.
+    """
 
     # Create the message format for apply_chat_template function
     messages = [
@@ -58,11 +70,23 @@ def tokenizer_chat_template(
 
     return prompt
 
-def format_dataset( 
+def format_dataset(
     dataset: datasets.Dataset,
     pre_question: str,
     post_question: str
-) -> {str | list[str], str | list[str]}:
+) -> tuple[list[str], list[str]]:
+    """
+    Format a dataset by adding pre and post question templates to each problem.
+
+    Args:
+        dataset: The dataset containing problems and answers.
+        pre_question: Text to prepend before each problem.
+        post_question: Text to append after each problem.
+
+    Returns:
+        A tuple of (question_list, answer_list) where question_list contains
+        formatted questions and answer_list contains corresponding answers.
+    """
     # Lists to store the questions and answers
     question_list = []
     answer_list = []
@@ -85,7 +109,22 @@ def format_dataset(
 # Load a dataset based on name
 def load_benchmark(
     dataset_name: str
-) -> {str | list[str], str | list[str]}:
+) -> tuple[str, list[str], list[str]]:
+    """
+    Load a benchmark dataset by name and return formatted questions and answers.
+
+    Args:
+        dataset_name: Name of the dataset to load. Supported values are "MATH500" and "AIME".
+
+    Returns:
+        A tuple of (system_message, question_list, answer_list) where:
+        - system_message: The system message to use for the chat template
+        - question_list: List of formatted questions
+        - answer_list: List of corresponding answers
+
+    Raises:
+        ValueError: If the dataset_name is not supported.
+    """
         # Load either the MATH500 or AIME dataset
         if(dataset_name == "MATH500"):
             # Load the Math500 dataset
@@ -129,13 +168,35 @@ def benchmark_sampling(
     system_message: str,
     question_list: list[str],
     answer_list: list[str],
-    enable_thinking: bool, 
+    enable_thinking: bool,
     chat_template: bool,
-    sampling_techniques: list[bool], # greedy sampling, low temp sampling, power sampling, smc, best of n, power sampling and smc
-    max_questions: int = 0, 
+    sampling_techniques: list[bool],
+    max_questions: int = 0,
     output_file_name: str = "math500_power_sampling_results.csv",
     **kwargs
 ) -> None:
+    """
+    Benchmark different sampling techniques on a dataset of math problems.
+
+    Args:
+        llm: The AutoregressiveSampler instance to use for generation.
+        system_message: The system message to include in prompts.
+        question_list: List of formatted questions to benchmark.
+        answer_list: List of correct answers corresponding to the questions.
+        enable_thinking: Whether to enable thinking mode in chat templates.
+        chat_template: Whether to use chat template formatting for prompts.
+        sampling_techniques: List of booleans indicating which sampling techniques to use.
+            [0]: Naive sampling (temperature=1.0)
+            [1]: Low temperature sampling
+            [2]: Power sampling (MCMC)
+        max_questions: Maximum number of questions to process. 0 means process all.
+        output_file_name: Path to the output CSV file for results.
+        **kwargs: Additional keyword arguments passed to sampling functions.
+            log_file_path: Base directory for logging individual question results.
+
+    Returns:
+        None. Results are written to the output CSV file.
+    """
     # Store results
     results = []    
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
