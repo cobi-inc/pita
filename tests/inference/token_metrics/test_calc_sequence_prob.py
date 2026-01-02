@@ -1,29 +1,17 @@
 import pytest
 import numpy as np
-from pita.inference.LLM_backend import AutoregressiveSampler, Output
+from unittest.mock import MagicMock
+from pita.inference.LLM_backend import Output
 from pita.sampling.token_metrics import calc_sequence_prob
 
-# Constants
-MODEL = "facebook/opt-125m"
 
 @pytest.fixture(scope="module")
 def sampler():
-    sampler = AutoregressiveSampler(
-        engine="vllm",
-        model=MODEL,
-        dtype="auto",
-        tokenizer_path=None,
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
-        max_probs=10,
-        logits_processor=True,
-        trust_remote_code=True,
-        sampling_params=None
-    )
-    yield sampler
-    del sampler.llm
-    del sampler.tokenizer
-    del sampler
+    """Create a mock sampler that provides the necessary sampling_params."""
+    mock_sampler = MagicMock()
+    mock_sampler.sampling_params = MagicMock()
+    mock_sampler.sampling_params.temperature = 1.0
+    yield mock_sampler
 
 def test_logprobs_full_sequence(sampler):
     """Test calc_sequence_prob with logprobs metric for full sequence."""

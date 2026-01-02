@@ -246,8 +246,17 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
 # Validates the SMC sample function using a real AutoregressiveSampler (Integration Test)
 from transformers import AutoTokenizer
 
+# Check if vllm is available for integration tests
+try:
+    import vllm
+    HAS_VLLM = True
+except ImportError:
+    HAS_VLLM = False
+# TODO Modify the following test cases to use either vLLM or llama_cpp depending on the availability of the backend
 @pytest.fixture(scope="module")
 def real_sampler():
+    if not HAS_VLLM:
+        pytest.skip("vLLM is required for this integration test")
     # Initalize the sampler
     sampler = AutoregressiveSampler(
         engine="vllm",
@@ -274,6 +283,7 @@ def real_sampler():
     if hasattr(sampler, 'llm'):
         del sampler.llm
 
+@pytest.mark.skipif(not HAS_VLLM, reason="vLLM is required for this integration test")
 def test_smc_with_real_sampler(real_sampler):
     prompt = "The capital of France is"
     

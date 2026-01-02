@@ -1,4 +1,8 @@
 import pytest
+
+# Skip this entire module if vllm is not installed
+vllm = pytest.importorskip("vllm", reason="vLLM is required for these tests")
+
 from pita.inference.LLM_backend import AutoregressiveSampler
 from transformers import AutoTokenizer
 import pita.inference.vllm_backend as vllm_backend
