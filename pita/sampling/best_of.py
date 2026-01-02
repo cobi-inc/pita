@@ -42,18 +42,18 @@ class Best_of_N:
         # Select the top_k sequences based on scores
         if self.sequence_top_k == self.sequence_n:
             # If top_k equals the number of sequences, sort all
-            top_k_indices = np.argsort(-sequence_scores)
+            top_k_indices = np.argsort(-sequence_scores)[:self.sequence_top_k]
         else:
             top_k_indices = np.argpartition(-sequence_scores, self.sequence_top_k)[:self.sequence_top_k]
 
         # Find the scores of the top_k sequences
-        top_k_scores = sequence_scores[top_k_indices[:self.sequence_top_k]]
+        top_k_scores = sequence_scores[top_k_indices]
         
         # Convert to relative probabilities using log-sum-exp trick for numerical stability
         top_k_relative_probs = np.exp(top_k_scores - logsumexp(top_k_scores))
 
         # Take a weighted random choice from the top_k sequences based on their relative probabilities
-        best_index = np.random.choice(top_k_indices[:self.sequence_top_k], p=top_k_relative_probs)
+        best_index = np.random.choice(top_k_indices, p=top_k_relative_probs)
         
         # Return the index of the best sequence
         return best_index
