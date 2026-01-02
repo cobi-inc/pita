@@ -324,14 +324,17 @@ class AutoregressiveSampler:
             
         elif(engine == "llama_cpp"):
             backend = _get_llama_cpp_backend()
+            # Extract model_type from kwargs if provided, otherwise let backend infer it
+            llama_model_type = kwargs.pop('model_type', None)
             # Create the LLM object
             self.llm = backend.create_LLM_object(
                 model_name = model, 
-                model_type = model_type,
+                model_type = llama_model_type,
                 dtype = dtype, 
                 gpu_memory_utilization = gpu_memory_utilization, 
                 max_model_len = max_model_len,
-                logits = logits,
+                max_logprobs = max_probs,
+                logits_processor = logits_processor,
                 **kwargs
             )
             # Set the autoregressive sampler function
@@ -450,8 +453,8 @@ class AutoregressiveSampler:
         elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
             if(self.engine == "vllm"):
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama.cpp"):
-                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+            elif(self.engine == "llama_cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for SMC.")
 
@@ -506,7 +509,7 @@ class AutoregressiveSampler:
         elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
             if(self.engine == "vllm"):
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama.cpp"):
+            elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Best-of-N.")
@@ -551,8 +554,8 @@ class AutoregressiveSampler:
         elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy"):
             if(self.engine == "vllm"):
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama.cpp"):
-                llama_cpp_backend.check_token_metric_compatibility(self,token_metric)
+            elif(self.engine == "llama_cpp"):
+                llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Power Sampling.")
 
