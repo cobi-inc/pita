@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Tuple
 from math_grader import grade_answer
 from parse_utils import parse_answer
 import argparse
