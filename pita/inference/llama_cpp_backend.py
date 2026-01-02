@@ -88,7 +88,6 @@ def sample(
         
         # Validate and adjust token length to match n_completion
         if len(tokens) != n_completion:
-            # Adjust tokens to match n_completion length
             if len(tokens) < n_completion:
                 # This indicates a serious problem with generation or token encoding
                 raise ValueError(
