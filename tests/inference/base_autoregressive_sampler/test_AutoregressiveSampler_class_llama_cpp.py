@@ -117,12 +117,12 @@ def test_prob_outputs(sampler):
     # set logits_per_token to 6
     sampler.sampling_params.logits_per_token = 6
     output = sampler.sample("Hello")
-    assert len(output.top_k_logprobs[0]) >= 4
-    assert len(output.top_k_logprobs[0]) < 6
-    assert len(output.top_k_logits[0]) >= 6
-    assert len(output.top_k_logits[0]) < 8
+    assert len(output.top_k_logprobs[0]) == 4
+    assert len(output.top_k_logits[0]) == 6
 
     # Set logprobs_per_token and logits_per_token to 0
+    sampler.sampling_params.logprobs_per_token = 0
+    sampler.sampling_params.logits_per_token = 0
     sampler.sampling_params.logprobs_per_token = 0
     sampler.sampling_params.logits_per_token = 0
     output = sampler.sample("Hello")
