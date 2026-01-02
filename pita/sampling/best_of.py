@@ -4,7 +4,7 @@ from scipy.special import logsumexp
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
-from pita.sampling.token_metrics import calc_token_metric, calc_sequence_length_normalized_logprob
+from pita.sampling.token_metrics import calc_sequence_length_normalized_logprob
 
 
 class Best_of_N:
