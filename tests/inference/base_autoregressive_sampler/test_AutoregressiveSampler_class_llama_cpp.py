@@ -118,22 +118,28 @@ def test_temperature(sampler):
     assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
     
 def test_prob_outputs(sampler):
-    # Set logprobs_per_token to 4
-    sampler.sampling_params.logprobs_per_token = 4
-    # set logits_per_token to 6
-    sampler.sampling_params.logits_per_token = 6
-    output = sampler.sample("Hello")
-    assert len(output.top_k_logprobs[0]) == 4
-    assert len(output.top_k_logits[0]) == 6
+    # Preserve original settings to avoid leaking state to other tests
+    original_logprobs_per_token = sampler.sampling_params.logprobs_per_token
+    original_logits_per_token = sampler.sampling_params.logits_per_token
+    try:
+        # Set logprobs_per_token to 4
+        sampler.sampling_params.logprobs_per_token = 4
+        # set logits_per_token to 6
+        sampler.sampling_params.logits_per_token = 6
+        output = sampler.sample("Hello")
+        assert len(output.top_k_logprobs[0]) == 4
+        assert len(output.top_k_logits[0]) == 6
 
-    # Set logprobs_per_token and logits_per_token to 0
-    sampler.sampling_params.logprobs_per_token = 0
-    sampler.sampling_params.logits_per_token = 0
-    sampler.sampling_params.logprobs_per_token = 0
-    sampler.sampling_params.logits_per_token = 0
-    output = sampler.sample("Hello")
-    assert len(output.top_k_logprobs[0]) == 0
-    assert len(output.top_k_logits[0]) == 0
+        # Set logprobs_per_token and logits_per_token to 0
+        sampler.sampling_params.logprobs_per_token = 0
+        sampler.sampling_params.logits_per_token = 0
+        output = sampler.sample("Hello")
+        assert len(output.top_k_logprobs[0]) == 0
+        assert len(output.top_k_logits[0]) == 0
+    finally:
+        # Restore original values to keep tests independent
+        sampler.sampling_params.logprobs_per_token = original_logprobs_per_token
+        sampler.sampling_params.logits_per_token = original_logits_per_token
 
 def test_logit_to_logprob_conversion(sampler):
     # Set the temperature to 1
