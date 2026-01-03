@@ -8,6 +8,7 @@ import copy
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
 llama_cpp_backend = None
+tensorrt_backend = None
 
 def _get_vllm_backend():
     global vllm_backend
@@ -22,6 +23,13 @@ def _get_llama_cpp_backend():
         import pita.inference.llama_cpp_backend as _llama_cpp_backend
         llama_cpp_backend = _llama_cpp_backend
     return llama_cpp_backend
+
+def _get_tensorrt_backend():
+    global tensorrt_backend
+    if tensorrt_backend is None:
+        import pita.inference.tensorRT_backend as _tensorrt_backend
+        tensorrt_backend = _tensorrt_backend
+    return tensorrt_backend
 
 # Utils
 import time
@@ -54,6 +62,16 @@ ENGINE_PARAM_MAPS = {
         'repetition_penalty': 'repetition_penalty',
         'stop_token_ids': 'eos_token_id',
         # transformers uses different names/doesn't support all params
+    },
+    'tensorrt': {
+        'max_tokens': 'max_tokens',
+        'temperature': 'temperature',
+        'top_p': 'top_p',
+        'top_k': 'top_k',
+        'logprobs_per_token': 'logprobs',
+        'seed': 'seed',
+        'stop': 'stop',
+        'stop_token_ids': 'stop_token_ids',
     },
     # Add more engines as needed
 }
@@ -345,8 +363,25 @@ class AutoregressiveSampler:
             # Llama.cpp does not have a separate engine params class
             engine_params = None
 
+        elif(engine == "tensorrt"):
+            backend = _get_tensorrt_backend()
+            # Create the LLM object
+            self.llm = backend.create_LLM_object(
+                model_name = model, 
+                dtype = dtype, 
+                gpu_memory_utilization = gpu_memory_utilization, 
+                max_model_len = max_model_len,
+                max_logprobs = max_probs,
+                logits_processor = logits_processor,
+                **kwargs
+            )
+            # Set the autoregressive sampler function
+            self.sample_fn = backend.sample
+            # TensorRT-LLM uses per-request engine params, create a default instance
+            engine_params = backend.create_tensorrt_engine_params()
+
         else:
-            raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
+            raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp', 'tensorrt'")
         
         # Create tokenizer depending on whether a tokenizer path is provided
         # Needed as some models do not include the tokenizer files in the same repo as the model
@@ -458,6 +493,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for SMC.")
 
@@ -521,6 +558,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Best-of-N.")
 
@@ -566,6 +605,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Power Sampling.")
 

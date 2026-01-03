@@ -1,0 +1,18 @@
+name: power_sampling_tensorrt
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cuda-toolkit=12.4.1
+  - cxx-compiler
+  - pip:
+    - tensorrt_llm
+    - torch
+    - transformers
+    - numpy
+    - scipy
+    - pandas
+    - datasets
