@@ -1,0 +1,16 @@
+name: pita_llama_cpp
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      # Install llama-cpp-python 
+      - llama-cpp-python
+      # Test dependencies
+      - pytest
+
+# NOTE: After creating the environment, install pita separately:
+#   conda activate pita_llama_cpp
+#   cd /path/to/pita
+#   pip install -e .

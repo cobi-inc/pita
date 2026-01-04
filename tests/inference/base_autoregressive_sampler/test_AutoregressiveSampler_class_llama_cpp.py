@@ -105,17 +105,28 @@ def test_normalization_constants(sampler):
         sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
 
 def test_temperature(sampler):
-    # Set temperature to 1 
-    sampler.sampling_params.temperature = 1
-    assert sampler.sampling_params.temperature == 1
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant
+    # Preserve original settings to avoid leaking state to other tests
+    original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    original_temperature = sampler.sampling_params.temperature
+    try:
+        # Enable normalization constants to test temperature effects
+        sampler.sampling_params.enable_normalization_constants = True
+        
+        # Set temperature to 1 
+        sampler.sampling_params.temperature = 1
+        assert sampler.sampling_params.temperature == 1
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant
 
-    # Set temperature to 0.25
-    sampler.sampling_params.temperature = 0.25
-    assert sampler.sampling_params.temperature == 0.25
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
+        # Set temperature to 0.25
+        sampler.sampling_params.temperature = 0.25
+        assert sampler.sampling_params.temperature == 0.25
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
+    finally:
+        # Restore original values to keep tests independent
+        sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
+        sampler.sampling_params.temperature = original_temperature
     
 def test_prob_outputs(sampler):
     # Preserve original settings to avoid leaking state to other tests
