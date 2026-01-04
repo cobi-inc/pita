@@ -7,7 +7,6 @@ from pita.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from pita.sampling.power_sample import Power_Sampling
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.sampling.best_of import Best_of_N
 from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
