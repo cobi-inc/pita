@@ -10,7 +10,15 @@ dependencies:
       # Test dependencies
       - pytest
 
-# NOTE: After creating the environment, install pita separately:
+# NOTE: This environment file installs llama-cpp-python and pytest only.
+# After creating the environment, install pita itself from your local checkout:
 #   conda activate pita_llama_cpp
 #   cd /path/to/pita
 #   pip install -e .
+#
+# The Quick Installation instructions in the README show running
+#   pip install -e .
+# before installing llama-cpp-python. Here, llama-cpp-python is installed
+# as part of the environment creation and pita is installed afterwards.
+# This difference in order is intentional and should be functionally
+# equivalent for normal use.
