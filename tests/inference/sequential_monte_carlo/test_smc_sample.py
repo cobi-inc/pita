@@ -119,8 +119,9 @@ def test_smc_sample_eos_handling(mock_sampler):
         assert mock_score_update.call_count == 2
 
         # Check the call count of Sequential_Monte_Carlo.particle_sampling
-        # Called once per step -> 1
-        assert mock_particle_sampling.call_count == 1
+        # Not called because all particles finished before resampling step
+        # The implementation breaks out of the step loop when all finish
+        assert mock_particle_sampling.call_count == 0
 
         # Check that max_tokens was modified then restored (or at least used correctly)
         assert mock_sampler.sampling_params.max_tokens == 10
@@ -155,29 +156,29 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     mock_sampler.token_sample.assert_called()
     
     # Assertions
-    # Check call counts for 1 particle * 1 token_per_step * 10 steps
-    # token_sample called 10 times (1 per step for 1 particle)
-    assert mock_sampler.token_sample.call_count == 10
+    # Check call counts for 1 particle * 5 steps (10 max_tokens / 2 tokens_per_step = 5 steps)
+    # token_sample called 5 times (1 per step for 1 particle)
+    assert mock_sampler.token_sample.call_count == 5
     
-    # score_update called 10 times (1 per step for 1 particle)
-    assert mock_score_update.call_count == 10
+    # score_update called 5 times (1 per step for 1 particle)
+    assert mock_score_update.call_count == 5
     
-    # particle_sampling called 10 times (1 per step)
-    assert mock_particle_sampling.call_count == 10
+    # particle_sampling called 5 times (1 per step)
+    assert mock_particle_sampling.call_count == 5
 
     # Check Output Integrity
-    # tokens: [1, 2] * 10
-    assert result.tokens == [1, 2] * 10
-    # top_k_logprobs: [[-1.0, -0.5], [-0.1, -0.2]] * 10
-    assert result.top_k_logprobs == [[-1.0, -0.5], [-0.1, -0.2]] * 10
-    # top_k_logits: [[0.1, 0.2], [0.3, 0.4]] * 10
-    assert result.top_k_logits == [[0.1, 0.2], [0.3, 0.4]] * 10
-    # unprocessed_log_normalization_constant: [0.0, 0.0] * 10
-    assert result.unprocessed_log_normalization_constant == [0.0, 0.0] * 10
-    # temp_processed_log_normalization_constant: [0.0, 0.0] * 10
-    assert result.temp_processed_log_normalization_constant == [0.0, 0.0] * 10
-    # entropy: [0.5, 0.5] * 10
-    assert result.entropy == [0.5, 0.5] * 10
+    # tokens: [1, 2] * 5 (5 steps, each returning 2 tokens)
+    assert result.tokens == [1, 2] * 5
+    # top_k_logprobs: [[-1.0, -0.5], [-0.1, -0.2]] * 5
+    assert result.top_k_logprobs == [[-1.0, -0.5], [-0.1, -0.2]] * 5
+    # top_k_logits: [[0.1, 0.2], [0.3, 0.4]] * 5
+    assert result.top_k_logits == [[0.1, 0.2], [0.3, 0.4]] * 5
+    # unprocessed_log_normalization_constant: [0.0, 0.0] * 5
+    assert result.unprocessed_log_normalization_constant == [0.0, 0.0] * 5
+    # temp_processed_log_normalization_constant: [0.0, 0.0] * 5
+    assert result.temp_processed_log_normalization_constant == [0.0, 0.0] * 5
+    # entropy: [0.5, 0.5] * 5
+    assert result.entropy == [0.5, 0.5] * 5
 
 # Test case for when the number of tokens returned is less than tokens_per_step
 def test_smc_sample_fewer_tokens_than_step(mock_sampler):
@@ -210,14 +211,14 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
         # Run sample
         result = smc.sample(mock_sampler, "Prompt")
         
-        # Verify score_update received the correct token_count (it passes self.tokens_per_step)
-        # Even if we got fewer tokens, the code currently passes tokens_per_step (2)
+        # Verify score_update received the correct token_count (actual number of tokens returned)
+        # The implementation correctly passes len(sample_output.tokens), not tokens_per_step
         
         mock_score_update.assert_called()
         args, _ = mock_score_update.call_args
         # args[0] is token_metric_scores (list of float)
-        # args[1] is token_count
-        assert args[1] == 2 # tokens_per_step
+        # args[1] is token_count (actual tokens returned, which is 1)
+        assert args[1] == 1 # actual tokens returned, not tokens_per_step
         
         # Assertions
         # 1 particle, 10 max tokens, 2 tokens per step -> 5 steps
