@@ -4,11 +4,12 @@ channels:
   - nvidia
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.12
   - pip
   - cuda-toolkit=12.4.1
   - cxx-compiler
   - pip:
+    - --extra-index-url https://pypi.nvidia.com/
     - tensorrt_llm
     - torch
     - transformers
