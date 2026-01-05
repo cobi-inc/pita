@@ -9,9 +9,6 @@ Results are stored in instance variables for retrieval after generation complete
 import torch
 from torch.distributions import Categorical
 from typing import List, Optional
-import numpy as np
-
-
 class TensorRTLogitsProcessor:
     """
     Logits processor for TensorRT-LLM that calculates and stores normalization constants
