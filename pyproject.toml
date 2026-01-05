@@ -46,11 +46,6 @@ dependencies = [
     "PyYAML>=6.0.0",
     "Jinja2>=3.1.0",
     "MarkupSafe>=2.1.0",
-    
-    # Documentation (can be moved to dev if needed)
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.0.0",
-    "mkdocstrings[python]>=0.24.0",
 ]
 
 [project.optional-dependencies]
@@ -85,11 +80,19 @@ dev = [
     "pytest-asyncio>=0.21.0",
 ]
 
+# Documentation dependencies
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0",
+]
+
 # Install all backends
 all = [
     "pita[vllm]",
     "pita[llama_cpp]",
     "pita[dev]",
+    "pita[docs]",
 ]
 
 [tool.setuptools]
