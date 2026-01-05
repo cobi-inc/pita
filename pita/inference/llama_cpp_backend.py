@@ -157,13 +157,14 @@ def sample(
         else:
             top_k_logprobs = [[]] * n_completion
         
-        # Pad normalization constants and entropy if needed
+        # Pad normalization constants and entropy if needed.
+        # Use np.nan so that missing values are explicit and not treated as real zeros.
         while len(unprocessed_log_normalization_constant) < n_completion:
-            unprocessed_log_normalization_constant.append(0.0)
+            unprocessed_log_normalization_constant.append(np.nan)
         while len(temp_processed_log_normalization_constant) < n_completion:
-            temp_processed_log_normalization_constant.append(0.0)
+            temp_processed_log_normalization_constant.append(np.nan)
         while len(entropy) < n_completion:
-            entropy.append(0.0)
+            entropy.append(np.nan)
         
         output = Output(
             tokens=tokens,
