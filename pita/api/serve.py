@@ -126,10 +126,17 @@ async def create_completion(request: ChatCompletionRequest):
     # Chain sampling (SMC, Best-of-N) operates on full sequences
     # Token sampling (Power Sampling) can be used standalone or combined with chain sampling
     
+    # Validate that both chain_sampling and token_sampling are not specified together
+    if chain_sampling is not None and token_sampling is not None:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot specify both chain_sampling and token_sampling simultaneously. "
+                   "Combined mode is not yet implemented. Please use either chain_sampling "
+                   "(SMC or Best-of-N) or token_sampling (Power Sampling), but not both."
+        )
+    
     if chain_sampling is not None:
         # Use chain sampling method (SMC or Best-of-N)
-        # TODO: If token_sampling is also specified, we may need to configure the 
-        # chain sampler to use power sampling for its internal token generation
         output = chain_sampling.sample(sampler, prompt)
         generated_text = sampler.tokenizer.decode(output.tokens, skip_special_tokens=True)
         
