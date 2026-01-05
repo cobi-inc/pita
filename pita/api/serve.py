@@ -128,8 +128,24 @@ async def create_completion(request: ChatCompletionRequest):
     
     if chain_sampling is not None:
         # Use chain sampling method (SMC or Best-of-N)
-        # TODO: If token_sampling is also specified, we may need to configure the 
-        # chain sampler to use power sampling for its internal token generation
+        # If token_sampling is also specified, configure chain sampler to use power sampling
+        if token_sampling is not None:
+            # Verify Power Sampling is enabled on the sampler before proceeding
+            if getattr(sampler, "token_sample_name", None) != "Power Sampling":
+                # Automatically enable Power Sampling using parameters from the token_sampling object
+                print("Power Sampling not enabled on sampler. Enabling automatically based on request parameters.")
+                sampler.enable_power_sampling(
+                    block_size=token_sampling.block_size,
+                    MCMC_steps=token_sampling.MCMC_steps,
+                    token_metric=token_sampling.token_metric 
+                )
+            
+            # Configure SMC to use token_sample method (Power Sampling)
+            # Use hasattr check as Best-of-N does not support token_sampling_method yet
+            if hasattr(chain_sampling, "token_sampling_method"):
+                chain_sampling.token_sampling_method = "token_sample"
+        else:
+            chain_sampling.token_sampling_method = "standard"
         output = chain_sampling.sample(sampler, prompt)
         generated_text = sampler.tokenizer.decode(output.tokens, skip_special_tokens=True)
         
