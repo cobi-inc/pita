@@ -148,7 +148,8 @@ def sample(
             top_k_logprobs = (top_k_logits_array / self.sampling_params.temperature) - temp_norm_array
             top_k_logprobs = top_k_logprobs[:, :logprobs_per_token].tolist()
             
-            # Pad back to n_completion if needed
+            # Pad back to n_completion if needed.
+            # Use 0.0 for logprobs/logits as these are feature vectors where 0.0 is valid.
             while len(top_k_logprobs) < n_completion:
                 top_k_logprobs.append([0.0] * logprobs_per_token)
             # Also update top_k_logits to match
