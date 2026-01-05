@@ -6,7 +6,6 @@ following the same pattern as vllm_backend.py and llama_cpp_backend.py.
 """
 
 from tensorrt_llm import LLM, SamplingParams
-import numpy as np
 
 # Custom Libraries
 from pita.inference.LLM_backend import Output
