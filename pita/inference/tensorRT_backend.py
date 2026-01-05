@@ -190,6 +190,9 @@ def create_LLM_object(
     # TensorRT-LLM LLM class handles model loading and optimization
     llm = LLM(
         model=model_name,
+        dtype=dtype,
+        max_num_tokens=max_model_len,
+        trust_remote_code=True,
         **kwargs
     )
     

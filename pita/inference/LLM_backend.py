@@ -157,7 +157,7 @@ class Sampling_Params:
         # Also sync to engine_params if it exists
         super().__setattr__(name, value)
 
-        # If attribute is dependent on a Logits Processor, makes sure to propogate the change
+        # If attribute is dependent on a Logits Processor, makes sure to propagate the change
         if(self.engine == "vllm"):
             if(name == "enable_normalization_constants"):
                 self.engine_params.extra_args["normalization_constants"] = value
@@ -311,7 +311,7 @@ class AutoregressiveSampler:
 
         print(f"Loading model {model} with {engine}...")
         
-        # Seperate Backend Loading for each engine
+        # Separate Backend Loading for each engine
         if(engine == "vllm"):
             backend = _get_vllm_backend()
 
@@ -427,7 +427,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM using the token sampling function
+        """Samples programmatically from the LLM using the token sampling function
 
         Args:
             context (str): The input context.
