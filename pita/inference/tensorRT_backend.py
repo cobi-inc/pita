@@ -120,8 +120,8 @@ def sample(
                     top_k_logits.append([])
         else:
             # No logprobs available, fill with empty lists
-            top_k_logits = [[]] * n_completion
-            top_k_logprobs = [[]] * n_completion
+            top_k_logits = [[] for _ in range(n_completion)]
+            top_k_logprobs = [[] for _ in range(n_completion)]
         
         # Ensure arrays have consistent length
         while len(unprocessed_log_normalization_constant) < n_completion:
