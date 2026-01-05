@@ -45,4 +45,4 @@ pytest tests/api/test_api_integration_llama_cpp.py -v
 
 - This environment uses CUDA 12.8 libraries (from pita's dependencies)
 - llama-cpp-python 0.3.16+ is recommended for compatibility
-- The pita package pins specific NVIDIA library versions to ensure compatibility
+- The pita package specifies minimum versions for NVIDIA-related libraries (for example, PyTorch) but does not pin exact NVIDIA library versions; consult your CUDA toolkit and driver versions to ensure compatibility
