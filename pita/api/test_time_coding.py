@@ -1,125 +1,144 @@
+# Test Time Coding - Encode/Decode for Inference Time Scaling Parameters
+# Format: ITS_<chain_sampling>_<chain_params...>_<token_sampling>_<token_params...>
+#
+# Chain Sampling Methods (operate on full sequences):
+#   - SMC_<num_particles>_<tokens_per_step>_<stop_on_eos> (Sequential Monte Carlo)
+#   - BO_<sequence_n>_<sequence_top_k> (Best-of-N)
+#   - NONE (no chain sampling)
+#
+# Token Sampling Methods (modify individual token generation):
+#   - PS_<block_size>_<MCMC_steps> (Power Sampling)
+#   - NONE (no token sampling)
+#
+# Examples:
+#   ITS_SMC_10_5_1_NONE         -> SMC with 10 particles, 5 tokens/step, stop_on_eos=True
+#   ITS_BO_5_2_PS_192_8         -> Best-of-N (5 sequences, top 2) with Power Sampling (192 block, 8 MCMC)
+#   ITS_NONE_PS_192_8           -> Just Power Sampling
+#   ITS_SMC_10_5_1_PS_192_8     -> SMC with Power Sampling for token generation
+
 from pita.sampling.power_sample import Power_Sampling
 from pita.sampling.smc import Sequential_Monte_Carlo
 from pita.sampling.best_of import Best_of_N
 from typing import Optional
 
-# Encode the parameters into a single string that can be passed as context (e.g., system prompt) during the API call
+
 def encode(
-    Power_Sampling_Params: Optional[Power_Sampling] = None,
-    SMC_Sampling_Params: Optional[Sequential_Monte_Carlo] = None,
-    Best_of_Sampling_Params: Optional[Best_of_N] = None
+    chain_sampling: Optional[Sequential_Monte_Carlo | Best_of_N] = None,
+    token_sampling: Optional[Power_Sampling] = None
 ) -> str:
     """
     Encode test-time scaling parameters into a string for embedding in system prompts.
 
-    This function creates a compact string representation of sampling parameters that can be
-    embedded in the system prompt during API calls. The string is prefixed with "ITS" (Inference
-    Time Scaling) and contains parameter values for various sampling techniques.
-
     Args:
-        Power_Sampling_Params: Power sampling configuration object containing block_size and MCMC_steps.
-        SMC_Sampling_Params: Sequential Monte Carlo configuration object containing num_particles,
-            tokens_per_step, and stop_on_eos.
-        Best_of_Sampling_Params: Best-of-N sampling configuration object containing sequence_n
-            and sequence_top_k.
+        chain_sampling: Chain sampling configuration (SMC or Best-of-N). Only one allowed.
+        token_sampling: Token sampling configuration (Power Sampling).
 
     Returns:
-        A formatted string starting with "ITS" followed by underscore-separated parameter values.
-        For example: "ITS_PS_192_8" for power sampling with block_size=192 and MCMC_steps=8.
+        A formatted string: "ITS_<chain>_<chain_params>_<token>_<token_params>"
         Returns empty string if no parameters are provided.
     """
-    system_string =""
+    if chain_sampling is None and token_sampling is None:
+        return ""
+    
+    parts = ["ITS"]
+    
+    # Encode chain sampling method
+    if chain_sampling is None:
+        parts.append("NONE")
+    elif isinstance(chain_sampling, Sequential_Monte_Carlo):
+        parts.extend(["SMC", str(chain_sampling.num_particles), 
+                      str(chain_sampling.tokens_per_step), 
+                      str(int(chain_sampling.stop_on_eos))])
+    elif isinstance(chain_sampling, Best_of_N):
+        parts.extend(["BO", str(chain_sampling.sequence_n), 
+                      str(chain_sampling.sequence_top_k)])
+    else:
+        raise ValueError(f"Unknown chain sampling type: {type(chain_sampling)}")
+    
+    # Encode token sampling method
+    if token_sampling is None:
+        parts.append("NONE")
+    elif isinstance(token_sampling, Power_Sampling):
+        parts.extend(["PS", str(token_sampling.block_size), 
+                      str(token_sampling.MCMC_steps)])
+    else:
+        raise ValueError(f"Unknown token sampling type: {type(token_sampling)}")
+    
+    return "_".join(parts)
 
-    # Check if the block size and MCMC steps are provided for Power Sampling
-    if(Power_Sampling_Params is not None):
-        system_string += f"ITS_PS_{Power_Sampling_Params.block_size}_{Power_Sampling_Params.MCMC_steps}"
-    
-    # Check if the parameters are provided for SMC Sampling
-    # stop_oni_eos is a boolean, so we convert it to int for easier encoding/decoding
-    if(SMC_Sampling_Params is not None):
-        if(system_string == ""):
-            system_string += "ITS"
-        system_string += f"_SMC_{SMC_Sampling_Params.num_particles}_{SMC_Sampling_Params.tokens_per_step}_{int(SMC_Sampling_Params.stop_on_eos)}"
-    
-    # Check if the parameters are provided for Best Of Sampling
-    if(Best_of_Sampling_Params is not None):
-        if(system_string == ""):
-            system_string += "ITS"
-        system_string += f"_BO_{Best_of_Sampling_Params.sequence_n}_{Best_of_Sampling_Params.sequence_top_k}"
-    
-    return system_string
 
-# Decode the parameters from the system prompt string to be used during inference
-def decode(system_string: str) -> tuple[Optional[Power_Sampling], Optional[Sequential_Monte_Carlo], Optional[Best_of_N]]:
+def decode(system_string: str) -> tuple[Optional[Sequential_Monte_Carlo | Best_of_N], Optional[Power_Sampling]]:
     """
     Decode test-time scaling parameters from a system prompt string.
 
-    This function parses a string encoded by the `encode()` function and reconstructs the
-    sampling parameter objects. The string should start with "ITS" followed by parameter
-    specifications.
-
     Args:
         system_string: The encoded string containing test-time scaling parameters.
-            Expected format: "ITS_PS_<block_size>_<MCMC_steps> [additional content...]"
-            or similar patterns for SMC and Best-of-N sampling.
+            Format: "ITS_<chain>_<chain_params...>_<token>_<token_params...>"
 
     Returns:
-        A tuple of (ps_params, smc_params, best_of_params) where each element is either
+        A tuple of (chain_sampling, token_sampling) where each element is either
         a parameter object or None if that sampling technique was not specified.
 
     Raises:
-        ValueError: If the system_string doesn't start with "ITS" or if parameter values
-            are invalid (non-numeric or wrong count).
+        ValueError: If the format is invalid or parameter values are non-numeric.
     """
-    # Initialize the objects to None
-    ps_params = None
-    smc_params = None
-    best_of_params = None
-
-    # Split the string into parts and parse
-    parts = system_string.split(" ")
-    parts = parts[0].split("_")  # Only consider the first part before any spaces
-    if(parts[0] != "ITS"):
+    # Split the string into parts (only first token before space)
+    parts = system_string.split(" ")[0].split("_")
+    
+    if len(parts) < 2 or parts[0] != "ITS":
         raise ValueError("Invalid system string format. Must start with 'ITS'.")
     
-    i = 1  # Start after the initial "ITS"
-    while i < len(parts):
-        # Check to see if the test time coding parts are present
-        if parts[i] == "PS" :
-            # Check if the next 3 parts are valid digits (non-negative integers)
-            if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
-                raise ValueError(f"Invalid parameters for Power Sampling: expected 2 integers after 'PS', got '{parts[i+1]}', '{parts[i+2]}'.")
-            
-            # If valide, create the Power_Sampling_Params object
-            ps_params = Power_Sampling_Params(
-                block_size=int(parts[i+1]),
-                MCMC_steps=int(parts[i+2])
-            )
-            i += 3
-        elif parts[i] == "SMC":
-            # Check if the next 3 parts are valid digits (non-negative integers)
-            if not (parts[i+1].isdigit() and parts[i+2].isdigit() and parts[i+3].isdigit()):
-                raise ValueError(f"Invalid parameters for SMC: expected 3 integers after 'SMC', got '{parts[i+1]}', '{parts[i+2]}', '{parts[i+3]}'.")
-            
-            # If valid, create the SMC_Sampling_Params object
-            smc_params = SequentialMonteCarlo_Params(
-                num_particles=int(parts[i+1]),
-                tokens_per_step=int(parts[i+2]),
-                stop_on_eos=bool(int(parts[i+3]))
-            )
-            i += 4
-        elif parts[i] == "BO":
-            # Check if the next 2 parts are valid digits (non-negative integers)
-            if not (parts[i+1].isdigit() and parts[i+2].isdigit()):
-                raise ValueError(f"Invalid parameters for Best Of Sampling: expected 2 integers after 'BO', got '{parts[i+1]}', '{parts[i+2]}'.")
-
-            # If valid, create the Best_of_Sampling_Params object
-            best_of_params = Best_of_Params(
-                sequence_n=int(parts[i+1]),
-                sequence_top_k=int(parts[i+2])
-            )
-            i += 3
-        else:
-            i += 1
+    chain_sampling = None
+    token_sampling = None
     
-    return ps_params, smc_params, best_of_params
+    i = 1  # Start after "ITS"
+    
+    # Parse chain sampling method
+    if parts[i] == "NONE":
+        i += 1
+    elif parts[i] == "SMC":
+        # SMC requires 3 params: num_particles, tokens_per_step, stop_on_eos
+        if i + 3 >= len(parts):
+            raise ValueError("SMC requires 3 parameters: num_particles, tokens_per_step, stop_on_eos")
+        if not all(parts[i+j].isdigit() for j in range(1, 4)):
+            raise ValueError(f"Invalid SMC parameters: expected 3 integers after 'SMC'")
+        chain_sampling = Sequential_Monte_Carlo(
+            num_particles=int(parts[i+1]),
+            tokens_per_step=int(parts[i+2]),
+            stop_on_eos=bool(int(parts[i+3]))
+        )
+        i += 4
+    elif parts[i] == "BO":
+        # BO requires 2 params: sequence_n, sequence_top_k
+        if i + 2 >= len(parts):
+            raise ValueError("BO requires 2 parameters: sequence_n, sequence_top_k")
+        if not all(parts[i+j].isdigit() for j in range(1, 3)):
+            raise ValueError(f"Invalid BO parameters: expected 2 integers after 'BO'")
+        chain_sampling = Best_of_N(
+            sequence_n=int(parts[i+1]),
+            sequence_top_k=int(parts[i+2])
+        )
+        i += 3
+    else:
+        raise ValueError(f"Unknown chain sampling method: '{parts[i]}'. Expected 'SMC', 'BO', or 'NONE'.")
+    
+    # Parse token sampling method
+    if i >= len(parts):
+        raise ValueError("Missing token sampling specification. Expected 'PS' or 'NONE'.")
+    
+    if parts[i] == "NONE":
+        pass  # token_sampling stays None
+    elif parts[i] == "PS":
+        # PS requires 2 params: block_size, MCMC_steps
+        if i + 2 >= len(parts):
+            raise ValueError("PS requires 2 parameters: block_size, MCMC_steps")
+        if not all(parts[i+j].isdigit() for j in range(1, 3)):
+            raise ValueError(f"Invalid PS parameters: expected 2 integers after 'PS'")
+        token_sampling = Power_Sampling(
+            block_size=int(parts[i+1]),
+            MCMC_steps=int(parts[i+2])
+        )
+    else:
+        raise ValueError(f"Unknown token sampling method: '{parts[i]}'. Expected 'PS' or 'NONE'.")
+    
+    return chain_sampling, token_sampling

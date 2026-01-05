@@ -1,4 +1,3 @@
-# TODO Update all these functions once the new backend is complete
 # Custom Software
 from pita.api.api_template import (
     ChatCompletionRequest,
@@ -8,7 +7,6 @@ from pita.api.api_template import (
     ChatMessageRole,
     Usage,
 )
-from pita.sampling.power_sample import power_sampling
 from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
 from pita.api.test_time_coding import decode
 
@@ -97,20 +95,20 @@ async def create_completion(request: ChatCompletionRequest):
     sampler = SERVER_STATE["sampler"]
 
     # Check the max tokens the user want to generate
-    # Handle optional max_tokens (default to sampler's token_count if None)
-    max_tokens = request.max_tokens if request.max_tokens is not None else sampler.token_count
+    # Handle optional max_tokens (default to sampler's max_tokens if None)
+    max_tokens = request.max_tokens if request.max_tokens is not None else sampler.sampling_params.max_tokens
     if max_tokens > sampler.tokenizer.model_max_length:
         raise HTTPException(status_code=400, detail=f"Requested {max_tokens} tokens. {sampler.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
-    sampler.token_count = max_tokens 
+    sampler.sampling_params.max_tokens = max_tokens 
 
     # Check the message in the system prompt for inference scaling sampling parameters
-    # Example system prompt: "PS_1000_250_3 SMC_ You are a personal..." Means perform PS with 1000 total tokens, block size 250, 3 MCMC steps
-    ps_params, smc_params, best_of_params = None, None, None
+    # Format: ITS_<chain_sampling>_<params>_<token_sampling>_<params>
+    chain_sampling, token_sampling = None, None
     if len(request.messages) > 0 and request.messages[0].role == ChatMessageRole.System:
         system_content = request.messages[0].content
         if system_content.startswith("ITS"):
             # Decode the parameters from the system prompt
-            ps_params, smc_params, best_of_params = decode(system_content)
+            chain_sampling, token_sampling = decode(system_content)
 
             # Remove the parameter encoding from the system prompt
             request.messages[0].content = " ".join(system_content.split(" ")[1:])
@@ -124,23 +122,42 @@ async def create_completion(request: ChatCompletionRequest):
         enable_thinking = sampler.sampling_params.enable_thinking
     )
     
-    # Call the power sampling function
-    # Note: power_sampling returns (text, acceptances, block_acceptances, index_proposals, total_tokens)
-    if(ps_params is not None):
-        # Set the power sampling parameters
-        sampler.power_sampling_params = ps_params
-
-        # Call the power sampling function
-        generated_text, _, _, _, total_generated = power_sampling(
-            sampler=sampler,
-            prompt=prompt
-        )
+    # Call the appropriate sampling method based on decoded parameters
+    # Chain sampling (SMC, Best-of-N) operates on full sequences
+    # Token sampling (Power Sampling) can be used standalone or combined with chain sampling
+    
+    if chain_sampling is not None:
+        # Use chain sampling method (SMC or Best-of-N)
+        # If token_sampling is also specified, configure chain sampler to use power sampling
+        if token_sampling is not None:
+            # Verify Power Sampling is enabled on the sampler before proceeding
+            if getattr(sampler, "token_sample_name", None) != "Power Sampling":
+                # Automatically enable Power Sampling using parameters from the token_sampling object
+                print("Power Sampling not enabled on sampler. Enabling automatically based on request parameters.")
+                sampler.enable_power_sampling(
+                    block_size=token_sampling.block_size,
+                    MCMC_steps=token_sampling.MCMC_steps,
+                    token_metric=token_sampling.token_metric 
+                )
+            
+            # Configure SMC to use token_sample method (Power Sampling)
+            # Use hasattr check as Best-of-N does not support token_sampling_method yet
+            if hasattr(chain_sampling, "token_sampling_method"):
+                chain_sampling.token_sampling_method = "token_sample"
+        else:
+            chain_sampling.token_sampling_method = "standard"
+        output = chain_sampling.sample(sampler, prompt)
+        generated_text = sampler.tokenizer.decode(output.tokens, skip_special_tokens=True)
         
-    elif(smc_params is not None):
-        pass
+    elif token_sampling is not None:
+        # Use token sampling method (Power Sampling) standalone
+        output = token_sampling.sample(sampler, prompt)
+        generated_text = sampler.tokenizer.decode(output.tokens, skip_special_tokens=True)
+        
     else:
-        generated_text, _, _ = sampler.sample(prompt, sampler.token_count)
-        generated_text = sampler.tokenizer.decode(generated_text, skip_special_tokens=True)
+        # Default: Standard autoregressive sampling
+        output = sampler.sample(prompt)
+        generated_text = sampler.tokenizer.decode(output.tokens, skip_special_tokens=True)
 
     # TO DO
     # Create message ID

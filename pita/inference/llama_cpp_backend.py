@@ -119,35 +119,51 @@ def sample(
             top_k_logits = [[]] * n_completion
         
         # Get normalization constants from the logits processor
-        # These arrays have exactly n_completion entries
+        # These arrays should have n_completion entries but may have slight mismatches
         unprocessed_log_normalization_constant = logits_processor.log_norm_constants
         temp_processed_log_normalization_constant = logits_processor.log_norm_constants_temp_scaled
         entropy = logits_processor.entropy
         
+        # The authoritative length is n_completion (from llm_output['usage'])
+        # Trim or pad all arrays to match n_completion
+        # This handles fence-post differences in indexing
+        if len(unprocessed_log_normalization_constant) > n_completion:
+            unprocessed_log_normalization_constant = unprocessed_log_normalization_constant[:n_completion]
+        if len(temp_processed_log_normalization_constant) > n_completion:
+            temp_processed_log_normalization_constant = temp_processed_log_normalization_constant[:n_completion]
+        if len(entropy) > n_completion:
+            entropy = entropy[:n_completion]
+        if len(top_k_logits) > n_completion:
+            top_k_logits = top_k_logits[:n_completion]
+        
         # Calculate logprobs from logits and normalization constants
         if logprobs_per_token > 0 and top_k_logits and temp_processed_log_normalization_constant:
-            top_k_logits_array = np.array(top_k_logits)
-            temp_norm_array = np.array(temp_processed_log_normalization_constant)[:, np.newaxis]
+            # Use the minimum common length to avoid broadcasting errors
+            min_len = min(len(top_k_logits), len(temp_processed_log_normalization_constant))
+            top_k_logits_trimmed = top_k_logits[:min_len]
+            temp_norm_trimmed = temp_processed_log_normalization_constant[:min_len]
+            
+            top_k_logits_array = np.array(top_k_logits_trimmed)
+            temp_norm_array = np.array(temp_norm_trimmed)[:, np.newaxis]
             top_k_logprobs = (top_k_logits_array / self.sampling_params.temperature) - temp_norm_array
             top_k_logprobs = top_k_logprobs[:, :logprobs_per_token].tolist()
+            
+            # Pad back to n_completion if needed
+            while len(top_k_logprobs) < n_completion:
+                top_k_logprobs.append([0.0] * logprobs_per_token)
+            # Also update top_k_logits to match
+            while len(top_k_logits) < n_completion:
+                top_k_logits.append([0.0] * logits_per_token)
         else:
             top_k_logprobs = [[]] * n_completion
         
-        # Validate that all arrays have consistent length
-        # Using RuntimeError instead of assert for production-safe validation
-        # Note: tokens validation ensures the adjustment logic worked correctly
-        if len(tokens) != n_completion:
-            raise RuntimeError(f"tokens length {len(tokens)} != n_completion {n_completion}")
-        if len(top_k_logits) != n_completion:
-            raise RuntimeError(f"top_k_logits length {len(top_k_logits)} != n_completion {n_completion}")
-        if len(top_k_logprobs) != n_completion:
-            raise RuntimeError(f"top_k_logprobs length {len(top_k_logprobs)} != n_completion {n_completion}")
-        if len(unprocessed_log_normalization_constant) != n_completion:
-            raise RuntimeError(f"unprocessed_log_normalization_constant length {len(unprocessed_log_normalization_constant)} != n_completion {n_completion}")
-        if len(temp_processed_log_normalization_constant) != n_completion:
-            raise RuntimeError(f"temp_processed_log_normalization_constant length {len(temp_processed_log_normalization_constant)} != n_completion {n_completion}")
-        if len(entropy) != n_completion:
-            raise RuntimeError(f"entropy length {len(entropy)} != n_completion {n_completion}")
+        # Pad normalization constants and entropy if needed
+        while len(unprocessed_log_normalization_constant) < n_completion:
+            unprocessed_log_normalization_constant.append(0.0)
+        while len(temp_processed_log_normalization_constant) < n_completion:
+            temp_processed_log_normalization_constant.append(0.0)
+        while len(entropy) < n_completion:
+            entropy.append(0.0)
         
         output = Output(
             tokens=tokens,

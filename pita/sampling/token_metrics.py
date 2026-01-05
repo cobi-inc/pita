@@ -22,13 +22,17 @@ def calc_token_metric(
         npt.NDArray[np.float64]: The calculated token metric.
     """
     if metric == "logprobs":
-        return output.top_k_logprobs[:, 0]
+        # Convert to numpy array if it's a list (e.g., from llama_cpp backend)
+        logprobs = np.asarray(output.top_k_logprobs)
+        return logprobs[:, 0]
     elif metric == "power_distribution":
+        # Convert to numpy array if it's a list
+        logits = np.asarray(output.top_k_logits)
         return (1 / sampler.sampling_params.temperature) * (
-            output.top_k_logits[:, 0] - np.asarray(output.unprocessed_log_normalization_constant)
+            logits[:, 0] - np.asarray(output.unprocessed_log_normalization_constant)
         )
     elif metric == "entropy":
-        return output.entropy
+        return np.asarray(output.entropy)
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', or 'entropy'."
@@ -54,20 +58,25 @@ def calc_sequence_prob(
     Returns:
         float: The calculated sequence probability.
     """
+    # Convert to numpy arrays for consistent indexing
+    logprobs = np.asarray(output.top_k_logprobs)
+    logits = np.asarray(output.top_k_logits)
+    entropy = np.asarray(output.entropy)
+    
     if metric == "logprobs":
         # Sum the log probabilities of the tokens in the sequence and exponentiate
-        return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]))
+        return np.exp(np.sum(logprobs[:, 0][starting_index:ending_index]))
     elif metric == "power_distribution":
         # Sum the log power distribution of the tokens in the sequence and exponentiate
         return np.exp(np.sum((1 / sampler.sampling_params.temperature) * (
-            output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
+            logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         )))
     elif metric == "entropy":
         # Exponentiate the average negative entropy of the tokens in the sequence
-        return np.exp(-np.mean(output.entropy[starting_index:ending_index]))
+        return np.exp(-np.mean(entropy[starting_index:ending_index]))
     elif metric == "likelihood_confidence":
         # Multiply the probability of the sequence by the confidence of the sequence
-        return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index])) * np.exp(-np.mean(output.entropy[starting_index:ending_index]))
+        return np.exp(np.sum(logprobs[:, 0][starting_index:ending_index])) * np.exp(-np.mean(entropy[starting_index:ending_index]))
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
@@ -93,20 +102,25 @@ def calc_sequence_logprob(
     Returns:
         The calculated sequence log probability.
     """
+    # Convert to numpy arrays for consistent indexing
+    logprobs = np.asarray(output.top_k_logprobs)
+    logits = np.asarray(output.top_k_logits)
+    entropy = np.asarray(output.entropy)
+    
     if(metric == "logprobs"):
         # Sum the log probabilities of the tokens in the sequence
-        return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index])
+        return np.sum(logprobs[:, 0][starting_index:ending_index])
     elif(metric == "power_distribution"):
         # Sum the log power distribution of the tokens in the sequence
         return np.sum((1 / sampler.sampling_params.temperature) * (
-            output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
+            logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         ))
     elif(metric == "entropy"):
         # Return the average negative entropy of the tokens in the sequence
-        return -np.mean(output.entropy[starting_index:ending_index])
+        return -np.mean(entropy[starting_index:ending_index])
     elif(metric == "likelihood_confidence"):
         # Add the log probability of the sequence and the negative entropy of the sequence log( p(x) * e^(-H(x)) ) = log(p(x)) + log(e^(-H(x))) = log(p(x)) - H(x)
-        return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) - np.mean(output.entropy[starting_index:ending_index])
+        return np.sum(logprobs[:, 0][starting_index:ending_index]) - np.mean(entropy[starting_index:ending_index])
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
@@ -132,20 +146,25 @@ def calc_sequence_length_normalized_prob(
     Returns:
         float: The calculated sequence probability.
     """
+    # Convert to numpy arrays for consistent indexing
+    logprobs = np.asarray(output.top_k_logprobs)
+    logits = np.asarray(output.top_k_logits)
+    entropy = np.asarray(output.entropy)
+    
     if(metric == "logprobs"):
         # Sum the log probabilities of the tokens in the sequence and exponentiate
-        return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index - starting_index))
+        return np.exp(np.sum(logprobs[:, 0][starting_index:ending_index]) / (ending_index - starting_index))
     elif(metric == "power_distribution"):
         # Sum the log power distribution of the tokens in the sequence and exponentiate
         return np.exp(np.sum((1 / sampler.sampling_params.temperature) * (
-            output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
+            logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         )) / (ending_index-starting_index))
     elif(metric == "entropy"):
         # Exponentiate the average negative entropy of the tokens in the sequence
-        return np.exp(-np.mean(output.entropy[starting_index:ending_index]))
+        return np.exp(-np.mean(entropy[starting_index:ending_index]))
     elif(metric == "likelihood_confidence"):
         # Multiply the probability of the sequence by the confidence of the sequence
-        return np.exp(np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index)) * np.exp(-np.mean(output.entropy[starting_index:ending_index]))
+        return np.exp(np.sum(logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index)) * np.exp(-np.mean(entropy[starting_index:ending_index]))
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
@@ -171,20 +190,25 @@ def calc_sequence_length_normalized_logprob(
     Returns:
         float: The calculated sequence log probability.
     """
+    # Convert to numpy arrays for consistent indexing
+    logprobs = np.asarray(output.top_k_logprobs)
+    logits = np.asarray(output.top_k_logits)
+    entropy = np.asarray(output.entropy)
+    
     if(metric == "logprobs"):
         # Sum the log probabilities of the tokens in the sequence and exponentiate
-        return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index - starting_index)
+        return np.sum(logprobs[:, 0][starting_index:ending_index]) / (ending_index - starting_index)
     elif(metric == "power_distribution"):
         # Sum the log power distribution of the tokens in the sequence and exponentiate
         return np.sum((1 / sampler.sampling_params.temperature) * (
-            output.top_k_logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
+            logits[:, 0][starting_index:ending_index] - np.asarray(output.unprocessed_log_normalization_constant)[starting_index:ending_index]
         )) / (ending_index-starting_index)
     elif(metric == "entropy"):
         # Exponentiate the average negative entropy of the tokens in the sequence
-        return -np.mean(output.entropy[starting_index:ending_index])
+        return -np.mean(entropy[starting_index:ending_index])
     elif(metric == "likelihood_confidence"):
         # Multiply the probability of the sequence by the confidence of the sequence
-        return np.sum(output.top_k_logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index) - np.mean(output.entropy[starting_index:ending_index])
+        return np.sum(logprobs[:, 0][starting_index:ending_index]) / (ending_index-starting_index) - np.mean(entropy[starting_index:ending_index])
     else:
         raise ValueError(
             f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
