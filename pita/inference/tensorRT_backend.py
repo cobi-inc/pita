@@ -84,9 +84,21 @@ def sample(
         n_completion = len(tokens)
         
         # Get normalization constants from the logits processor
-        unprocessed_log_normalization_constant = logits_processor.log_norm_constants
-        temp_processed_log_normalization_constant = logits_processor.log_norm_constants_temp_scaled
-        entropy = logits_processor.entropy
+        unprocessed_log_normalization_constant = (
+            logits_processor.log_norm_constants.copy()
+            if getattr(logits_processor, "log_norm_constants", None) is not None
+            else None
+        )
+        temp_processed_log_normalization_constant = (
+            logits_processor.log_norm_constants_temp_scaled.copy()
+            if getattr(logits_processor, "log_norm_constants_temp_scaled", None) is not None
+            else None
+        )
+        entropy = (
+            logits_processor.entropy.copy()
+            if getattr(logits_processor, "entropy", None) is not None
+            else None
+        )
         
         # Extract logprobs if available
         logprobs_per_token = self.sampling_params.logprobs_per_token or 0
