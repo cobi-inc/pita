@@ -190,9 +190,9 @@ def create_LLM_object(
         model_name (str): The name of the model to load (HuggingFace model name or path).
         model_type (str, optional): The type of model. Defaults to None.
         dtype (str, optional): The data type to use. Defaults to "auto".
-        gpu_memory_utilization (float, optional): The fraction of GPU memory to use. Defaults to 0.85.
+        gpu_memory_utilization (float, optional): Unused by TensorRT-LLM.
         max_model_len (int, optional): The maximum context length. Defaults to 2048.
-        max_logprobs (int, optional): Controls how many logprobs are stored for each token. Defaults to None.
+        max_logprobs (int, optional): Unused by TensorRT-LLM.
         logits_processor (bool, optional): Whether logits processing is enabled. Defaults to False.
         **kwargs: Additional keyword arguments passed to the LLM constructor.
 
@@ -239,9 +239,9 @@ def check_token_metric_compatibility(sampler, token_metric: str):
     """
     if token_metric == "logprobs":
         # logprobs requires logits_per_token to be set
-        if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token < 1:
+        if sampler.sampling_params.logprobs_per_token is None or sampler.sampling_params.logprobs_per_token < 1:
             raise ValueError(
-                "logits_per_token must be set to at least 1 to use 'logprobs' token metric with TensorRT-LLM backend."
+                "logprobs_per_token must be set to at least 1 to use 'logprobs' token metric with TensorRT-LLM backend."
             )
         # Enable normalization constants for logprobs calculation
         sampler.sampling_params.enable_normalization_constants = True
@@ -249,29 +249,24 @@ def check_token_metric_compatibility(sampler, token_metric: str):
         
     elif token_metric == "power_distribution":
         # power_distribution requires normalization constants
-        if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token < 1:
+        if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token < 1 or sampler.sampling_params.logprobs_per_token is None or sampler.sampling_params.logprobs_per_token < 1:
             raise ValueError(
-                "logits_per_token must be set to at least 1 to use 'power_distribution' token metric with TensorRT-LLM backend."
+                "logits_per_token (and logprobs_per_token, which logits_per_token depends on) must be set to at least 1 to use 'power_distribution' token metric with TensorRT-LLM backend."
             )
         # Enable normalization constants
         sampler.sampling_params.enable_normalization_constants = True
         print("Enabled normalization constants in sampling params for power_distribution metric.")
         
     elif token_metric == "entropy":
-        # entropy requires the entropy calculation to be enabled
-        if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token < 1:
-            raise ValueError(
-                "logits_per_token must be set to at least 1 to use 'entropy' token metric with TensorRT-LLM backend."
-            )
         # Enable entropy calculation
         sampler.sampling_params.enable_entropy = True
         print("Enabled entropy calculation in sampling params for entropy metric.")
         
     elif token_metric == "likelihood_confidence":
         # likelihood_confidence requires logprobs and entropy
-        if sampler.sampling_params.logits_per_token is None or sampler.sampling_params.logits_per_token < 1:
+        if sampler.sampling_params.logprobs_per_token is None or sampler.sampling_params.logprobs_per_token < 1:
             raise ValueError(
-                "logits_per_token must be set to at least 1 to use 'likelihood_confidence' token metric with TensorRT-LLM backend."
+                "logprobs_per_token must be set to at least 1 to use 'likelihood_confidence' token metric with TensorRT-LLM backend."
             )
         sampler.sampling_params.enable_normalization_constants = True
         sampler.sampling_params.enable_entropy = True
