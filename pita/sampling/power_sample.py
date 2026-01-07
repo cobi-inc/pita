@@ -7,13 +7,13 @@ import time
 import numpy as np
 
 # Helper Library
-from tqdm import tqdm
 import json
 
 # Custom Libraries
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 from pita.sampling.token_metrics import calc_token_metric
 
+# TODO Investigate wether we need these lazy imports anymore
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
 llama_cpp_backend = None

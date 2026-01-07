@@ -4,8 +4,6 @@ import time
 import random
 # Data Manipulation Libraries
 import pandas as pd
-# Util Libraries
-from tqdm import tqdm
 #Tokenizing Libraries
 from transformers import AutoTokenizer
 # Benchmarking library
@@ -207,7 +205,7 @@ def benchmark_sampling(
     log_file_path_template = os.path.join(log_base_dir, "question_{}.csv")
 
     # Iterate over the dataset
-    for question_index, question in tqdm(enumerate(question_list), disable=True):
+    for question_index, question in enumerate(question_list):
         
         # Break if we have reached the max number of questions to ask
         if(max_questions == question_index and max_questions != 0):

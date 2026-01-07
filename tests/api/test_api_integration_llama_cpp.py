@@ -83,7 +83,7 @@ class TestIntegrationPowerSampling:
     def test_power_sampling_basic(self, sampler):
         """Power Sampling should work end-to-end."""
         ps = Power_Sampling(block_size=16, MCMC_steps=2)
-        prompt = create_prompt(sampler, "You are a helpful assistant.", "Say hello.")
+        prompt = create_prompt(sampler, "You are a helpful assistant.", "Say hello. Write a story about a cat in a hat.")
         
         # Save and modify max_tokens for this test
         original_max_tokens = sampler.sampling_params.max_tokens
@@ -96,7 +96,7 @@ class TestIntegrationPowerSampling:
             assert len(output.tokens) > 0
             # Power sampling should fill approximately max_tokens
             # (may be slightly less due to block boundaries)
-            assert len(output.tokens) >= 16
+            assert len(output.tokens) == 32
         finally:
             sampler.sampling_params.max_tokens = original_max_tokens
     
