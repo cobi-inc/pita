@@ -86,7 +86,7 @@ class Sampling_Params:
         max_tokens (int): Max Number of tokens to generate per sequence.
         temperature (float): Controls randomness of sampling. Lower is more deterministic, higher is more random.
         top_p (float): Controls tokens to consider based on cumulative probability. Must be in (0, 1].
-        top_k (int): Controls number of top tokens to consider. 0 or -1 considers all tokens.
+        top_k (int): Controls number of top tokens to consider. 0 considers all tokens.
         logprobs_per_token (int): Number of logprobs to return per output token. logprobs+1 token returned (includes chosen token).
         logits_per_token (int): Number of descending ranked logits to return per output token.
         presence_penalty (float): Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
@@ -109,7 +109,7 @@ class Sampling_Params:
         max_tokens: int = 16,
         temperature: float = 1.0,
         top_p: float = 1.0,
-        top_k: int = -1,
+        top_k: int = 0,
         logprobs_per_token: int = None,
         logits_per_token: int = None,
         presence_penalty: float = 0.0,
@@ -192,6 +192,12 @@ class Sampling_Params:
                     # Do not overwrite the vLLM engine parameter "logits_per_token" as logprobs_per_token will fail
                     return
         
+        # Handle tensorrt-specific top_k value conversion
+        # TensorRT-LLM requires top_k >= 0, where 0 means "consider all tokens"
+        # Other backends like vLLM use -1 to mean the same thing
+        if self.engine == "tensorrt" and param_name == "top_k" and value == -1:
+            value = 0
+
         # Sync logic here
         engine_map = ENGINE_PARAM_MAPS.get(self.engine, {})
         engine_param_name = engine_map.get(param_name)
@@ -390,7 +396,7 @@ class AutoregressiveSampler:
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
 
-        print("Engine Params Extra Args:", engine_params.extra_args if engine_params is not None else "N/A")
+        print("Engine Params Extra Args:", getattr(engine_params, "extra_args", "N/A") if engine_params is not None else "N/A")
 
         # Intialize the Sampling Params
         if(sampling_params is None):

@@ -11,6 +11,14 @@ from tensorrt_llm import LLM, SamplingParams
 from pita.inference.LLM_backend import Output
 from pita.inference.tensorRT_logits_processor import create_logits_processor
 
+# Standard Libraries
+import os
+import uuid
+import warnings
+import redis
+
+from pita.utils.constants import REDIS_HOST, REDIS_PORT
+
 
 def sample(
         self, 
@@ -38,13 +46,6 @@ def sample(
     calculate_normalization = getattr(self.sampling_params, 'enable_normalization_constants', False)
     calculate_entropy = getattr(self.sampling_params, 'enable_entropy', False)
     
-    # Create a fresh logits processor for this sample call
-    logits_processor = create_logits_processor(
-        temperature=self.sampling_params.temperature,
-        calculate_normalization=calculate_normalization,
-        calculate_entropy=calculate_entropy
-    )
-
     # Check if context is a list of strings or a single string
     if isinstance(context, list):
         context_list_len = len(context)
@@ -55,27 +56,33 @@ def sample(
     all_outputs = []
     
     for context_input in context:
-        # Reset the logits processor for each context
-        logits_processor.reset()
+        # Generate unique request ID for Redis IPC
+        req_id = f"tensorrt_{uuid.uuid4().hex}"
         
-        # Create TensorRT-LLM SamplingParams
-        sampling_params = SamplingParams(
-            max_tokens=self.sampling_params.max_tokens,
-            temperature=self.sampling_params.temperature,
-            top_p=self.sampling_params.top_p,
-            top_k=self.sampling_params.top_k if self.sampling_params.top_k > 0 else None,
-            seed=self.sampling_params.seed,
-        )
+        # Create logits processor if normalization or entropy is needed
+        if calculate_normalization or calculate_entropy:
+            logits_processor = create_logits_processor(
+                req_id=req_id,
+                temperature=self.sampling_params.temperature,
+                calculate_normalization=calculate_normalization,
+                calculate_entropy=calculate_entropy
+            )
+            self.sampling_params.engine_params.logits_processor = logits_processor
+        else:
+            self.sampling_params.engine_params.logits_processor = None
         
-        # Add logprobs if requested
-        if self.sampling_params.logprobs_per_token and self.sampling_params.logprobs_per_token > 0:
-            sampling_params.logprobs = self.sampling_params.logprobs_per_token
-        
-        # Generate with the logits processor
+        # Check if logprobs_per_token/logits_per_token is greater than 1. If so send a warning and set to 1
+        if self.sampling_params.logprobs_per_token and self.sampling_params.logprobs_per_token > 1:
+            warnings.warn("logprobs_per_token > 1 is not supported for the TensorRT-LLM backend. Setting logprobs_per_token to 1.")
+            self.sampling_params.logprobs_per_token = 1
+        if self.sampling_params.logits_per_token and self.sampling_params.logits_per_token > 1:
+            warnings.warn("logits_per_token > 1 is not supported for the TensorRT-LLM backend. Setting logits_per_token to 1.")
+            self.sampling_params.logits_per_token = 1
+
+        # Generate
         llm_output = self.llm.generate(
             context_input, 
-            sampling_params=sampling_params,
-            logits_processor=logits_processor,
+            sampling_params=self.sampling_params.engine_params,
             **kwargs
         )
         
@@ -83,23 +90,30 @@ def sample(
         tokens = list(llm_output.outputs[0].token_ids)
         n_completion = len(tokens)
         
-        # Get normalization constants from the logits processor
-        unprocessed_log_normalization_constant = (
-            logits_processor.log_norm_constants.copy()
-            if getattr(logits_processor, "log_norm_constants", None) is not None
-            else None
-        )
-        temp_processed_log_normalization_constant = (
-            logits_processor.log_norm_constants_temp_scaled.copy()
-            if getattr(logits_processor, "log_norm_constants_temp_scaled", None) is not None
-            else None
-        )
-        entropy = (
-            logits_processor.entropy.copy()
-            if getattr(logits_processor, "entropy", None) is not None
-            else None
-        )
+        # Retrieve normalization constants and entropy from Redis
+        unprocessed_log_normalization_constant = []
+        temp_processed_log_normalization_constant = []
+        entropy = []
         
+        if calculate_normalization or calculate_entropy:
+            try:
+                redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+                
+                # Retrieve all values from Redis using the request ID
+                normalization_terms = redis_client.lrange(req_id, 0, -1)
+                
+                # Clean up the Redis key after retrieval
+                redis_client.delete(req_id)
+                
+                # Parse the normalization terms (format: "norm_val,norm_temp_val,entropy_val")
+                for term in normalization_terms:
+                    parts = term.split(',')
+                    unprocessed_log_normalization_constant.append(float(parts[0]))
+                    temp_processed_log_normalization_constant.append(float(parts[1]))
+                    entropy.append(float(parts[2]))
+            except Exception as e:
+                print(f"Warning: Failed to retrieve results from Redis: {e}")
+
         # Extract logprobs if available
         logprobs_per_token = self.sampling_params.logprobs_per_token or 0
         logits_per_token = self.sampling_params.logits_per_token or 0
@@ -112,8 +126,17 @@ def sample(
             for token_logprobs in llm_output.outputs[0].logprobs:
                 if token_logprobs:
                     # Get top-k logprobs
-                    sorted_logprobs = sorted(token_logprobs.items(), key=lambda x: x[1], reverse=True)
-                    token_top_logprobs = [lp for _, lp in sorted_logprobs[:logprobs_per_token]]
+                    # Sort by logprob value - token_logprobs is dict of token_id -> Logprob object
+                    sorted_logprobs = sorted(
+                        token_logprobs.items(), 
+                        key=lambda x: getattr(x[1], 'logprob', x[1]) if hasattr(x[1], 'logprob') else x[1], 
+                        reverse=True
+                    )
+                    # Extract the float value from Logprob objects
+                    token_top_logprobs = [
+                        getattr(lp, 'logprob', lp) if hasattr(lp, 'logprob') else lp 
+                        for _, lp in sorted_logprobs[:logprobs_per_token]
+                    ]
                     top_k_logprobs.append(token_top_logprobs)
                     
                     # Calculate logits from logprobs (logit = logprob + log_norm_constant)
@@ -207,7 +230,7 @@ def create_LLM_object(
         trust_remote_code=True,
         **kwargs
     )
-    
+
     if logits_processor:
         print("TensorRT-LLM LogitsProcessor enabled. Normalization constants and entropy will be calculated per-request.")
     

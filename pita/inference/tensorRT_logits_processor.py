@@ -2,36 +2,38 @@
 TensorRT-LLM Logits Processor for calculating normalization constants and entropy.
 
 This module provides a LogitsProcessor class that can be passed per-request to
-TensorRT-LLM's generate() function, following the same pattern as llama_cpp_backend.
-Results are stored in instance variables for retrieval after generation completes.
+TensorRT-LLM's generate() function. Results are stored in Redis for retrieval
+after generation completes, enabling IPC across MPI process boundaries.
 """
 
 import torch
+import redis
 from torch.distributions import Categorical
 from typing import List, Optional
+
+from pita.utils.constants import REDIS_HOST, REDIS_PORT
+
+
 class TensorRTLogitsProcessor:
     """
     Logits processor for TensorRT-LLM that calculates and stores normalization constants
-    and entropy for each generated token.
+    and entropy for each generated token via Redis IPC.
     
-    This processor is designed to be instantiated fresh for each sample() call,
-    accumulating per-token statistics that can be retrieved after generation completes.
-    
-    Unlike the vLLM logits processor which uses Redis for IPC, this processor
-    stores results directly in instance variables since TensorRT-LLM supports
-    per-request logits processors.
+    This processor is designed to be instantiated fresh for each sample() call.
+    Results are written to Redis using the req_id as the key, allowing the main
+    process to retrieve them after generation completes.
     
     Attributes:
-        log_norm_constants (list[float]): Log normalization constants (logsumexp of raw logits) per token.
-        log_norm_constants_temp_scaled (list[float]): Log normalization constants after temperature scaling per token.
-        entropy (list[float]): Shannon entropy per token.
+        req_id (str): Unique request ID used as Redis key.
         temperature (float): Temperature for scaling logits.
         calculate_entropy (bool): Whether to calculate entropy.
         calculate_normalization (bool): Whether to calculate normalization constants.
+        redis_client: Redis client for storing computed values.
     """
     
     def __init__(
         self, 
+        req_id: str,
         temperature: float = 1.0, 
         calculate_normalization: bool = True,
         calculate_entropy: bool = False
@@ -40,84 +42,96 @@ class TensorRTLogitsProcessor:
         Initialize the TensorRTLogitsProcessor.
         
         Args:
+            req_id: Unique request ID used as Redis key for storing results.
             temperature: Temperature for scaling logits. Defaults to 1.0.
             calculate_normalization: Whether to calculate normalization constants. Defaults to True.
             calculate_entropy: Whether to calculate entropy. Defaults to False.
         """
-        self.log_norm_constants: list[float] = []
-        self.log_norm_constants_temp_scaled: list[float] = []
-        self.entropy: list[float] = []
+        self.req_id: str = req_id
         self.temperature: float = temperature
         self.calculate_normalization: bool = calculate_normalization
         self.calculate_entropy: bool = calculate_entropy
+        self.redis_client = None
         
-    def reset(self) -> None:
-        """Reset all accumulated lists for a new generation."""
-        self.log_norm_constants = []
-        self.log_norm_constants_temp_scaled = []
-        self.entropy = []
+    def _ensure_redis(self) -> None:
+        """
+        Ensure Redis client is initialized and connected.
         
+        Lazily initializes the Redis connection on first use to avoid connection
+        issues during processor instantiation (which may happen in a different process).
+        """
+        if self.redis_client is None:
+            try:
+                self.redis_client = redis.Redis(
+                    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+                )
+            except Exception as e:
+                print(f"CRITICAL WORKER ERROR: Redis connect failed: {e}")
+
     def __call__(
         self, 
         req_id: int,
         logits: torch.Tensor,
         token_ids: List[List[int]],
-        stream_ptr: int,
-        client_id: Optional[str] = None
-    ) -> torch.Tensor:
+        stream_ptr: Optional[int],
+        client_id: Optional[int] = None
+    ) -> None:
         """
         Process logits for a single token generation step.
         
         Calculates logsumexp of the current logits for normalization constants
-        and optionally calculates Shannon entropy.
+        and optionally calculates Shannon entropy. Results are pushed to Redis.
         
         Args:
-            req_id: The ID of the request.
-            logits: A torch.Tensor containing the raw logits (batch_size, vocab_size).
+            req_id: The ID of the request (from TensorRT-LLM, not used - we use self.req_id).
+            logits: A torch.Tensor containing the raw logits.
             token_ids: A list of lists of token IDs generated so far.
-            stream_ptr: A pointer to the CUDA stream.
+            stream_ptr: A pointer to the CUDA stream (required for synchronization).
             client_id: An optional client ID.
             
         Returns:
-            The unmodified logits tensor (this processor only observes, doesn't modify).
+            None (this processor only observes, doesn't modify logits).
         """
-        # Process each request in the batch
-        # For simplicity, we assume batch_size=1 for now (single request processing)
-        # If batch processing is needed, this can be extended
+        self._ensure_redis()
         
+        # Synchronize with the CUDA stream before reading logits values
+        if stream_ptr is not None:
+            stream = torch.cuda.ExternalStream(stream_ptr)
+            stream.synchronize()
+        else:
+            torch.cuda.synchronize()
+        
+        # Handle 1D, 2D, and 3D logits tensors
+        # TensorRT-LLM returns 3D tensors: [batch_size, seq_len, vocab_size]
+        if logits.dim() == 1:
+            logits_1d = logits
+        elif logits.dim() == 2:
+            logits_1d = logits[0]
+        else:
+            logits_1d = logits[0, 0]
+        
+        # Calculate normalization constants
         if self.calculate_normalization:
-            # Calculate log normalization constant (logsumexp of raw logits)
-            # Handle both 1D and 2D logits tensors
-            if logits.dim() == 1:
-                log_norm_constant = torch.logsumexp(logits, dim=-1).item()
-                log_norm_constant_temp_scaled = torch.logsumexp(logits / self.temperature, dim=-1).item()
-            else:
-                # For 2D (batch), take first row
-                log_norm_constant = torch.logsumexp(logits[0], dim=-1).item()
-                log_norm_constant_temp_scaled = torch.logsumexp(logits[0] / self.temperature, dim=-1).item()
-            
-            self.log_norm_constants.append(float(log_norm_constant))
-            self.log_norm_constants_temp_scaled.append(float(log_norm_constant_temp_scaled))
+            log_norm_constant = torch.logsumexp(logits_1d, dim=-1).item()
+            log_norm_constant_temp_scaled = torch.logsumexp(logits_1d / self.temperature, dim=-1).item()
         else:
-            # Append zeros if not calculating
-            self.log_norm_constants.append(0.0)
-            self.log_norm_constants_temp_scaled.append(0.0)
+            log_norm_constant = 0.0
+            log_norm_constant_temp_scaled = 0.0
         
+        # Calculate entropy
         if self.calculate_entropy:
-            # Calculate Shannon entropy from the probability distribution
-            if logits.dim() == 1:
-                token_entropy = Categorical(logits=logits).entropy().item()
-            else:
-                token_entropy = Categorical(logits=logits[0]).entropy().item()
-            self.entropy.append(float(token_entropy))
+            token_entropy = Categorical(logits=logits_1d).entropy().item()
         else:
-            self.entropy.append(0.0)
+            token_entropy = 0.0
         
-        # Return logits unchanged so generation continues normally
-        return logits
+        # Push to Redis: format "norm,norm_temp,entropy"
+        if self.redis_client is not None:
+            data = f"{log_norm_constant},{log_norm_constant_temp_scaled},{token_entropy}"
+            self.redis_client.rpush(self.req_id, data)
 
 
 def create_logits_processor(
+    req_id: str,
     temperature: float = 1.0,
     calculate_normalization: bool = True,
     calculate_entropy: bool = False
@@ -126,6 +140,7 @@ def create_logits_processor(
     Create a TensorRTLogitsProcessor for use with TensorRT-LLM.
     
     Args:
+        req_id: Unique request ID used as Redis key for storing results.
         temperature: Temperature for scaling logits.
         calculate_normalization: Whether to calculate normalization constants.
         calculate_entropy: Whether to calculate entropy.
@@ -134,6 +149,7 @@ def create_logits_processor(
         A TensorRTLogitsProcessor instance that can be passed to generate().
     """
     return TensorRTLogitsProcessor(
+        req_id=req_id,
         temperature=temperature,
         calculate_normalization=calculate_normalization,
         calculate_entropy=calculate_entropy

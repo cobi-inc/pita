@@ -72,6 +72,9 @@ def test_sampler_init(sampler):
     assert sampler.sample_fn == tensorrt_backend.sample
     assert sampler.chain_sampling is None
     assert sampler.token_sampling is None
+    assert sampler.sampling_params.logprobs_per_token == 10
+    assert sampler.sampling_params.logits_per_token == 10
+
 
 def test_sampling_params_initialized(sampler):
     # Test that the sampling params are not None
@@ -81,35 +84,51 @@ def test_max_tokens(sampler):
     # Test that the max tokens is set to 16
     sampler.sampling_params.max_tokens = 16
     assert sampler.sampling_params.max_tokens == 16
-    output = sampler.sample("Hello")
+    # Check if the engine throws a warning during sample as logprobs_per_token > 1
+    with pytest.warns(UserWarning):
+        output = sampler.sample("Hello")
     assert len(output.tokens) == 16
 
 def test_normalization_constants(sampler):
-    # Preserve original setting to avoid leaking state to other tests
+    # Preserve original settings to avoid leaking state to other tests
     original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    original_max_tokens = sampler.sampling_params.max_tokens
     try:
         # Set normalization constants to True
         sampler.sampling_params.enable_normalization_constants = True
+        # Ensure max_tokens is set (may not persist from previous test)
+        sampler.sampling_params.max_tokens = 16
         assert sampler.sampling_params.enable_normalization_constants is True
         output = sampler.sample("Hello")
+        # Check normalization constants are computed (non-zero)
         assert output.unprocessed_log_normalization_constant[0] != 0
         assert output.temp_processed_log_normalization_constant[0] != 0
     finally:
-        # Restore original value to keep tests independent
+        # Restore original values to keep tests independent
         sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
+        sampler.sampling_params.max_tokens = original_max_tokens
 
 def test_temperature(sampler):
-    # Set temperature to 1 
-    sampler.sampling_params.temperature = 1
-    assert sampler.sampling_params.temperature == 1
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant
+    # Preserve original settings to avoid leaking state to other tests
+    original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    try:
+        # Enable normalization constants (required for this test)
+        sampler.sampling_params.enable_normalization_constants = True
+        
+        # Set temperature to 1 
+        sampler.sampling_params.temperature = 1
+        assert sampler.sampling_params.temperature == 1
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant
 
-    # Set temperature to 0.25
-    sampler.sampling_params.temperature = 0.25
-    assert sampler.sampling_params.temperature == 0.25
-    output = sampler.sample("Hello")
-    assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
+        # Set temperature to 0.25
+        sampler.sampling_params.temperature = 0.25
+        assert sampler.sampling_params.temperature == 0.25
+        output = sampler.sample("Hello")
+        assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
+    finally:
+        # Restore original value to keep tests independent
+        sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
     
 def test_prob_outputs(sampler):
     # Preserve original settings to avoid leaking state to other tests

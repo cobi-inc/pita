@@ -6,7 +6,6 @@ channels:
 dependencies:
   - python=3.10
   - pip
-  - cuda-toolkit=12.4.1
   - cxx-compiler
   - onnx<1.16.0
   - mpi4py
