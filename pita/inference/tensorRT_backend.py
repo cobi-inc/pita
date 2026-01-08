@@ -70,13 +70,17 @@ def sample(
         else:
             self.sampling_params.engine_params.logits_processor = None
         
-        # Check if logprobs_per_token/logits_per_token is greater than 1. If so send a warning and set to 1
+        # Check if logprobs_per_token/logits_per_token is greater than 1. If so, raise an error for unsupported configuration
         if self.sampling_params.logprobs_per_token and self.sampling_params.logprobs_per_token > 1:
-            warnings.warn("logprobs_per_token > 1 is not supported for the TensorRT-LLM backend. Setting logprobs_per_token to 1.")
-            self.sampling_params.logprobs_per_token = 1
+            raise ValueError(
+                "logprobs_per_token > 1 is not supported for the TensorRT-LLM backend. "
+                "Please set logprobs_per_token to 1 or disable it."
+            )
         if self.sampling_params.logits_per_token and self.sampling_params.logits_per_token > 1:
-            warnings.warn("logits_per_token > 1 is not supported for the TensorRT-LLM backend. Setting logits_per_token to 1.")
-            self.sampling_params.logits_per_token = 1
+            raise ValueError(
+                "logits_per_token > 1 is not supported for the TensorRT-LLM backend. "
+                "Please set logits_per_token to 1 or disable it."
+            )
 
         # Generate
         llm_output = self.llm.generate(
