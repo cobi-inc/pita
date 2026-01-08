@@ -111,6 +111,7 @@ def test_normalization_constants(sampler):
 def test_temperature(sampler):
     # Preserve original settings to avoid leaking state to other tests
     original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
+    original_temperature = sampler.sampling_params.temperature
     try:
         # Enable normalization constants (required for this test)
         sampler.sampling_params.enable_normalization_constants = True
@@ -127,8 +128,9 @@ def test_temperature(sampler):
         output = sampler.sample("Hello")
         assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
     finally:
-        # Restore original value to keep tests independent
+        # Restore original values to keep tests independent
         sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
+        sampler.sampling_params.temperature = original_temperature
     
 def test_prob_outputs(sampler):
     # Preserve original settings to avoid leaking state to other tests
