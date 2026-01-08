@@ -23,10 +23,13 @@ import uvicorn
 
 # --- Configuration ---
 def get_default_config():
+    tokenizer_env = os.environ.get("PITA_TOKENIZER")
+    if tokenizer_env is not None and tokenizer_env.strip().lower() == "none":
+        tokenizer_env = None
     return {
         "engine": os.environ.get("PITA_ENGINE", "vllm"),
         "model": os.environ.get("PITA_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
-        "tokenizer": os.environ.get("PITA_TOKENIZER", None),
+        "tokenizer": tokenizer_env,
         "port": int(os.environ.get("PITA_PORT", 8001)),
         "host": os.environ.get("PITA_HOST", "0.0.0.0")
     }
