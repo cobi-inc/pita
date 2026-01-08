@@ -12,6 +12,7 @@ from pita.api.test_time_coding import decode
 
 # Standard Libraries
 import time
+import uuid
 import argparse
 import os
 from typing import Optional, List, Union, Dict, Any
@@ -60,7 +61,6 @@ async def startup_event():
         DTYPE = "Q5_K_M"
         if TOKENIZER_PATH is None:
              TOKENIZER_PATH = MODEL_NAME 
-        MAX_PROBS = 0 # llama.cpp handling might differ, matching previous logic roughly
 
     print(f"Loading model {MODEL_NAME} using {ENGINE}...")
 
@@ -166,7 +166,7 @@ async def create_completion(request: ChatCompletionRequest):
     )
 
     return ChatCompletionResponse(
-        id="chatcmpl-0",
+        id=f"chatcmpl-{uuid.uuid4()}",
         object="chat.completion",
         created=int(time.time()),
         model=request.model,
