@@ -12,7 +12,6 @@ from pita.inference.LLM_backend import Output
 from pita.inference.tensorRT_logits_processor import create_logits_processor
 
 # Standard Libraries
-import os
 import uuid
 import warnings
 import redis
