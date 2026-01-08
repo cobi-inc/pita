@@ -125,9 +125,10 @@ class TensorRTLogitsProcessor:
             token_entropy = 0.0
         
         # Push to Redis: format "norm,norm_temp,entropy"
-        if self.redis_client is not None:
-            data = f"{log_norm_constant},{log_norm_constant_temp_scaled},{token_entropy}"
-            self.redis_client.rpush(self.req_id, data)
+        if self.redis_client is None:
+            raise RuntimeError("Redis client is not initialized; cannot push logits data.")
+        data = f"{log_norm_constant},{log_norm_constant_temp_scaled},{token_entropy}"
+        self.redis_client.rpush(self.req_id, data)
 
 
 def create_logits_processor(
