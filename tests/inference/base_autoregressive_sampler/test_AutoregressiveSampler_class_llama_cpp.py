@@ -85,9 +85,8 @@ def test_max_tokens(sampler):
     sampler.sampling_params.max_tokens = 16
     assert sampler.sampling_params.max_tokens == 16
     output = sampler.sample("Hello. Write a story about a cat in a hat.")
-    # Note: The tokenizer may add BOS tokens when re-encoding the output text.
-    # llama_cpp generates max_tokens completion tokens, but re-encoding may differ.
-    # We check that we're in a reasonable range.
+    # The llama_cpp backend now tracks generated token IDs directly from generate(),
+    # so the number of output tokens should match the configured max_tokens exactly.
     assert len(output.tokens) == 16
 
 def test_normalization_constants(sampler):
