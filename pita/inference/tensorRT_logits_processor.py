@@ -113,6 +113,13 @@ class TensorRTLogitsProcessor:
         elif logits.dim() == 2:
             logits_1d = logits[0]
         else:
+            batch_size, seq_len = logits.size(0), logits.size(1)
+            if batch_size != 1 or seq_len != 1:
+                raise ValueError(
+                    f"TensorRTLogitsProcessor expects 3D logits with batch_size == 1 and seq_len == 1, "
+                    f"but got shape {tuple(logits.shape)}. Multi-batch or multi-step processing is not supported "
+                    f"by this processor; ensure generation is configured for a single sequence and step per call."
+                )
             logits_1d = logits[0, 0]
         
         # Calculate normalization constants
