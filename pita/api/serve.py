@@ -157,8 +157,9 @@ async def create_completion(request: ChatCompletionRequest):
         finish_reason="stop"
     )
 
-    prompt_token_count = len(sampler.tokenizer.encode(prompt))
-    completion_token_count = len(sampler.tokenizer.encode(generated_text))
+    prompt_encoded = sampler.tokenizer.encode(prompt)
+    prompt_token_count = len(prompt_encoded)
+    completion_token_count = len(output.tokens)
     usage = Usage(
         prompt_tokens=prompt_token_count,
         completion_tokens=completion_token_count,
