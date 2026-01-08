@@ -23,10 +23,13 @@ import uvicorn
 
 # --- Configuration ---
 def get_default_config():
+    tokenizer_env = os.environ.get("PITA_TOKENIZER")
+    if tokenizer_env is not None and tokenizer_env.strip().lower() == "none":
+        tokenizer_env = None
     return {
         "engine": os.environ.get("PITA_ENGINE", "vllm"),
         "model": os.environ.get("PITA_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
-        "tokenizer": os.environ.get("PITA_TOKENIZER", None),
+        "tokenizer": tokenizer_env,
         "port": int(os.environ.get("PITA_PORT", 8001)),
         "host": os.environ.get("PITA_HOST", "0.0.0.0")
     }
@@ -82,11 +85,14 @@ def create_app(config: Dict[str, Any] = None) -> FastAPI:
         print("Shutting down PITA Server...")
         sampler = getattr(app.state, "sampler", None)
         if sampler is not None:
-            if sampler.engine == "vllm":
-                sampler.llm.close()
-            elif sampler.engine == "llama_cpp":
-                sampler.llm.close()
-                
+            try:
+                if sampler.engine == "vllm":
+                    sampler.llm.close()
+                elif sampler.engine == "llama_cpp":
+                    sampler.llm.close()
+            except Exception as e:
+                # Ensure shutdown continues even if closing the LLM fails
+                print(f"Warning: error while closing sampler LLM: {e}")
         app.state.sampler = None
         print("Shutdown complete.")
 
@@ -227,9 +233,7 @@ def run_server():
         "host": args.host
     }
     
-    # Create app with specific config
-    # We must overwrite the global 'app' if we want uvicorn to use passing 'app' object directly, 
-    # but uvicorn.run can take the app instance.
+    # Create a dedicated app instance with the specified config and pass it directly to uvicorn.run
     server_app = create_app(config)
     
     uvicorn.run(server_app, host=args.host, port=args.port)
