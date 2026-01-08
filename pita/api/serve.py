@@ -59,7 +59,7 @@ async def startup_event():
     if ENGINE == "llama_cpp":
         DTYPE = "Q5_K_M"
         if TOKENIZER_PATH is None:
-             TOKENIZER_PATH = MODEL_NAME 
+            TOKENIZER_PATH = MODEL_NAME 
         MAX_PROBS = 0 # llama.cpp handling might differ, matching previous logic roughly
 
     print(f"Loading model {MODEL_NAME} using {ENGINE}...")
