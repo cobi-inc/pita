@@ -27,6 +27,11 @@ def mock_sampler_instance(mock_sampler_class):
     mock_output = MagicMock()
     mock_output.tokens = [4, 5, 6]
     instance.sample.return_value = mock_output
+
+    # Mock sampling_params to simulate actual sampler configuration
+    instance.sampling_params = MagicMock()
+    instance.sampling_params.max_tokens = 128
+    instance.sampling_params.enable_thinking = False
     
     mock_sampler_class.return_value = instance
     return instance
