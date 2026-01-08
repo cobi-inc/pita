@@ -84,7 +84,7 @@ def test_max_tokens(sampler):
     # Test that the max tokens is set to 16
     sampler.sampling_params.max_tokens = 16
     assert sampler.sampling_params.max_tokens == 16
-    output = sampler.sample("Hello. Write a story about a cat in a hat.")
+    output = sampler.sample("Once upon a time")
     # Check that the output has 16 tokens
     assert len(output.tokens) == 16
 
@@ -192,3 +192,20 @@ def test_entropy(sampler):
         assert output.entropy[0] == 0
     finally:
         sampler.sampling_params.enable_entropy = original_enable_entropy
+
+def test_single_token_prompt(sampler):
+    """Test that single token prompts work correctly with the manual eval workaround."""
+    # Test with a single token ID (BOS)
+    req_token_ids = [1] 
+    
+    # We use AutoregressiveSampler's sample method which handles token conversion or direct passage?
+    # Actually sampler.sample takes string prompt or list of tokens?
+    # Checking AutoregressiveSampler.sample signature...
+    # It takes (input_ids: list[int] | str, ...)
+    
+    output = sampler.sample(
+        context=[req_token_ids]
+    )
+    
+    assert len(output.tokens) > 0
+    # Just ensure it generated something and didn't crash

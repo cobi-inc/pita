@@ -68,11 +68,11 @@ def sample(
         logits_per_token = self.sampling_params.logits_per_token or 0
         
         if len(prompt_tokens) > 0:
-            self.llm.eval([prompt_tokens[0]])
+            self.llm.eval(prompt_tokens)
         
         # Generation loop
         generator = self.llm.generate(
-            prompt_tokens[1:] if len(prompt_tokens) > 0 else [],
+            [],
             top_k=self.sampling_params.top_k,
             top_p=self.sampling_params.top_p,
             min_p=self.sampling_params.min_p,
@@ -81,6 +81,7 @@ def sample(
             frequency_penalty=self.sampling_params.frequency_penalty,
             presence_penalty=self.sampling_params.presence_penalty,
             logits_processor=logits_processor_list,
+            reset=False,
             **kwargs
         )
 
