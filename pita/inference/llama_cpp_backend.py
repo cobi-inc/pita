@@ -90,18 +90,20 @@ def sample(
             current_logits = self.llm.scores[self.llm.n_tokens - 1, :]
             
             if logits_per_token > 0:
-                # Extract top k indices
-                top_indices = np.argsort(current_logits)[-logits_per_token:][::-1]
-                
+                # Extract logits for the current step.
+                # We always place the chosen token's logit first, then fill with the
+                # highest remaining logits until we reach logits_per_token elements
+                # or run out of logits.
+                sorted_indices = np.argsort(current_logits)[::-1]
+
                 # Ensure the chosen token logit is first as requested
                 step_logits = [float(current_logits[token])]
-                for idx in top_indices:
+                for idx in sorted_indices:
                     if idx == token:
                         continue
                     if len(step_logits) >= logits_per_token:
                         break
                     step_logits.append(float(current_logits[idx]))
-                
                 top_k_logits.append(step_logits)
             
             tokens.append(int(token))
