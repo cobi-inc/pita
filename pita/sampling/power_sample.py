@@ -13,7 +13,7 @@ import json
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 from pita.sampling.token_metrics import calc_token_metric
 
-# TODO Investigate wether we need these lazy imports anymore
+# TODO Investigate whether we need these lazy imports anymore
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
 llama_cpp_backend = None
