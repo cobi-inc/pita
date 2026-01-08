@@ -8,6 +8,7 @@ import copy
 # Lazy imports for backends - will be imported when needed
 vllm_backend = None
 llama_cpp_backend = None
+tensorrt_backend = None
 
 def _get_vllm_backend():
     global vllm_backend
@@ -22,6 +23,13 @@ def _get_llama_cpp_backend():
         import pita.inference.llama_cpp_backend as _llama_cpp_backend
         llama_cpp_backend = _llama_cpp_backend
     return llama_cpp_backend
+
+def _get_tensorrt_backend():
+    global tensorrt_backend
+    if tensorrt_backend is None:
+        import pita.inference.tensorRT_backend as _tensorrt_backend
+        tensorrt_backend = _tensorrt_backend
+    return tensorrt_backend
 
 # Utils
 import time
@@ -55,6 +63,16 @@ ENGINE_PARAM_MAPS = {
         'stop_token_ids': 'eos_token_id',
         # transformers uses different names/doesn't support all params
     },
+    'tensorrt': {
+        'max_tokens': 'max_tokens',
+        'temperature': 'temperature',
+        'top_p': 'top_p',
+        'top_k': 'top_k',
+        'logprobs_per_token': 'logprobs',
+        'seed': 'seed',
+        'stop': 'stop',
+        'stop_token_ids': 'stop_token_ids',
+    },
     # Add more engines as needed
 }
 
@@ -68,7 +86,7 @@ class Sampling_Params:
         max_tokens (int): Max Number of tokens to generate per sequence.
         temperature (float): Controls randomness of sampling. Lower is more deterministic, higher is more random.
         top_p (float): Controls tokens to consider based on cumulative probability. Must be in (0, 1].
-        top_k (int): Controls number of top tokens to consider. 0 or -1 considers all tokens.
+        top_k (int): Controls number of top tokens to consider. 0 considers all tokens.
         logprobs_per_token (int): Number of logprobs to return per output token. logprobs+1 token returned (includes chosen token).
         logits_per_token (int): Number of descending ranked logits to return per output token.
         presence_penalty (float): Penalizes new tokens based on appearance in generated text so far. > 0 encourages new tokens, < 0 encourages repeats.
@@ -91,7 +109,7 @@ class Sampling_Params:
         max_tokens: int = 16,
         temperature: float = 1.0,
         top_p: float = 1.0,
-        top_k: int = -1,
+        top_k: int = 0,
         logprobs_per_token: int = None,
         logits_per_token: int = None,
         presence_penalty: float = 0.0,
@@ -139,7 +157,7 @@ class Sampling_Params:
         # Also sync to engine_params if it exists
         super().__setattr__(name, value)
 
-        # If attribute is dependent on a Logits Processor, makes sure to propogate the change
+        # If attribute is dependent on a Logits Processor, makes sure to propagate the change
         if(self.engine == "vllm"):
             if(name == "enable_normalization_constants"):
                 self.engine_params.extra_args["normalization_constants"] = value
@@ -174,6 +192,12 @@ class Sampling_Params:
                     # Do not overwrite the vLLM engine parameter "logits_per_token" as logprobs_per_token will fail
                     return
         
+        # Handle tensorrt-specific top_k value conversion
+        # TensorRT-LLM requires top_k >= 0, where 0 means "consider all tokens"
+        # Other backends like vLLM use -1 to mean the same thing
+        if self.engine == "tensorrt" and param_name == "top_k" and value == -1:
+            value = 0
+
         # Sync logic here
         engine_map = ENGINE_PARAM_MAPS.get(self.engine, {})
         engine_param_name = engine_map.get(param_name)
@@ -293,7 +317,7 @@ class AutoregressiveSampler:
 
         print(f"Loading model {model} with {engine}...")
         
-        # Seperate Backend Loading for each engine
+        # Separate Backend Loading for each engine
         if(engine == "vllm"):
             backend = _get_vllm_backend()
 
@@ -345,8 +369,25 @@ class AutoregressiveSampler:
             # Llama.cpp does not have a separate engine params class
             engine_params = None
 
+        elif(engine == "tensorrt"):
+            backend = _get_tensorrt_backend()
+            # Create the LLM object
+            self.llm = backend.create_LLM_object(
+                model_name = model, 
+                dtype = dtype, 
+                gpu_memory_utilization = gpu_memory_utilization, 
+                max_model_len = max_model_len,
+                max_logprobs = max_probs,
+                logits_processor = logits_processor,
+                **kwargs
+            )
+            # Set the autoregressive sampler function
+            self.sample_fn = backend.sample
+            # TensorRT-LLM uses per-request engine params, create a default instance
+            engine_params = backend.create_tensorrt_engine_params()
+
         else:
-            raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp'")
+            raise ValueError(f"Engine {engine} not supported for Autoregressive Sampler. Supported engines are: 'vllm', 'llama_cpp', 'tensorrt'")
         
         # Create tokenizer depending on whether a tokenizer path is provided
         # Needed as some models do not include the tokenizer files in the same repo as the model
@@ -355,7 +396,7 @@ class AutoregressiveSampler:
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust_remote_code)
 
-        print("Engine Params Extra Args:", engine_params.extra_args if engine_params is not None else "N/A")
+        print("Engine Params Extra Args:", getattr(engine_params, "extra_args", "N/A") if engine_params is not None else "N/A")
 
         # Intialize the Sampling Params
         if(sampling_params is None):
@@ -392,7 +433,7 @@ class AutoregressiveSampler:
         context: str,
         **kwargs
     )-> Output:
-        """Samples programmatical from the LLM using the token sampling function
+        """Samples programmatically from the LLM using the token sampling function
 
         Args:
             context (str): The input context.
@@ -458,6 +499,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for SMC.")
 
@@ -521,6 +564,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Best-of-N.")
 
@@ -566,6 +611,8 @@ class AutoregressiveSampler:
                 vllm_backend.check_token_metric_compatibility(self, token_metric)
             elif(self.engine == "llama_cpp"):
                 llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
+            elif(self.engine == "tensorrt"):
+                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
         else:
             raise ValueError(f"{token_metric} not supported for Power Sampling.")
 

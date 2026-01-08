@@ -79,38 +79,24 @@ llama_cpp = [
     "diskcache>=5.6.0",
 ]
 
+# TensorRT backend dependencies
+tensorrt = [
+    "tensorrt_llm",
+    "redis>=4.0.0",
+]
+
 # Development/testing dependencies
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
 ]
 
-# Install all backends and development dependencies
+# Install all backends
 all = [
-    # vLLM backend dependencies
-    "vllm>=0.4.0",
-    "ray>=2.9.0",
-    "redis>=4.0.0",
-    "cupy-cuda12x>=13.0.0",
-    "xformers>=0.0.23",
-    "triton>=2.1.0",
-    "outlines_core>=0.2.0",
-    "lm-format-enforcer>=0.10.0",
-    "xgrammar>=0.1.0",
-    "compressed-tensors>=0.5.0",
-    "mistral_common>=1.0.0",
-    "msgspec>=0.18.0",
-    "pyzmq>=25.0.0",
-    "cloudpickle>=3.0.0",
-
-    # llama.cpp backend dependencies
-    "llama-cpp-python>=0.2.0",
-    "gguf>=0.6.0",
-    "diskcache>=5.6.0",
-
-    # Development/testing dependencies
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
+    "pita[vllm]",
+    "pita[llama_cpp]",
+    "pita[tensorrt]",
+    "pita[dev]",
 ]
 
 [tool.setuptools]
