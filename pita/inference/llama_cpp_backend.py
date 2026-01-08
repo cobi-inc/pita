@@ -95,10 +95,21 @@ def sample(
                 # We always place the chosen token's logit first, then fill with the
                 # highest remaining logits until we reach logits_per_token elements
                 # or run out of logits.
-                sorted_indices = np.argsort(current_logits)[::-1]
+                
+                # Use argpartition to find top logits efficiently (O(N) instead of O(N log N))
+                if len(current_logits) > logits_per_token:
+                    # Get indices of top logits_per_token elements
+                    # We might need logits_per_token elements to fill the list if the chosen token isn't in top K
+                    top_indices = np.argpartition(current_logits, -logits_per_token)[-logits_per_token:]
+                    # Sort only these top elements
+                    sorted_short_indices = np.argsort(current_logits[top_indices])[::-1]
+                    sorted_indices = top_indices[sorted_short_indices]
+                else:
+                    sorted_indices = np.argsort(current_logits)[::-1]
 
                 # Ensure the chosen token logit is first as requested
                 step_logits = [float(current_logits[token])]
+                
                 for idx in sorted_indices:
                     if idx == token:
                         continue
