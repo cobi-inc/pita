@@ -1,8 +1,9 @@
 
 import pytest
+import sys
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
-from pita.api.serve import create_app, ChatMessageRole
+from pita.api.serve import create_app, ChatMessageRole, run_server
 
 # Mock AutoregressiveSampler to avoid loading actual models during tests
 @pytest.fixture
@@ -118,3 +119,70 @@ def test_create_completion_uninitialized(mock_sampler_class):
         }
         response = client.post("/v1/chat/completions", json=payload)
         assert response.status_code == 503
+
+def test_run_server_arguments():
+    """Test that run_server parses arguments and passes them to create_app."""
+    # Simulate command line arguments
+    test_args = [
+        "serve.py",
+        "--model", "test-cli-model",
+        "--engine", "llama_cpp",
+        "--tokenizer", "test-cli-tokenizer",
+        "--port", "9999",
+        "--host", "1.2.3.4"
+    ]
+    
+    # We patch sys.argv to simulate command line arguments
+    # We patch create_app to verify it's called with correct config
+    # We patch uvicorn.run to verify it's called with correct app and args
+    with patch("sys.argv", test_args), \
+         patch("pita.api.serve.uvicorn.run") as mock_run, \
+         patch("pita.api.serve.create_app") as mock_create_app:
+        
+        # Call the function under test
+        run_server()
+        
+        # Verify create_app was called with correct config
+        expected_config = {
+            "model": "test-cli-model",
+            "engine": "llama_cpp",
+            "tokenizer": "test-cli-tokenizer",
+            "port": 9999,
+            "host": "1.2.3.4"
+        }
+        mock_create_app.assert_called_once_with(expected_config)
+        
+        # Verify uvicorn.run was called correctly
+        # The first argument to uvicorn.run should be the return value of create_app
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == mock_create_app.return_value
+        assert call_args[1]["host"] == "1.2.3.4"
+        assert call_args[1]["port"] == 9999
+
+def test_create_completion_max_tokens_exceeded(mock_sampler_instance):
+    """Test that requesting more tokens than model_max_length returns 400."""
+    config = {
+        "engine": "vllm",
+        "model": "test-model",
+        "tokenizer": None,
+        "port": 8000,
+        "host": "0.0.0.0"
+    }
+    app = create_app(config)
+    
+    # Ensure the mock sampler has the expected max length
+    mock_sampler_instance.tokenizer.model_max_length = 2048
+    
+    with TestClient(app) as client:
+        payload = {
+            "model": "test-model",
+            "messages": [{"role": "user", "content": "hello"}],
+            "max_tokens": 4096  # Exceeds 2048
+        }
+        response = client.post("/v1/chat/completions", json=payload)
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "can only generate up to 2048 tokens" in data["detail"]
+
