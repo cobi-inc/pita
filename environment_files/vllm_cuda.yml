@@ -1,4 +1,4 @@
-name: power_sampling
+name: pita_vllm_cuda
 channels:
   - defaults
   - nvidia

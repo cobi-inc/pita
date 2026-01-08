@@ -1,4 +1,4 @@
-name: power_sampling_llamacpp_cuda
+name: pita_tensorrt_cuda
 channels:
   - defaults
   - nvidia
