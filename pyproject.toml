@@ -82,6 +82,7 @@ llama_cpp = [
 # TensorRT backend dependencies
 tensorrt = [
     "tensorrt_llm",
+    "redis>=4.0.0",
 ]
 
 # Development/testing dependencies

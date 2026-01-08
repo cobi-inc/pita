@@ -22,4 +22,6 @@ dependencies:
     - regex
     - pydantic
     - fastapi
+    - redis>=4.0.0
+    - redis-server
     - uvicorn
