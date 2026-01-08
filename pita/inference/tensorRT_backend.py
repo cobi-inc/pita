@@ -40,6 +40,9 @@ def sample(
             - unprocessed_log_normalization_constant: The log normalization constants for each token.
             - temp_processed_log_normalization_constant: The temperature-scaled log normalization constants.
             - entropy: The entropy for each token.
+
+        See the :class:`pita.inference.LLM_backend.Output` class documentation
+        for a complete description of the fields and their semantics.
     """
     # Determine if we need normalization constants or entropy
     calculate_normalization = getattr(self.sampling_params, 'enable_normalization_constants', False)
