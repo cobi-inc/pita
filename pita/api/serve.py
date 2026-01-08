@@ -176,8 +176,21 @@ async def create_completion(request: ChatCompletionRequest):
 
 @app.get("/v1/models")
 async def list_models():
-    sampler = SERVER_STATE["sampler"]
-    return {"object": "list", "data": [{"id": sampler.model, "object": "model", "created": 0, "owned_by": "custom"}]}
+    sampler = SERVER_STATE.get("sampler")
+    if sampler is None:
+        # Mirror the initialization check behavior used in create_completion
+        raise HTTPException(status_code=503, detail="Model is not initialized")
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": sampler.model,
+                "object": "model",
+                "created": 0,
+                "owned_by": "custom",
+            }
+        ],
+    }
 
 def run_server():
     parser = argparse.ArgumentParser(description="PITA API Server")
