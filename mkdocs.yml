@@ -47,6 +47,7 @@ nav:
       - Benchmarking: utils/benchmarking_utils.md
       - Constants: utils/constants.md
       - Parse Utils: utils/parse_utils.md
+      - Redis Manager: utils/redis_manager.md
       - System Utils: utils/system_utils.md
       - Grading:
         - Math:
