@@ -99,14 +99,15 @@ def sample(
         entropy = []
         
         if calculate_normalization or calculate_entropy:
+            redis_client = None
             try:
                 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
                 
+                # Set a TTL as a fallback in case cleanup fails (e.g., process crash)
+                redis_client.expire(req_id, 60)
+                
                 # Retrieve all values from Redis using the request ID
                 normalization_terms = redis_client.lrange(req_id, 0, -1)
-                
-                # Clean up the Redis key after retrieval
-                redis_client.delete(req_id)
                 
                 # Parse the normalization terms (format: "norm_val,norm_temp_val,entropy_val")
                 for term in normalization_terms:
@@ -116,10 +117,17 @@ def sample(
                     entropy.append(float(parts[2]))
             except Exception as e:
                 print(f"Warning: Failed to retrieve results from Redis: {e}")
+            finally:
+                # Always clean up the Redis key, even if an exception occurred
+                if redis_client is not None:
+                    try:
+                        redis_client.delete(req_id)
+                    except Exception:
+                        pass  # Ignore cleanup errors; TTL will handle expiration
 
         # Extract logprobs if available
-        logprobs_per_token = self.sampling_params.logprobs_per_token or 0
-        logits_per_token = self.sampling_params.logits_per_token or 0
+        logprobs_per_token = self.sampling_params.logprobs_per_token 
+        logits_per_token = self.sampling_params.logits_per_token 
         
         top_k_logits = []
         top_k_logprobs = []

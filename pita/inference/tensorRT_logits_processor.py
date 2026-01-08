@@ -6,12 +6,16 @@ TensorRT-LLM's generate() function. Results are stored in Redis for retrieval
 after generation completes, enabling IPC across MPI process boundaries.
 """
 
+import logging
 import torch
 import redis
 from torch.distributions import Categorical
 from typing import List, Optional
 
 from pita.utils.constants import REDIS_HOST, REDIS_PORT
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 class TensorRTLogitsProcessor:
@@ -66,7 +70,8 @@ class TensorRTLogitsProcessor:
                     host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
                 )
             except Exception as e:
-                print(f"CRITICAL WORKER ERROR: Redis connect failed: {e}")
+                logger.error(f"Redis connection failed: {e}")
+                raise ConnectionError(f"Failed to connect to Redis at {REDIS_HOST}:{REDIS_PORT}") from e
 
     def __call__(
         self, 
