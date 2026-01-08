@@ -58,10 +58,10 @@ def sampler():
         trust_remote_code=True,
         sampling_params=None
     )
-    yield sampler
-    del sampler.llm
-    del sampler.tokenizer
-    del sampler
+    try:
+        yield sampler
+    finally:
+        del sampler
 
 # Test the init of the AutoregressiveSampler
 def test_sampler_init(sampler):
