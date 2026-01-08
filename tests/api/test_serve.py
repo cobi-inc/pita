@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
-from pita.api.serve import create_app, ChatMessageRole
+from pita.api.serve import create_app
 
 # Mock AutoregressiveSampler to avoid loading actual models during tests
 @pytest.fixture
