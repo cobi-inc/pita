@@ -227,9 +227,9 @@ def create_LLM_object(
         model_name (str): The name of the model to load (HuggingFace model name or path).
         model_type (str, optional): The type of model. Defaults to None.
         dtype (str, optional): The data type to use. Defaults to "auto".
-        gpu_memory_utilization (float, optional): Unused by TensorRT-LLM.
+        gpu_memory_utilization (float, optional): Kept for API compatibility with other backends; ignored by TensorRT-LLM and not passed to the LLM constructor.
         max_model_len (int, optional): The maximum context length. Defaults to 2048.
-        max_logprobs (int, optional): Unused by TensorRT-LLM.
+        max_logprobs (int, optional): Kept for API compatibility with other backends; ignored by TensorRT-LLM and not passed to the LLM constructor.
         logits_processor (bool, optional): Whether logits processing is enabled. Defaults to False.
         **kwargs: Additional keyword arguments passed to the LLM constructor.
 
