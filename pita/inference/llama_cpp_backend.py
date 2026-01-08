@@ -53,117 +53,105 @@ def sample(
     all_outputs = []
     
     for context_input in context:
-        # Reset the logits processor for each context
+        # Reset the LLM state for a fresh start with each context
+        self.llm.reset()
         logits_processor.reset()
         
-        # Generate a new response from the LLM
-        llm_output = self.llm.create_completion(
-            prompt=context_input,
-            max_tokens=self.sampling_params.max_tokens,
-            temperature=self.sampling_params.temperature,
+        # Use generate() to extract the token_ids instead of create_completion
+        if isinstance(context_input, str):
+            prompt_tokens = self.llm.tokenize(context_input.encode('utf-8'))
+        else:
+            prompt_tokens = context_input
+
+        tokens = []
+        top_k_logits = []
+        logits_per_token = self.sampling_params.logits_per_token or 0
+        
+        if len(prompt_tokens) > 0:
+            self.llm.eval(prompt_tokens)
+        
+        # Generation loop
+        generator = self.llm.generate(
+            [],
+            top_k=self.sampling_params.top_k,
             top_p=self.sampling_params.top_p,
             min_p=self.sampling_params.min_p,
-            stop=self.sampling_params.stop,
+            temp=self.sampling_params.temperature,
+            repeat_penalty=self.sampling_params.repetition_penalty,
             frequency_penalty=self.sampling_params.frequency_penalty,
             presence_penalty=self.sampling_params.presence_penalty,
-            repeat_penalty=self.sampling_params.repetition_penalty,
-            top_k=self.sampling_params.top_k,
-            seed=self.sampling_params.seed,
-            logprobs=self.sampling_params.logprobs_per_token,
             logits_processor=logits_processor_list,
+            reset=False,
             **kwargs
         )
-        
-        # We need to know where the prompt ends and the generation begins.
-        n_prompt = llm_output['usage']['prompt_tokens']
-        n_total = llm_output['usage']['total_tokens']
-        n_completion = n_total - n_prompt
 
-        # Reconstruct an array of all generated tokens
-        # Note: Encoding the generated text may produce a different token count
-        # than n_completion due to tokenizer differences (e.g., BOS tokens).
-        # We use n_completion as the authoritative length since the logits
-        # processor was called exactly n_completion times.
-        tokens = list(self.tokenizer.encode(llm_output['choices'][0]['text']))
-        
-        # Validate and adjust token length to match n_completion
-        if len(tokens) != n_completion:
-            if len(tokens) < n_completion:
-                # This indicates a serious problem with generation or token encoding
-                raise ValueError(
-                    f"Encoded tokens ({len(tokens)}) is fewer than n_completion ({n_completion}). "
-                    f"This indicates a problem with text generation or tokenization."
-                )
-            else:
-                # Truncate if too long (common case: tokenizer adds BOS when encoding)
-                tokens = tokens[:n_completion]
-        
-        # Get logits from self.llm.scores if logits_per_token is set
-        # scores logits are stored in self.llm.scores
-        # The previous index's scores correspond to the next token prediction
-        # token[i] is predicted by scores[i-1]
-        logits_per_token = self.sampling_params.logits_per_token or 0
+        for token in generator:
+            # For each token, self.llm.scores[self.llm.n_tokens - 1] contains the logits
+            # that were used to sample it.
+            current_logits = self.llm.scores[self.llm.n_tokens - 1, :]
+            
+            if logits_per_token > 0:
+                # Extract logits for the current step.
+                # We always place the chosen token's logit first, then fill with the
+                # highest remaining logits until we reach logits_per_token elements
+                # or run out of logits.
+                
+                # Use argpartition to find top logits efficiently (O(N) instead of O(N log N))
+                if len(current_logits) > logits_per_token:
+                    # Get indices of top logits_per_token elements
+                    # We might need logits_per_token elements to fill the list if the chosen token isn't in top K
+                    top_indices = np.argpartition(current_logits, -logits_per_token)[-logits_per_token:]
+                    # Sort only these top elements
+                    sorted_short_indices = np.argsort(current_logits[top_indices])[::-1]
+                    sorted_indices = top_indices[sorted_short_indices]
+                else:
+                    sorted_indices = np.argsort(current_logits)[::-1]
+
+                # Ensure the chosen token logit is first as requested
+                step_logits = [float(current_logits[token])]
+                
+                for idx in sorted_indices:
+                    if idx == token:
+                        continue
+                    if len(step_logits) >= logits_per_token:
+                        break
+                    step_logits.append(float(current_logits[idx]))
+                top_k_logits.append(step_logits)
+            
+            tokens.append(int(token))
+            
+            # Check stopping criteria
+            if len(tokens) >= self.sampling_params.max_tokens:
+                break
+            if token == self.llm.token_eos():
+                break
+            if self.sampling_params.stop_token_ids and token in self.sampling_params.stop_token_ids:
+                break
+
+        # Find the token count from the token_ids
+        token_count = len(tokens)
+
+        # We only trim data from the logits processor as it is the only source that is guaranteed to have the wrong length
+        unprocessed_log_normalization_constant = logits_processor.log_norm_constants[:token_count]
+        temp_processed_log_normalization_constant = logits_processor.log_norm_constants_temp_scaled[:token_count]
+        entropy = logits_processor.entropy[:token_count]
+
+        # Use the temp_processed_log_normalization_constant to calculate the logprobs
+        top_k_logprobs = []
         logprobs_per_token = self.sampling_params.logprobs_per_token or 0
-        
-        if logits_per_token > 0 and hasattr(self.llm, 'scores') and self.llm.scores is not None:
-            # Use partition to find top logits_per_token indices
-            scores_slice = self.llm.scores[n_prompt-1:n_total-1]
-            if len(scores_slice) > 0:
-                scores_array = np.asarray(scores_slice)
-                kth = min(logits_per_token, scores_array.shape[1] - 1)
-                top_k_logits = -np.partition(-scores_array, kth, axis=1)[:, :logits_per_token]
-                top_k_logits = top_k_logits.tolist()
-            else:
-                top_k_logits = [[]] * n_completion
+        if logprobs_per_token > 0 and top_k_logits:
+            for i in range(token_count):
+                logits_row = np.array(top_k_logits[i])
+                temp_norm = temp_processed_log_normalization_constant[i]
+                # logprob = (logit / temp) - logsumexp(logits / temp)
+                row_logprobs = (logits_row / self.sampling_params.temperature) - temp_norm
+                # Slice to the requested logprobs amount
+                top_k_logprobs.append(row_logprobs[:logprobs_per_token].tolist())
         else:
-            top_k_logits = [[]] * n_completion
-        
-        # Get normalization constants from the logits processor
-        # These arrays should have n_completion entries but may have slight mismatches
-        unprocessed_log_normalization_constant = logits_processor.log_norm_constants
-        temp_processed_log_normalization_constant = logits_processor.log_norm_constants_temp_scaled
-        entropy = logits_processor.entropy
-        
-        # The authoritative length is n_completion (from llm_output['usage'])
-        # Trim or pad all arrays to match n_completion
-        # This handles fence-post differences in indexing
-        if len(unprocessed_log_normalization_constant) > n_completion:
-            unprocessed_log_normalization_constant = unprocessed_log_normalization_constant[:n_completion]
-        if len(temp_processed_log_normalization_constant) > n_completion:
-            temp_processed_log_normalization_constant = temp_processed_log_normalization_constant[:n_completion]
-        if len(entropy) > n_completion:
-            entropy = entropy[:n_completion]
-        if len(top_k_logits) > n_completion:
-            top_k_logits = top_k_logits[:n_completion]
-        
-        # Calculate logprobs from logits and normalization constants
-        if logprobs_per_token > 0 and top_k_logits and temp_processed_log_normalization_constant:
-            # Use the minimum common length to avoid broadcasting errors
-            min_len = min(len(top_k_logits), len(temp_processed_log_normalization_constant))
-            top_k_logits_trimmed = top_k_logits[:min_len]
-            temp_norm_trimmed = temp_processed_log_normalization_constant[:min_len]
-            
-            top_k_logits_array = np.array(top_k_logits_trimmed)
-            temp_norm_array = np.array(temp_norm_trimmed)[:, np.newaxis]
-            top_k_logprobs = (top_k_logits_array / self.sampling_params.temperature) - temp_norm_array
-            top_k_logprobs = top_k_logprobs[:, :logprobs_per_token].tolist()
-            
-            # Pad back to n_completion if needed
-            while len(top_k_logprobs) < n_completion:
-                top_k_logprobs.append([0.0] * logprobs_per_token)
-            # Also update top_k_logits to match
-            while len(top_k_logits) < n_completion:
-                top_k_logits.append([0.0] * logits_per_token)
-        else:
-            top_k_logprobs = [[]] * n_completion
-        
-        # Pad normalization constants and entropy if needed
-        while len(unprocessed_log_normalization_constant) < n_completion:
-            unprocessed_log_normalization_constant.append(0.0)
-        while len(temp_processed_log_normalization_constant) < n_completion:
-            temp_processed_log_normalization_constant.append(0.0)
-        while len(entropy) < n_completion:
-            entropy.append(0.0)
+            top_k_logprobs = [[]] * token_count
+
+        if not top_k_logits:
+            top_k_logits = [[]] * token_count
         
         output = Output(
             tokens=tokens,

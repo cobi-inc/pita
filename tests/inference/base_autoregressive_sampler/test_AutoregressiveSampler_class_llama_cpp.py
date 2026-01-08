@@ -84,11 +84,9 @@ def test_max_tokens(sampler):
     # Test that the max tokens is set to 16
     sampler.sampling_params.max_tokens = 16
     assert sampler.sampling_params.max_tokens == 16
-    output = sampler.sample("Hello. Can you write a story about a cat in a hat?")
-    # Note: The tokenizer may add BOS tokens when re-encoding the output text.
-    # llama_cpp generates max_tokens completion tokens, but re-encoding may differ.
-    # We check that we're in a reasonable range.
-    assert len(output.tokens) >= 14 and len(output.tokens) <= 20
+    output = sampler.sample("Once upon a time")
+    # Check that the output has 16 tokens
+    assert len(output.tokens) == 16
 
 def test_normalization_constants(sampler):
     # Preserve original setting to avoid leaking state to other tests
@@ -194,3 +192,20 @@ def test_entropy(sampler):
         assert output.entropy[0] == 0
     finally:
         sampler.sampling_params.enable_entropy = original_enable_entropy
+
+def test_single_token_prompt(sampler):
+    """Test that single token prompts work correctly with the manual eval workaround."""
+    # Test with a single token ID (BOS)
+    req_token_ids = [1] 
+    
+    # We use AutoregressiveSampler's sample method which handles token conversion or direct passage?
+    # Actually sampler.sample takes string prompt or list of tokens?
+    # Checking AutoregressiveSampler.sample signature...
+    # It takes (input_ids: list[int] | str, ...)
+    
+    output = sampler.sample(
+        context=[req_token_ids]
+    )
+    
+    assert len(output.tokens) > 0
+    # Just ensure it generated something and didn't crash

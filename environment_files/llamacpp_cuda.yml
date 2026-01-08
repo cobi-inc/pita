@@ -1,4 +1,4 @@
-name: pita_tensorrt_cuda
+name: pita_llamacpp_cuda
 channels:
   - defaults
   - nvidia
@@ -7,18 +7,10 @@ dependencies:
   - python=3.12
   - pip
   - cuda-cudart=12.4.127  # CUDA runtime library needed by llama-cpp-python
-  - cuda-toolkit=12.4.1 # Use the single meta-package from the nvidia channel
-  - cxx-compiler      # Use conda-forge's cxx-compiler for a modern GCC
-  - pip:
-    # - --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
-    # - llama-cpp-python
-    - pandas
-    - datasets
-    - regex
-    - transformers
-    - torch
-    - pydantic
-    - fastapi
-    - uvicorn
-    - openai
-    - scipy
+  - cuda-toolkit=12.4.1   # Use the single meta-package from the nvidia channel
+  - cmake                 # Required for building llama-cpp-python from source
+  # After activating this environment, install llama-cpp-python with CUDA:
+  # export CUDACXX=$CONDA_PREFIX/bin/nvcc
+  # export CPATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH
+  # export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+  # CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler" pip install llama-cpp-python --no-cache-dir
