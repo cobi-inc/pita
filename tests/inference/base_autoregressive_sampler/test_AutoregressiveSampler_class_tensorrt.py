@@ -156,21 +156,31 @@ def test_prob_outputs(sampler):
         sampler.sampling_params.logits_per_token = original_logits_per_token
 
 def test_logit_to_logprob_conversion(sampler):
-    # Set the temperature to 1
-    sampler.sampling_params.temperature = 1
-    # Set logprobs_per_token and logits_per_token to 1
-    sampler.sampling_params.logprobs_per_token = 1
-    sampler.sampling_params.logits_per_token = 1
-    
-    output = sampler.sample("Hello")
-    # Check that the logit to logprob conversion is correct when the temperature is 1
-    assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant    
+    # Preserve original settings to avoid leaking state to other tests
+    original_temperature = sampler.sampling_params.temperature
+    original_logprobs_per_token = sampler.sampling_params.logprobs_per_token
+    original_logits_per_token = sampler.sampling_params.logits_per_token
+    try:
+        # Set the temperature to 1
+        sampler.sampling_params.temperature = 1
+        # Set logprobs_per_token and logits_per_token to 1
+        sampler.sampling_params.logprobs_per_token = 1
+        sampler.sampling_params.logits_per_token = 1
+        
+        output = sampler.sample("Hello")
+        # Check that the logit to logprob conversion is correct when the temperature is 1
+        assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant    
 
-    # Verify we have logits and logprobs to compare
-    if output.top_k_logits and len(output.top_k_logits) > 0 and output.top_k_logits[0]:
-        # Check the logit to logprob conversion
-        expected_logprob = output.top_k_logits[0][0] - output.temp_processed_log_normalization_constant[0]
-        assert output.top_k_logprobs[0][0] == pytest.approx(expected_logprob, rel=1e-3)
+        # Verify we have logits and logprobs to compare
+        if output.top_k_logits and len(output.top_k_logits) > 0 and output.top_k_logits[0]:
+            # Check the logit to logprob conversion
+            expected_logprob = output.top_k_logits[0][0] - output.temp_processed_log_normalization_constant[0]
+            assert output.top_k_logprobs[0][0] == pytest.approx(expected_logprob, rel=1e-3)
+    finally:
+        # Restore original values to keep tests independent
+        sampler.sampling_params.temperature = original_temperature
+        sampler.sampling_params.logprobs_per_token = original_logprobs_per_token
+        sampler.sampling_params.logits_per_token = original_logits_per_token
 
 def test_entropy(sampler):
     original_enable_entropy = sampler.sampling_params.enable_entropy
