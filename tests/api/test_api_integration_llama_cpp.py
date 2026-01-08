@@ -94,8 +94,7 @@ class TestIntegrationPowerSampling:
             
             assert output is not None
             assert len(output.tokens) > 0
-            # Power sampling should fill approximately max_tokens
-            # (may be slightly less due to block boundaries)
+            # Power sampling should fill the max_tokens
             assert len(output.tokens) == 32
         finally:
             sampler.sampling_params.max_tokens = original_max_tokens

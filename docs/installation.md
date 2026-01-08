@@ -8,7 +8,7 @@ This guide explains how to install and set up PITA for different hardware config
 - **Git** for cloning the repository
 
 ```bash
-git clone https://github.com/your-org/pita.git
+git clone https://github.com/cobi-inc-MC/pita
 cd pita
 ```
 
