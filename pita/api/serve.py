@@ -82,11 +82,14 @@ def create_app(config: Dict[str, Any] = None) -> FastAPI:
         print("Shutting down PITA Server...")
         sampler = getattr(app.state, "sampler", None)
         if sampler is not None:
-            if sampler.engine == "vllm":
-                sampler.llm.close()
-            elif sampler.engine == "llama_cpp":
-                sampler.llm.close()
-                
+            try:
+                if sampler.engine == "vllm":
+                    sampler.llm.close()
+                elif sampler.engine == "llama_cpp":
+                    sampler.llm.close()
+            except Exception as e:
+                # Ensure shutdown continues even if closing the LLM fails
+                print(f"Warning: error while closing sampler LLM: {e}")
         app.state.sampler = None
         print("Shutdown complete.")
 
