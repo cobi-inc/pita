@@ -108,7 +108,10 @@ async def create_completion(request: ChatCompletionRequest):
 
     max_tokens = request.max_tokens if request.max_tokens is not None else sampler.sampling_params.max_tokens
     if max_tokens > sampler.tokenizer.model_max_length:
-        raise HTTPException(status_code=400, detail=f"Requested {max_tokens} tokens. {sampler.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Requested {max_tokens} tokens, but the model can only generate up to {sampler.tokenizer.model_max_length} tokens.",
+        )
     sampler.sampling_params.max_tokens = max_tokens 
 
     # Check for ITS scaling parameters in system prompt
