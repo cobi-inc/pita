@@ -91,8 +91,11 @@ class Power_Sampling:
             #create or overwrite log file
             power_sampling_log_path = log_file_path if log_file_path is not None else f"power_sampling_log_{time.strftime('%H%M%S_%d_%m_%Y')}.csv"
             with open(power_sampling_log_path, "w") as log_file:
-                log_file.write(f'"{json.dumps(vars(sampler), default=str).replace("\"", "\"\"")}"\n')
-                log_file.write(f'"{prompt.replace("\"", "\"\"")}"\n')
+                # Extract backslash expressions for Python 3.10 compatibility
+                sampler_json = json.dumps(vars(sampler), default=str).replace('"', '""')
+                prompt_escaped = prompt.replace('"', '""')
+                log_file.write(f'"{sampler_json}"\n')
+                log_file.write(f'"{prompt_escaped}"\n')
                 log_file.write("proposed_target_distribution_sum,proposed_sampling_distribution_sum,current_target_distribution_sum,current_sampling_distribution_sum,new_target_distribution_normalized,new_sampling_distribution_normalized,acceptance_ratio,accepted,starting_index,tokens_generated,\n")
 
         # Intialize arrays to store the probabilities of the current tokens
@@ -224,7 +227,9 @@ class Power_Sampling:
                 decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
                 if logging:
                     with open(power_sampling_log_path, "a") as log_file:
-                        log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
+                        # Extract backslash expression for Python 3.10 compatibility
+                        decoded_escaped = decoded_text.replace('"', '""')
+                        log_file.write(f'"{decoded_escaped}"\n')
                 # Set the max_new_tokens back to the original value
                 sampler.sampling_params.max_tokens = sampler_max_tokens 
                 return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)
@@ -234,7 +239,9 @@ class Power_Sampling:
         decoded_text = sampler.tokenizer.decode(context, skip_special_tokens=False)
         if logging:
             with open(power_sampling_log_path, "a") as log_file:
-                log_file.write(f'"{decoded_text.replace("\"", "\"\"")}"\n')
+                # Extract backslash expression for Python 3.10 compatibility
+                decoded_escaped = decoded_text.replace('"', '""')
+                log_file.write(f'"{decoded_escaped}"\n')
         # Set the max_tokens back to the original value
         sampler.sampling_params.max_tokens = sampler_max_tokens 
         return Output(tokens=context,top_k_logits=logits,top_k_logprobs=logprobs,unprocessed_log_normalization_constant=unprocessed_log_normalization_constant,temp_processed_log_normalization_constant=temp_processed_log_normalization_constant,entropy=entropy)

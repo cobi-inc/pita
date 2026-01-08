@@ -119,8 +119,8 @@ def test_smc_sample_eos_handling(mock_sampler):
         assert mock_score_update.call_count == 2
 
         # Check the call count of Sequential_Monte_Carlo.particle_sampling
-        # When all particles finish immediately, particle_sampling is not called
-        # because the code breaks before resampling when all particles are done
+        # Not called because all particles finished before resampling step
+        # The implementation breaks out of the step loop when all finish
         assert mock_particle_sampling.call_count == 0
 
         # Check that max_tokens was modified then restored (or at least used correctly)
@@ -156,7 +156,7 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     mock_sampler.token_sample.assert_called()
     
     # Assertions
-    # Check call counts for 1 particle * 2 tokens_per_step * 5 steps
+    # Check call counts for 1 particle * 5 steps (10 max_tokens / 2 tokens_per_step = 5 steps)
     # token_sample called 5 times (1 per step for 1 particle)
     assert mock_sampler.token_sample.call_count == 5
     
@@ -167,7 +167,7 @@ def test_smc_sample_token_sampling_method(mock_sampler, mock_output):
     assert mock_particle_sampling.call_count == 5
 
     # Check Output Integrity
-    # tokens: [1, 2] * 5
+    # tokens: [1, 2] * 5 (5 steps, each returning 2 tokens)
     assert result.tokens == [1, 2] * 5
     # top_k_logprobs: [[-1.0, -0.5], [-0.1, -0.2]] * 5
     assert result.top_k_logprobs == [[-1.0, -0.5], [-0.1, -0.2]] * 5
@@ -211,14 +211,14 @@ def test_smc_sample_fewer_tokens_than_step(mock_sampler):
         # Run sample
         result = smc.sample(mock_sampler, "Prompt")
         
-        # Verify score_update received the correct token_count (it passes self.tokens_per_step)
-        # Even if we got fewer tokens, the code currently passes tokens_per_step (2)
+        # Verify score_update received the correct token_count (actual number of tokens returned)
+        # The implementation correctly passes len(sample_output.tokens), not tokens_per_step
         
         mock_score_update.assert_called()
         args, _ = mock_score_update.call_args
         # args[0] is token_metric_scores (list of float)
-        # args[1] is token_count
-        assert args[1] < 2 # tokens_per_step
+        # args[1] is token_count (actual tokens returned, which is 1)
+        assert args[1] == 1 # actual tokens returned, not tokens_per_step
         
         # Assertions
         # 1 particle, 10 max tokens, 2 tokens per step -> 5 steps

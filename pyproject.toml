@@ -33,6 +33,14 @@ vllm = [
 # llama.cpp backend dependencies
 llama_cpp = [
     "llama-cpp-python>=0.2.0",
+    "gguf>=0.6.0",
+    "diskcache>=5.6.0",
+]
+
+# TensorRT backend dependencies
+tensorrt = [
+    "tensorrt_llm",
+    "redis>=4.0.0",
 ]
 
 # Development/testing dependencies
@@ -41,13 +49,12 @@ dev = [
     "pytest-asyncio>=0.21.0",
 ]
 
-# Install all backends and development dependencies
+# Install all backends
 all = [
-    "vllm>=0.10.0",
-    "redis>=4.0.0",
-    "llama-cpp-python>=0.2.0",
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
+    "pita[vllm]",
+    "pita[llama_cpp]",
+    "pita[tensorrt]",
+    "pita[dev]",
 ]
 
 [tool.setuptools]
