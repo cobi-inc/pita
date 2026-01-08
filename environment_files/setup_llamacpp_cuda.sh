@@ -56,7 +56,7 @@ echo ""
 
 # Install llama-cpp-python with CUDA support
 echo "Building and installing llama-cpp-python (this may take a few minutes)..."
-conda run -n "$ENV_NAME" pip install llama-cpp-python --no-cache-dir
+conda run -n "$ENV_NAME" bash -c "export CUDACXX='$CONDA_PREFIX_PATH/bin/nvcc'; export CPATH='$CONDA_PREFIX_PATH/targets/x86_64-linux/include:$CPATH'; export LD_LIBRARY_PATH='$CONDA_PREFIX_PATH/lib:$LD_LIBRARY_PATH'; export CMAKE_ARGS='-DGGML_CUDA=on -DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler'; pip install llama-cpp-python --no-cache-dir"
 
 # Verify installation
 echo ""
