@@ -108,7 +108,10 @@ async def create_completion(request: ChatCompletionRequest):
 
     max_tokens = request.max_tokens if request.max_tokens is not None else sampler.sampling_params.max_tokens
     if max_tokens > sampler.tokenizer.model_max_length:
-        raise HTTPException(status_code=400, detail=f"Requested {max_tokens} tokens. {sampler.model} can only provide {sampler.tokenizer.model_max_length} tokens.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Requested {max_tokens} tokens, but the model can only generate up to {sampler.tokenizer.model_max_length} tokens.",
+        )
     sampler.sampling_params.max_tokens = max_tokens 
 
     # Check for ITS scaling parameters in system prompt
@@ -157,8 +160,9 @@ async def create_completion(request: ChatCompletionRequest):
         finish_reason="stop"
     )
 
-    prompt_token_count = len(sampler.tokenizer.encode(prompt))
-    completion_token_count = len(sampler.tokenizer.encode(generated_text))
+    prompt_encoded = sampler.tokenizer.encode(prompt)
+    prompt_token_count = len(prompt_encoded)
+    completion_token_count = len(output.tokens)
     usage = Usage(
         prompt_tokens=prompt_token_count,
         completion_tokens=completion_token_count,
@@ -176,16 +180,29 @@ async def create_completion(request: ChatCompletionRequest):
 
 @app.get("/v1/models")
 async def list_models():
-    sampler = SERVER_STATE["sampler"]
-    return {"object": "list", "data": [{"id": sampler.model, "object": "model", "created": 0, "owned_by": "custom"}]}
+    sampler = SERVER_STATE.get("sampler")
+    if sampler is None:
+        # Mirror the initialization check behavior used in create_completion
+        raise HTTPException(status_code=503, detail="Model is not initialized")
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": sampler.model,
+                "object": "model",
+                "created": 0,
+                "owned_by": "custom",
+            }
+        ],
+    }
 
 def run_server():
     parser = argparse.ArgumentParser(description="PITA API Server")
-    parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Model name or path")
-    parser.add_argument("--engine", type=str, default="vllm", choices=["vllm", "llama_cpp"], help="Inference engine")
-    parser.add_argument("--tokenizer", type=str, default=None, help="Tokenizer path (optional)")
-    parser.add_argument("--port", type=int, default=8001, help="Port number")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument("--model", type=str, default=SERVER_CONFIG["model"], help="Model name or path")
+    parser.add_argument("--engine", type=str, default=SERVER_CONFIG["engine"], choices=["vllm", "llama_cpp"], help="Inference engine")
+    parser.add_argument("--tokenizer", type=str, default=SERVER_CONFIG["tokenizer"], help="Tokenizer path (optional)")
+    parser.add_argument("--port", type=int, default=SERVER_CONFIG["port"], help="Port number")
+    parser.add_argument("--host", type=str, default=SERVER_CONFIG["host"], help="Host address")
     
     args = parser.parse_args()
     
