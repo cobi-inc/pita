@@ -227,9 +227,7 @@ def run_server():
         "host": args.host
     }
     
-    # Create app with specific config
-    # We must overwrite the global 'app' if we want uvicorn to use passing 'app' object directly, 
-    # but uvicorn.run can take the app instance.
+    # Create a dedicated app instance with the specified config and pass it directly to uvicorn.run
     server_app = create_app(config)
     
     uvicorn.run(server_app, host=args.host, port=args.port)
