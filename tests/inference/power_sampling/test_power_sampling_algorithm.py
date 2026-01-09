@@ -161,7 +161,7 @@ class TestPowerSamplingSampleMethod:
         np.random.seed(42)
         
         # Execute
-        result = ps.sample(mock_sampler, "Test prompt")
+        ps.sample(mock_sampler, "Test prompt")
         
         # Should have: 1 initial + mcmc_steps refinements = 5 calls
         assert mock_sampler.call_count == 1 + mcmc_steps, \
