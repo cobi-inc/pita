@@ -23,7 +23,6 @@ import os
 import tempfile
 import random
 from unittest.mock import Mock
-from dataclasses import dataclass
 
 # PITA Libraries
 from pita.inference.LLM_backend import Output
