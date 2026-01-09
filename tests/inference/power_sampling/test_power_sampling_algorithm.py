@@ -194,7 +194,7 @@ class TestPowerSamplingSampleMethod:
         np.random.seed(42)
         
         # Execute
-        result = ps.sample(mock_sampler, "Test prompt")
+        ps.sample(mock_sampler, "Test prompt")
         
         # Extract the indices used (idx = context_length - max_tokens for MCMC calls)
         mcmc_max_tokens = [log['max_tokens'] for log in mock_sampler.call_log[1:]]
