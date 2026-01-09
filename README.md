@@ -106,7 +106,7 @@ import openai
 
 client = openai.OpenAI(
     base_url="http://localhost:8001/v1",
-    api_key="none"
+    api_key="not-used"  # Local server does not require authentication
 )
 
 response = client.chat.completions.create(
