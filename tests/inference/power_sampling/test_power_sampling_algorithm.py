@@ -525,7 +525,7 @@ class TestPowerSamplingAlgorithmVerification:
         random.seed(42)
         np.random.seed(42)
         
-        result = ps.sample(mock_sampler, "Test prompt")
+        ps.sample(mock_sampler, "Test prompt")
         
         # After first block, MCMC steps should have varying max_tokens
         mcmc_tokens = [log['max_tokens'] for log in mock_sampler.call_log[1:]]
