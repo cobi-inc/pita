@@ -228,7 +228,7 @@ class TestPowerSamplingSampleMethod:
             random.seed(42)
             np.random.seed(42)
             
-            result = ps.sample(mock_sampler, "Test prompt", logging=True, log_file_path=log_path)
+            ps.sample(mock_sampler, "Test prompt", logging=True, log_file_path=log_path)
             
             # Read the log file
             with open(log_path, 'r') as f:
