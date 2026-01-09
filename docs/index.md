@@ -19,21 +19,26 @@ This library can also be used to generate non-probabilistic, non-test-time scale
 
 ### Sampling Methodologies
 - **Power Sampling**: Leverage Metropolis-Hastings MCMC Sampling to generate diverse and high-quality outputs.
-- **Sequential Monte Carlo/Particle Filtering**: Sequential Monte Carlo/Particle Filtering generates diverse and high-quality token sequences, parsing and extending sequences.
-- **Best-of-N**
-- **(WIP) Beam Search**
+- **Sequential Monte Carlo (SMC)**: Sequential Monte Carlo/Particle Filtering generates diverse and high-quality token sequences, parsing and extending sequences.
+- **Best-of-N**: Generate N sequences and select the best based on decision metrics
+- **(WIP) Beam Search**: Maintain multiple candidate sequences during generation
+- **(WIP) Hybrid Strategies**: Combine chain and token-level scaling methods
+
 ### Decision Metrics
-- **Log Probability**: 
-- **Power Scaling**: 
-- **Entropy**:  
-- **(WIP) Entrop Minimization Inference**: 
-- **(WIP) Verifiers**: 
+- **Log Probabilities**: Standard model confidence scoring based on token probabilities
+- **Power Distribution**: Temperature-scaled confidence metrics using logits and normalization constants
+- **Entropy**: Model uncertainty quantification at each token position
+- **Likelihood Confidence**: Combined metric multiplying probability by confidence (exp(-entropy))
+- **(WIP) Entropy Minimization Inference**: Advanced entropy-based sampling
+- **(WIP) Process Reward Models (PRM)**: External graders for decision-making
+- **(WIP) Verifiers**: External verification models for quality assessment
+
 ### Inference Backends
-- **vLLM V1**
-- **(WIP) Llama.cpp**
-- **(WIP) Transformers**
-- **(WIP) TensorRT**
-- **(WIP) deepspeed**
+- **vLLM**: High-throughput GPU inference (primary backend, fully supported)
+- **llama.cpp**: CPU/GPU inference with GGUF model support (fully supported)
+- **TensorRT**: NVIDIA-optimized inference (supported, requires Redis)
+- **Transformers**: HuggingFace integration for flexibility (basic support)
+- **(WIP) DeepSpeed**: Distributed inference support
 
 ## Getting Started
 

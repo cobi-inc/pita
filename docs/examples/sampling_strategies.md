@@ -4,45 +4,182 @@
 
 ## Power Sampling
 
-Leverages Metropolis-Hastings MCMC Sampling for diverse and high-quality outputs.
+Power Sampling uses Metropolis-Hastings MCMC to iteratively refine generated tokens. It operates at the token level, proposing and accepting/rejecting token replacements based on a decision metric.
 
 ```python
-from pita.sampling.power_sample import power_sampling
+from pita.inference.LLM_backend import AutoregressiveSampler
 
-# Assuming 'sampler' is already initialized
-text, _, _, _, _ = power_sampling(
-    sampler=sampler,
-    prompt="Solving complex physics problem...",
-    # Custom power sampling params can be set in sampler.power_sampling_params
+# Initialize sampler
+sampler = AutoregressiveSampler(
+    engine="vllm",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    logits_processor=True  # Required for power sampling
 )
+
+# Enable power sampling
+sampler.enable_power_sampling(
+    block_size=250,          # Tokens generated per block
+    MCMC_steps=3,            # Number of MCMC refinement steps
+    token_metric="power_distribution"  # Metric for accept/reject decisions
+)
+
+# Use token sampling
+prompt = "Solve the equation: 3x + 7 = 22"
+output = sampler.token_sample(prompt)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(generated_text)
 ```
+
+### Available Token Metrics for Power Sampling
+
+- `"logprobs"`: Standard log probability scoring
+- `"power_distribution"`: Temperature-scaled power distribution (recommended)
+- `"entropy"`: Entropy-based metric
+- `"likelihood_confidence"`: Combined probability and confidence
 
 ## Sequential Monte Carlo (SMC)
 
-SMC/Particle Filtering generates diverse sequences by maintaining multiple candidate paths.
+SMC maintains multiple candidate sequences (particles) and selectively prunes/extends them based on quality metrics. It operates at the chain level.
 
 ```python
-# SMC sampling example
-# sampler.smc_sampling_params = ...
-# generated_text = smc_sampling(sampler, prompt)
+from pita.inference.LLM_backend import AutoregressiveSampler
+
+# Initialize sampler
+sampler = AutoregressiveSampler(
+    engine="vllm",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    logits_processor=True  # Required for SMC metrics
+)
+
+# Enable SMC
+sampler.enable_smc(
+    num_particles=5,         # Number of candidate sequences to maintain
+    tokens_per_step=50,      # Tokens generated per SMC step
+    stop_on_eos=True,        # Stop when EOS token is generated
+    token_metric="likelihood_confidence",  # Metric for particle scoring
+    aggregation="last"       # How to aggregate token scores ("last", "minimum", "product")
+)
+
+# Use chain sampling
+prompt = "Write a detailed explanation of photosynthesis."
+output = sampler.chain_sample(prompt)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(generated_text)
 ```
+
+### SMC Aggregation Methods
+
+- `"last"`: Use only the last token's metric for scoring
+- `"minimum"`: Use the minimum metric across all tokens
+- `"product"`: Multiply metrics across all tokens
+- `"model_aggregate"`: Custom model-based aggregation (WIP)
 
 ## Best-of-N
 
-Generates N sequences and selects the best one based on a metric.
+Best-of-N generates N independent sequences and selects the best one based on a decision metric. It operates at the chain level.
 
 ```python
-# Best-of-N sampling example
-# sampler.best_of_sampling_params = ...
-# best_sequence = best_of_n_sampling(sampler, prompt)
+from pita.inference.LLM_backend import AutoregressiveSampler
+
+# Initialize sampler
+sampler = AutoregressiveSampler(
+    engine="vllm",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    logits_processor=True
+)
+
+# Enable Best-of-N
+sampler.enable_best_of_n(
+    N=5,                     # Generate 5 candidate sequences
+    token_metric="likelihood_confidence"  # Metric for selecting best sequence
+)
+
+# Use chain sampling
+prompt = "Explain the concept of entropy in thermodynamics."
+output = sampler.chain_sample(prompt)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(generated_text)
+
+# Access the scores of all N candidates
+if hasattr(output, 'candidate_scores'):
+    print(f"Scores of all candidates: {output.candidate_scores}")
 ```
 
-## Combining Strategies
+## Combining Strategies (Advanced)
 
-You can layer strategies to achieve higher reasoning performance.
+You can combine chain-level and token-level strategies for hybrid scaling. For example, use Power Sampling within Best-of-N.
 
 ```python
-# Configuration for combined strategy
-# sampler.power_sampling_params = ...
-# sampler.smc_sampling_params = ...
+from pita.inference.LLM_backend import AutoregressiveSampler
+
+# Initialize sampler
+sampler = AutoregressiveSampler(
+    engine="vllm",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    logits_processor=True
+)
+
+# Enable both token-level (Power Sampling) and chain-level (Best-of-N)
+sampler.enable_power_sampling(
+    block_size=200,
+    MCMC_steps=2,
+    token_metric="power_distribution"
+)
+
+sampler.enable_best_of_n(
+    N=3,
+    token_metric="likelihood_confidence"
+)
+
+# When both are enabled, you can control which to use
+# Use power sampling only
+output_power = sampler.token_sample(prompt)
+
+# Use best-of-N only (will use standard sampling, not power)
+output_bon = sampler.chain_sample(prompt)
+
+# Note: Full hybrid (Power Sampling within each Best-of-N candidate) is WIP
+```
+
+## Using Sampling Strategies via API
+
+You can trigger sampling strategies via the API server using special system prompts:
+
+```python
+import openai
+
+client = openai.OpenAI(
+    base_url="http://localhost:8001/v1",
+    api_key="none"
+)
+
+# Power Sampling via API: ITS PS_<max_tokens>_<block_size>_<MCMC_steps>
+response = client.chat.completions.create(
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    messages=[
+        {"role": "system", "content": "ITS PS_1000_250_3 You are a helpful assistant."},
+        {"role": "user", "content": "Solve: 5x - 3 = 17"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+## Disabling Sampling Strategies
+
+To revert to standard sampling:
+
+```python
+# Disable token sampling (if enabled)
+if hasattr(sampler, 'token_sample_name'):
+    sampler.token_sample_name = None
+    sampler.token_sample_fn = None
+
+# Disable chain sampling (if enabled)
+if hasattr(sampler, 'chain_sample_name'):
+    sampler.chain_sample_name = None
+    sampler.chain_sample_fn = None
+
+# Now sampler.sample() will use standard autoregressive sampling
+output = sampler.sample(prompt)
 ```

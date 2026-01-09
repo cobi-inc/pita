@@ -7,24 +7,31 @@
 Use `pita` directly in your Python code for maximum control and offline processing.
 
 ```python
-from pita.inference.autoregressive_sampler_backend import create_autoregressive_sampler
-from pita.sampling.power_sample import power_sampling
+from pita.inference.LLM_backend import AutoregressiveSampler
 
-# Load the sampler
-sampler = create_autoregressive_sampler(
+# Initialize the sampler
+sampler = AutoregressiveSampler(
     engine="vllm",
-    model="Qwen/Qwen3-4B-AWQ"
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    logits_processor=True
 )
 
-# Perform custom sampling
+# Basic sampling
 prompt = "Write a short story about a robot."
-generated_text, acceptances, _, _, _ = power_sampling(
-    sampler=sampler,
-    prompt=prompt
+output = sampler.sample(prompt)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(f"Generated text: {generated_text}")
+
+# Power Sampling
+sampler.enable_power_sampling(
+    block_size=250,
+    MCMC_steps=3,
+    token_metric="power_distribution"
 )
 
-print(f"Generated text: {generated_text}")
-print(f"Acceptance rate: {sum(acceptances)/len(acceptances):.2f}")
+output = sampler.token_sample(prompt)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(f"Generated text (Power Sampling): {generated_text}")
 ```
 
 ## API Mode
@@ -52,7 +59,7 @@ client = openai.OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="Qwen/Qwen3-4B-AWQ",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Tell me a joke."}

@@ -44,19 +44,30 @@ An API endpoint can be created from the command line using:
 
 ### Using in Python Code
 
-You can also import and use `pita` components directly in your Python scripts.
+You can import and use `pita` components directly in your Python scripts.
 
 ```python
-import pita
-from pita.inference.vllm_backend import create_LLM_object
+from pita.inference.LLM_backend import AutoregressiveSampler
 
-# Example: setting up an LLM object
-llm = create_LLM_object(
-    model_name="facebook/opt-125m",
-    logits_processor=True
+# Initialize the sampler
+sampler = AutoregressiveSampler(
+    engine="vllm",
+    model="facebook/opt-125m",
+    logits_processor=True,
+    max_probs=100
 )
 
-# Further usage depends on specific modules (see API Reference)
+# Configure sampling parameters
+sampler.sampling_params.max_tokens = 50
+sampler.sampling_params.temperature = 1.0
+
+# Generate text
+context = "What is the capital of France?"
+output = sampler.sample(context)
+generated_text = sampler.tokenizer.decode(output.output_ids)
+print(generated_text)
+
+# Further usage with advanced sampling strategies (see examples)
 ```
 
 
