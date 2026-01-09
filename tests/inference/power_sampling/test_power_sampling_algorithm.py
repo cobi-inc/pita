@@ -429,7 +429,7 @@ class TestPowerSamplingMaxTokensRestoration:
         random.seed(42)
         np.random.seed(42)
         
-        result = ps.sample(mock_sampler, "Test prompt")
+        ps.sample(mock_sampler, "Test prompt")
         
         # max_tokens should be restored
         assert mock_sampler.sampling_params.max_tokens == original_max_tokens, \
