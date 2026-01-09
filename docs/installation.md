@@ -105,8 +105,8 @@ Best for: Large models, high throughput, production deployments.
 
 ```bash
 # Create environment with vLLM and CUDA 12.8
-conda env create -f environment_files/power_sampling_vllm_cuda.yml
-conda activate power_sampling
+conda env create -f environment_files/vllm_cuda.yml
+conda activate pita_vllm_cuda
 
 # Install pita
 pip install -e .

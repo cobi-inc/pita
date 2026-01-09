@@ -123,42 +123,42 @@ def load_benchmark(
     Raises:
         ValueError: If the dataset_name is not supported.
     """
-        # Load either the MATH500 or AIME dataset
-        if(dataset_name == "MATH500"):
-            # Load the Math500 dataset
-            dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
-            # Convert all keys to lowercase
-            dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
-            # convert answers to a string
-            dataset = dataset.cast_column('answer', datasets.Value('string'))
+    # Load either the MATH500 or AIME dataset
+    if(dataset_name == "MATH500"):
+        # Load the Math500 dataset
+        dataset = datasets.load_dataset("HuggingFaceH4/MATH-500")["test"]
+        # Convert all keys to lowercase
+        dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
+        # convert answers to a string
+        dataset = dataset.cast_column('answer', datasets.Value('string'))
 
-            # Create the system message, pre, and post question templates
-            system_message = MATH_SYSTEM_MESSAGE
-            pre_question = MATH_PRE_QUESTION 
-            post_question = MATH_ANSWER_FORMAT
+        # Create the system message, pre, and post question templates
+        system_message = MATH_SYSTEM_MESSAGE
+        pre_question = MATH_PRE_QUESTION 
+        post_question = MATH_ANSWER_FORMAT
 
-        elif(dataset_name == "AIME"):
-            #Load both parts of the AIME tests and concatenate them
-            dataset = datasets.concatenate_datasets([datasets.load_dataset("opencompass/AIME2025", "AIME2025-I")["test"], 
-                                                    datasets.load_dataset("opencompass/AIME2025", "AIME2025-II")["test"]])
-            # Convert all keys to lowercase
-            dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
-            # convert answers to a string
-            dataset = dataset.cast_column('answer', datasets.Value('string'))
-            # convert the question column name to "problem"
-            dataset = dataset.rename_column("question", "problem")
-            
-            # Create the system message, pre, and post question templates
-            system_message = MATH_SYSTEM_MESSAGE
-            pre_question = MATH_PRE_QUESTION
-            post_question = MATH_ANSWER_FORMAT
+    elif(dataset_name == "AIME"):
+        #Load both parts of the AIME tests and concatenate them
+        dataset = datasets.concatenate_datasets([datasets.load_dataset("opencompass/AIME2025", "AIME2025-I")["test"], 
+                                                datasets.load_dataset("opencompass/AIME2025", "AIME2025-II")["test"]])
+        # Convert all keys to lowercase
+        dataset = dataset.map(lambda x: {k.lower(): v for k, v in x.items()})
+        # convert answers to a string
+        dataset = dataset.cast_column('answer', datasets.Value('string'))
+        # convert the question column name to "problem"
+        dataset = dataset.rename_column("question", "problem")
+        
+        # Create the system message, pre, and post question templates
+        system_message = MATH_SYSTEM_MESSAGE
+        pre_question = MATH_PRE_QUESTION
+        post_question = MATH_ANSWER_FORMAT
 
-        else: 
-            raise ValueError(f"Dataset {dataset_name} not supported for benchmarking.")
+    else: 
+        raise ValueError(f"Dataset {dataset_name} not supported for benchmarking.")
 
-        # Format the dataset and return the system message, question list, and answer list
-        question_list, answer_list = format_dataset(dataset, pre_question, post_question)
-        return system_message, question_list, answer_list
+    # Format the dataset and return the system message, question list, and answer list
+    question_list, answer_list = format_dataset(dataset, pre_question, post_question)
+    return system_message, question_list, answer_list
 
 # Benchmark the Math500 dataset with different sampling methods
 def benchmark_sampling(
