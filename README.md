@@ -130,8 +130,8 @@ print(response.choices[0].message.content)
 ## Project Structure
 
 ```
-pita/
-├── pita/                          # Main package
+pita/                              # Repository root
+├── pita/                          # Main Python package
 │   ├── inference/                 # Backend abstraction layer
 │   │   ├── LLM_backend.py         # Core AutoregressiveSampler
 │   │   ├── vllm_backend.py        # vLLM engine
