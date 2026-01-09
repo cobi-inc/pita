@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from typing import List
 
 # PITA Libraries
-from pita.inference.LLM_backend import Output, Sampling_Params
+from pita.inference.LLM_backend import Output
 from pita.sampling.power_sample import Power_Sampling
 
 
