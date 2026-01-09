@@ -28,7 +28,7 @@ from typing import List
 
 # PITA Libraries
 from pita.inference.LLM_backend import Output, Sampling_Params
-from pita.sampling.power_sample import Power_Sampling, safe_concat
+from pita.sampling.power_sample import Power_Sampling
 
 
 def create_mock_output(num_tokens: int, seed: int = 42) -> Output:
