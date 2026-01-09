@@ -300,7 +300,7 @@ class TestPowerSamplingSampleMethod:
         random.seed(42)
         np.random.seed(42)
         
-        result = ps.sample(mock_sampler, "Test prompt")
+        ps.sample(mock_sampler, "Test prompt")
         
         # With 2 blocks and 2 MCMC steps each, we'd expect 6 calls without EOS
         # With EOS in first block, should terminate after first block's MCMC
