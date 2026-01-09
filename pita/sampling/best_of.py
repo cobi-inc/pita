@@ -59,6 +59,7 @@ class Best_of_N:
         # Return the index of the best sequence
         return best_index
 
+    # TODO Add support for token_sampling like in SMC
     def sample(
         self,
         sampler: AutoregressiveSampler,
