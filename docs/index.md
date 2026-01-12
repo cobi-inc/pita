@@ -11,7 +11,7 @@
 </p>
 
 
-**PITA** (Probabilistic Inference Time Algorithms) is a library designed to consolidate and simplfy the usage of probabilistic inference time algorithms with LLMs. It is built on top of existing inference frameworks and provides a unified interface for different inference backends.
+**PITA** (Probabilistic Inference Time Algorithms) is a library designed to consolidate and simplify the usage of probabilistic inference time algorithms with LLMs. It is built on top of existing inference frameworks and provides a unified interface for different inference backends.
 
 ## Introduction
 
