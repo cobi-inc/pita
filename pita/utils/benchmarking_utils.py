@@ -2,6 +2,7 @@
 import os
 import time
 import random
+from typing import Any
 # Data Manipulation Libraries
 import pandas as pd
 #Tokenizing Libraries
@@ -171,7 +172,7 @@ def benchmark_sampling(
     sampling_techniques: list[bool],
     max_questions: int = 0,
     output_file_name: str = "math500_power_sampling_results.csv",
-    **kwargs
+    **kwargs: Any
 ) -> None:
     """
     Benchmark different sampling techniques on a dataset of math problems.

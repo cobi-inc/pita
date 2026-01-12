@@ -6,6 +6,7 @@ following the same pattern as vllm_backend.py and llama_cpp_backend.py.
 """
 
 from tensorrt_llm import LLM, SamplingParams
+from typing import Any
 
 # Custom Libraries
 from pita.inference.LLM_backend import Output
@@ -20,15 +21,14 @@ from pita.utils.constants import REDIS_HOST, REDIS_PORT
 
 
 def sample(
-        self, 
-        context: str | list[str], 
-        **kwargs 
+        self,
+        context: str | list[str],
+        **kwargs: Any
     ) -> Output:
     """
     Generate text from the given context using the TensorRT-LLM engine.
 
     Args:
-        self: The AutoregressiveSampler instance.
         context (str | list[str]): The input context string to generate from.
         **kwargs: Additional keyword arguments passed to the TensorRT-LLM generate function.
 
@@ -211,15 +211,15 @@ def sample(
 
 
 def create_LLM_object(
-        model_name,
-        model_type=None, 
-        dtype="auto", 
-        gpu_memory_utilization=0.85, 
-        max_model_len=2048, 
-        max_logprobs=None,
-        logits_processor=False,
-        **kwargs
-    ):
+        model_name: str,
+        model_type: str | None = None,
+        dtype: str = "auto",
+        gpu_memory_utilization: float = 0.85,
+        max_model_len: int = 2048,
+        max_logprobs: int | None = None,
+        logits_processor: bool = False,
+        **kwargs: Any
+    ) -> LLM:
     """
     Create the LLM object given the model name and engine parameters.
 
@@ -253,7 +253,7 @@ def create_LLM_object(
     return llm
 
 
-def create_tensorrt_engine_params():
+def create_tensorrt_engine_params() -> SamplingParams:
     """
     Create the TensorRT-LLM SamplingParams object.
 
@@ -263,7 +263,7 @@ def create_tensorrt_engine_params():
     return SamplingParams()
 
 
-def check_token_metric_compatibility(sampler, token_metric: str):
+def check_token_metric_compatibility(sampler: Any, token_metric: str) -> None:
     """
     Check that the TensorRT-LLM engine can support the given token metric with the given configuration.
 

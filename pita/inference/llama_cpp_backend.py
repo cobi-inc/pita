@@ -1,5 +1,6 @@
 from llama_cpp import Llama
 import numpy as np
+from typing import Any
 
 # Custom Libraries
 from pita.utils.system_utils import get_total_vram, get_gpu_vram_usage_mb
@@ -10,9 +11,9 @@ from pita.inference.llama_cpp_logits_processor import create_logits_processor_li
 
 
 def sample(
-        self, 
-        context: str | list[str], 
-        **kwargs 
+        self,
+        context: str | list[str],
+        **kwargs: Any
     ) -> Output:
     """
     Generate text from the given context using the llama.cpp backend.
@@ -181,15 +182,15 @@ def sample(
 
 
 def create_LLM_object(
-        model_name,
-        model_type=None,
-        dtype="auto", 
-        gpu_memory_utilization=0.85, 
-        max_model_len=2048, 
-        max_logprobs=None,
-        logits_processor=False,
-        **kwargs
-    ):
+        model_name: str,
+        model_type: str | None = None,
+        dtype: str = "auto",
+        gpu_memory_utilization: float = 0.85,
+        max_model_len: int = 2048,
+        max_logprobs: int | None = None,
+        logits_processor: bool = False,
+        **kwargs: Any
+    ) -> Llama:
     """
     Create the LLM object given the model name and engine parameters.
 
@@ -285,7 +286,7 @@ def create_LLM_object(
     return llm
 
 
-def check_token_metric_compatibility(sampler, token_metric: str):
+def check_token_metric_compatibility(sampler: Any, token_metric: str) -> None:
     """
     Check that the llama.cpp engine can support the given token metric with the given configuration.
 

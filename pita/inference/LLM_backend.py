@@ -3,6 +3,7 @@ from transformers import AutoTokenizer
 
 # Standard Libraries
 import copy
+from typing import Any
 
 # Custom Libraries
 # Lazy imports for backends - will be imported when needed
@@ -288,8 +289,8 @@ class AutoregressiveSampler:
         logits_processor: bool,
         trust_remote_code: bool,
         sampling_params: Sampling_Params,
-        **kwargs
-    ):      
+        **kwargs: Any
+    ) -> None:      
     
         """Create an AutoregressiveSampler object given the engine, engine parameters, and model name.
 
@@ -306,9 +307,6 @@ class AutoregressiveSampler:
             sampling_params (Sampling_Params): General sampling parameters to use (Sampling_Params Class).
             **kwargs: Additional keyword arguments passed to the backend LLM creation function.
 
-        Returns:
-            An AutoregressiveSampler object.
-            
         Raises:
             ValueError: If the engine is not supported.
         """
@@ -413,15 +411,14 @@ class AutoregressiveSampler:
         self.chain_sampling = None
         self.token_sampling = None
 
-    def sample(self, 
+    def sample(self,
         context: str,
-        **kwargs
+        **kwargs: Any
     )-> Output:
         """Samples programmatically from the LLM given a context and max new tokens. Sample function is the engine_backend.sample function.
 
         Args:
             context (str): The input context.
-            max_new_tokens (int): Maximum number of new tokens to generate.
             **kwargs: Additional keyword arguments passed to the chosen LLM Inference Engine.
 
         Returns:
@@ -429,9 +426,9 @@ class AutoregressiveSampler:
         """
         return self.sample_fn(self, context, **kwargs)
 
-    def token_sample(self, 
+    def token_sample(self,
         context: str,
-        **kwargs
+        **kwargs: Any
     )-> Output:
         """Samples programmatically from the LLM using the token sampling function
 
@@ -447,9 +444,9 @@ class AutoregressiveSampler:
         else:
             raise ValueError("Token sampling is not enabled for this LLM/Engine.")
 
-    def chain_sample(self, 
+    def chain_sample(self,
         context: str,
-        **kwargs
+        **kwargs: Any
     )-> Output:
         """Samples programmatically from the LLM using the chain sampling function
 

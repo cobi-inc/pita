@@ -1,6 +1,17 @@
 # PITA
 
-**PITA** (Probabilistic Inference Time Algorithms) is a library designed to consolidate and simplfy the usage of probabilistic inference time algorithms with LLMs. It is built on top of existing inference frameworks and provides a unified interface for different inference backends.
+<div align="center">
+  <img src="assets/pita_logo.png" alt="PITA Logo" width="600"/>
+</div>
+
+<p align="center">
+  <img src="https://img.shields.io/github/stars/cobi-inc-MC/pita?style=social" alt="Star">
+  <img src="https://img.shields.io/github/forks/cobi-inc-MC/pita?style=social" alt="Fork">
+  <img src="https://img.shields.io/github/watchers/cobi-inc-MC/pita?style=social" alt="Watch">
+</p>
+
+
+**PITA** (Probabilistic Inference Time Algorithms) is a library designed to consolidate and simplify the usage of probabilistic inference time algorithms with LLMs. It is built on top of existing inference frameworks and provides a unified interface for different inference backends.
 
 ## Introduction
 
@@ -22,7 +33,7 @@ This library can also be used to generate non-probabilistic, non-test-time scale
 - **Sequential Monte Carlo (SMC)**: Sequential Monte Carlo/Particle Filtering generates diverse and high-quality token sequences, parsing and extending sequences.
 - **Best-of-N**: Generate N sequences and select the best based on decision metrics
 - **(WIP) Beam Search**: Maintain multiple candidate sequences during generation
-- **(WIP) Hybrid Strategies**: Combine chain and token-level scaling methods
+- **Hybrid Strategies**: Combine chain and token-level scaling methods
 
 ### Decision Metrics
 - **Log Probabilities**: Standard model confidence scoring based on token probabilities
@@ -37,7 +48,7 @@ This library can also be used to generate non-probabilistic, non-test-time scale
 - **vLLM**: High-throughput GPU inference (primary backend, fully supported)
 - **llama.cpp**: CPU/GPU inference with GGUF model support (fully supported)
 - **TensorRT**: NVIDIA-optimized inference (supported, requires Redis)
-- **Transformers**: HuggingFace integration for flexibility (basic support)
+- **(WIP) Transformers**: HuggingFace integration for flexibility (basic support)
 - **(WIP) DeepSpeed**: Distributed inference support
 
 ## Getting Started
@@ -53,14 +64,13 @@ We welcome contributions! Please see the [repository](https://github.com/cobi-in
 ## License
 (WIP)
 ## Citation
-(WIP)
 If you use PITA in your research, please cite it as follows:
 
 ```bibtex
-@misc{pita2025,
+@misc{pita2026,
   author = {COBI, Inc. Engineering Team},
   title = {PITA: Probabilistic Inference Time Algorithms},
-  year = {2025},
+  year = {2026},
   publisher = {GitHub},
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/cobi-inc-MC/pita}}

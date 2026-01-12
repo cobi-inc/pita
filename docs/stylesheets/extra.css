@@ -1,0 +1,99 @@
+/* Color scheme inspired by PITA branding */
+:root {
+    /* Primary colors from logo */
+    --md-primary-fg-color: #2C3E5A;  /* Deep navy blue */
+    --md-primary-fg-color--light: #3B4F6B;
+    --md-primary-fg-color--dark: #1F2D42;
+
+    /* Accent colors from tech elements */
+    --md-accent-fg-color: #7DCDDC;  /* Light blue/cyan */
+    --md-accent-fg-color--transparent: rgba(125, 205, 220, 0.1);
+
+    /* Pita bread warm tones */
+    --pita-orange: #F5B55F;
+    --pita-orange-light: #FFC97D;
+    --pita-orange-dark: #E8A849;
+
+    /* Tech element colors */
+    --tech-purple: #9B7CC5;
+    --tech-green: #6EC9A8;
+    --tech-blue: #5BB8D4;
+}
+
+/* Logo styling */
+.md-header__button.md-logo img {
+    height: 100px;
+    width: auto;
+}
+
+/* Header styling with gradient inspired by logo */
+.md-header {
+    background: linear-gradient(135deg, var(--md-primary-fg-color) 0%, var(--md-primary-fg-color--light) 100%);
+}
+
+/* Active navigation tab with pita orange */
+.md-tabs__link--active {
+    color: var(--pita-orange) !important;
+}
+
+/* Links with cyan accent */
+.md-typeset a {
+    color: var(--tech-blue);
+}
+
+.md-typeset a:hover {
+    color: var(--md-accent-fg-color);
+}
+
+/* Code blocks with tech theme */
+.md-typeset code {
+    background-color: rgba(43, 62, 90, 0.05);
+    border: 1px solid rgba(125, 205, 220, 0.2);
+}
+
+/* Buttons and call-to-actions with pita orange */
+.md-typeset .md-button--primary {
+    background-color: var(--pita-orange);
+    border-color: var(--pita-orange);
+    color: white;
+}
+
+.md-typeset .md-button--primary:hover {
+    background-color: var(--pita-orange-dark);
+    border-color: var(--pita-orange-dark);
+}
+
+/* Admonitions with brand colors */
+.md-typeset .admonition.note,
+.md-typeset .admonition.info {
+    border-left-color: var(--tech-blue);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset .admonition.hint {
+    border-left-color: var(--tech-green);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset .admonition.attention {
+    border-left-color: var(--pita-orange);
+}
+
+/* Search box highlight */
+.md-search__input:focus {
+    border-color: var(--tech-blue);
+}
+
+/* Table of contents active item */
+.md-nav__link--active {
+    color: var(--pita-orange);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar-thumb {
+    background-color: var(--md-primary-fg-color--light);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--tech-blue);
+}
