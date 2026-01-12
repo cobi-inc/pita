@@ -1,11 +1,22 @@
-site_name: Pita Documentation
+site_name: PITA
 theme:
   name: material
+  logo: assets/pita_cat.png
+  favicon: assets/pita_cat.png
+  palette:
+    # Primary color scheme matching PITA branding
+    scheme: default
+    primary: custom  # Will be overridden by CSS
+    accent: cyan
   features:
     - navigation.tabs
     - navigation.sections
     - navigation.expand
     - toc.integrate
+
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search

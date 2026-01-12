@@ -190,7 +190,7 @@ conda env create -f <environment_file.yml>
 |----------|-----------|------|--------|
 | Linux + NVIDIA CUDA | ✅ | ✅ | Fully supported |
 | Linux + CPU | ✅ | ❌ | llama.cpp only |
-| macOS + Apple Silicon | 🔄 | ❌ | In development |
+| macOS + Apple Silicon | 🔄 | 🔄 | In development |
 | Linux + AMD ROCm | 🔄 | 🔄 | In development |
 
 ✅ = Supported | 🔄 = In development | ❌ = Not supported
