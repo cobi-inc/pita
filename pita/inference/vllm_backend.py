@@ -95,7 +95,7 @@ def sample(
 
 def create_LLM_object(
         model_name: str,
-        model_type: str = None,
+        model_type: str | None = None,
         dtype: str = "auto",
         gpu_memory_utilization: float = 0.85,
         max_model_len: int = 2048,
