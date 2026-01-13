@@ -64,7 +64,6 @@ def cleanup(sampler):
     print("Done.")
 
 import argparse
-import sys
 
 def instantiate_llama_cpp_instance():
     model_name = "Qwen/Qwen2.5-0.5B-Instruct-GGUF" # HuggingFace repo ID
