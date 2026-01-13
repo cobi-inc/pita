@@ -1,0 +1,10 @@
+name: pita_llamacpp_windows_cpu
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - llama-cpp-python
+  - pytest
+  - pytest-asyncio
