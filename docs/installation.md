@@ -92,7 +92,13 @@ python -c "import pita; import llama_cpp; print('CPU installation successful!')"
 
 For systems with NVIDIA GPUs. Choose your preferred inference engine:
 
-### Option A: llama.cpp with CUDA (Recommended)
+### Option A.1: llama.cpp with CUDA using scripts (Recommended)
+
+For a streamlined installation on Linux, we provide an automated setup script that handles environment creation and CUDA compilation for you.
+
+See the [Automated Installation Guide](automated_installation.md) for detailed instructions on using the `setup_llamacpp_cuda.sh` script.
+
+### Option A.2: llama.cpp with CUDA (Manual)
 
 Best for: Smaller models, lower memory usage, flexible quantization options.
 
