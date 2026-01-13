@@ -55,4 +55,18 @@ def test_entropy(sampler):
     entropy = calc_token_metric(output, sampler, "entropy")
     assert entropy.shape == (3,)
     assert np.allclose(entropy, output.entropy)
-    
+
+def test_likelihood_confidence(sampler):
+    output = Output(
+        tokens=[1,2,3], 
+        top_k_logits=np.array([[1,2,3],[2,3,4],[3,4,5]]), 
+        top_k_logprobs=np.array([[1,2,3],[4,5,6],[7,8,9]]), 
+        unprocessed_log_normalization_constant=np.array([4,5,6]), 
+        temp_processed_log_normalization_constant=np.array([5,6,7]), 
+        entropy=np.array([6,7,8])
+    )
+    likelihood_confidence = calc_token_metric(output, sampler, "likelihood_confidence")
+    assert likelihood_confidence.shape == (3,)
+    # Manually calculate expected values: logprobs[:, 0] - entropy
+    expected = output.top_k_logprobs[:, 0] - output.entropy
+    assert np.allclose(likelihood_confidence, expected)
