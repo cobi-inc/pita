@@ -8,7 +8,7 @@ This guide explains how to set up `pita` with `llama-cpp-python` on Windows usin
 ## Installation Steps
 
 ### 1. Create the Conda Environment
-Open **Anaconda Powershell Prompt** and run following commands from the project root:
+Open **Anaconda Powershell Prompt** and run the following commands from the project root:
 
 ```powershell
 # Create environment from YAML file
