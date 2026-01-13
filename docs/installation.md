@@ -20,16 +20,56 @@ For development, testing, or systems without GPU acceleration.
 
 ### Option 1: llama.cpp (Recommended for CPU)
 
+Save the following as `pita_llama_cpp.yml`:
+```yaml
+name: pita_llama_cpp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - llama-cpp-python
+  - pytest
+```
+
+Then run:
 ```bash
-# Create environment
-conda env create -f environment_files/pita_llama_cpp.yml
+conda env create -f pita_llama_cpp.yml
 conda activate pita_llama_cpp
 
 # Install pita in editable mode
 pip install -e .
 ```
 
-### Option 2: Manual Setup
+### Option 2: Windows CPU (llama.cpp)
+
+For Windows users without a dedicated GPU.
+
+Save the following as `llamacpp_windows_cpu.yml`:
+```yaml
+name: pita_llamacpp_windows_cpu
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - llama-cpp-python
+  - pytest
+  - pytest-asyncio
+```
+
+Then run:
+```powershell
+conda env create -f llamacpp_windows_cpu.yml
+conda activate pita_llamacpp_windows_cpu
+
+# Install pita (ensure you are in the root directory)
+pip install -e ".[llama_cpp]"
+```
+
+### Option 3: Manual Setup
 
 ```bash
 conda create -n pita_cpu python=3.12 -y
@@ -56,32 +96,38 @@ For systems with NVIDIA GPUs. Choose your preferred inference engine:
 
 Best for: Smaller models, lower memory usage, flexible quantization options.
 
-#### Quick Setup (Automated)
-
-```bash
-cd environment_files
-./setup_llamacpp_cuda.sh
+Save the following as `llamacpp_cuda.yml`:
+```yaml
+name: pita_llamacpp_cuda
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - cuda-cudart=12.4.127
+  - cuda-toolkit=12.4.1
+  - cmake
 ```
 
-This script creates the environment, builds llama-cpp-python from source with CUDA, and verifies the installation.
-
-#### Manual Setup
+Then run the setup:
 
 ```bash
-# Create conda environment
-conda env create -f environment_files/power_sampling_llamacpp_cuda.yml
+# 1. Create environment
+conda env create -f llamacpp_cuda.yml
 conda activate pita_llamacpp_cuda
 
-# Set up CUDA build environment
+# 2. Set up CUDA build environment
 export CUDACXX=$CONDA_PREFIX/bin/nvcc
 export CPATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 
-# Build llama-cpp-python with CUDA support
+# 3. Build llama-cpp-python with CUDA support
 CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler" \
   pip install llama-cpp-python --no-cache-dir
 
-# Install pita
+# 4. Install pita
 pip install -e .
 ```
 
@@ -103,9 +149,31 @@ print('CUDA backend installed:', [l for l in libs if 'cuda' in l])
 
 Best for: Large models, high throughput, production deployments.
 
+Save the following as `vllm_cuda.yml`:
+```yaml
+name: pita_vllm_cuda
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - cuda-toolkit=12.8
+  - cxx-compiler
+  - redis-server
+  - pip:
+    - vllm==0.11.0
+    - pandas==2.3.3
+    - datasets==4.3.0
+    - regex==2025.9.18
+```
+
+Then run:
+
 ```bash
 # Create environment with vLLM and CUDA 12.8
-conda env create -f environment_files/vllm_cuda.yml
+conda env create -f vllm_cuda.yml
 conda activate pita_vllm_cuda
 
 # Install pita
