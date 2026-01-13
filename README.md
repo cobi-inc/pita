@@ -2,7 +2,7 @@
   <img src="docs/assets/pita_logo.png" alt="PITA Logo" width="300"/>
 </div>
 
-# PITA - Probabilistic Inference Time Algorithms
+# PITA - Probabilistic Inference Time Algorithms (Community Edition)
 
 PITA is a unified Python library for probabilistic inference-time scaling methods with Large Language Models (LLMs). It provides a consistent interface across multiple inference backends and sampling strategies to improve output quality through test-time computation.
 
