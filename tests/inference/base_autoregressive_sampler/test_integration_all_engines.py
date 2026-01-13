@@ -1,6 +1,5 @@
 import pytest
 import subprocess
-import os
 
 # Environment names
 ENV_NAMES = {
