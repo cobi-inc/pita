@@ -194,15 +194,69 @@ python -c "import vllm; print(f'vLLM {vllm.__version__} installed successfully')
 
 ---
 
+### Option C: TensorRT-LLM with CUDA
+
+Best for: Maximum performance on NVIDIA hardware, production deployments.
+
+Save the following as `tensorrt_cuda.yml`:
+```yaml
+name: pita_tensorrt_cuda
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cxx-compiler
+  - onnx<1.16.0
+  - mpi4py
+  - openmpi
+  - pytest
+  - pip:
+    - --extra-index-url https://pypi.nvidia.com/
+    - tensorrt_llm
+    - torch
+    - transformers
+    - numpy
+    - scipy
+    - pandas
+    - regex
+    - pydantic
+    - fastapi
+    - redis>=4.0.0
+    - redis-server
+    - uvicorn
+```
+
+Then run:
+
+```bash
+# 1. Create environment
+conda env create -f tensorrt_cuda.yml
+conda activate pita_tensorrt_cuda
+
+# 2. Install pita in editable mode
+pip install -e .
+```
+
+#### Verify TensorRT-LLM Installation
+
+```bash
+python -c "import tensorrt_llm; print(f'TensorRT-LLM {tensorrt_llm.__version__} installed successfully')"
+```
+
+---
+
 ## Choosing an Inference Engine
 
-| Feature | llama.cpp | vLLM |
-|---------|-----------|------|
-| **Best for** | Experimentation, quantized models | Production, high throughput |
-| **Memory usage** | Lower (supports aggressive quantization) | Higher |
-| **Model formats** | GGUF | HuggingFace, GPTQ, AWQ |
-| **Batch processing** | Limited | Excellent |
-| **Setup complexity** | Simple | Moderate |
+| Feature | llama.cpp | vLLM | TensorRT-LLM |
+|---------|-----------|------|--------------|
+| **Best for** | Experimentation, quantized models | Production, high throughput | Maximum performance, production |
+| **Memory usage** | Lower (supports aggressive quantization) | Higher | High (optimized for performance) |
+| **Model formats** | GGUF | HuggingFace, GPTQ, AWQ | TensorRT engines (built from HF/ONNX) |
+| **Batch processing** | Limited | Excellent | Excellent |
+| **Setup complexity** | Simple | Moderate | Moderate/High |
 
 ---
 
@@ -215,8 +269,9 @@ After installation, verify everything works:
 pytest tests/ -v
 
 # Run specific backend tests
-pytest tests/inference/ -v -k "llama"  # llama.cpp tests
-pytest tests/inference/ -v -k "vllm"   # vLLM tests
+pytest tests/inference/ -v -k "llama"     # llama.cpp tests
+pytest tests/inference/ -v -k "vllm"      # vLLM tests
+pytest tests/inference/ -v -k "tensorrt"  # TensorRT-LLM tests
 ```
 
 ---
@@ -242,6 +297,12 @@ export CPATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH
 nvidia-smi  # Should show your GPU
 ```
 
+### TensorRT-LLM Issues
+
+**"AttributeError: module 'onnx.helper' has no attribute 'float32_to_bfloat16'"**: Ensure you are using `onnx<1.16.0`.
+
+**"ImportError: libmpi.so.40"**: Ensure `openmpi` is installed via conda (`conda list openmpi`).
+
 ### General Issues
 
 **Environment conflicts**: Create a fresh environment:
@@ -254,11 +315,11 @@ conda env create -f <environment_file.yml>
 
 ## Platform Support Matrix
 
-| Platform | llama.cpp | vLLM | Status |
-|----------|-----------|------|--------|
-| Linux + NVIDIA CUDA | ✅ | ✅ | Fully supported |
-| Linux + CPU | ✅ | ❌ | llama.cpp only |
-| macOS + Apple Silicon | 🔄 | 🔄 | In development |
-| Linux + AMD ROCm | 🔄 | 🔄 | In development |
+| Platform | llama.cpp | vLLM | TensorRT-LLM | Status |
+|----------|-----------|------|--------------|--------|
+| Linux + NVIDIA CUDA | ✅ | ✅ | ✅ | Fully supported |
+| Linux + CPU | ✅ | ❌ | ❌ | llama.cpp only |
+| macOS + Apple Silicon | 🔄 | 🔄 | ❌ | In development |
+| Linux + AMD ROCm | 🔄 | 🔄 | ❌ | In development |
 
 ✅ = Supported | 🔄 = In development | ❌ = Not supported
