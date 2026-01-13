@@ -12,6 +12,7 @@ except ImportError:
 from pita.inference.LLM_backend import AutoregressiveSampler
 from transformers import AutoTokenizer
 import pita.inference.vllm_backend as vllm_backend
+import numpy as np
 
 # Constants
 MODEL = "facebook/opt-125m"
@@ -113,20 +114,18 @@ def test_temperature(sampler):
         assert sampler.sampling_params.temperature == 1
         sampler.sampling_params.enable_normalization_constants = True
         output = sampler.sample("Hello")
-        assert output.unprocessed_log_normalization_constant == output.temp_processed_log_normalization_constant
+        assert np.array_equal(output.unprocessed_log_normalization_constant, output.temp_processed_log_normalization_constant)
     finally:
         sampler.sampling_params.temperature = original_temperature
         sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
 
     # Set temperature to 0.25
-    original_temperature = sampler.sampling_params.temperature
-    original_enable_normalization_constants = sampler.sampling_params.enable_normalization_constants
     try:
         sampler.sampling_params.temperature = 0.25
         assert sampler.sampling_params.temperature == 0.25
         sampler.sampling_params.enable_normalization_constants = True
         output = sampler.sample("Hello")
-        assert output.unprocessed_log_normalization_constant != output.temp_processed_log_normalization_constant
+        assert not np.array_equal(output.unprocessed_log_normalization_constant, output.temp_processed_log_normalization_constant)
     finally:
         sampler.sampling_params.temperature = original_temperature
         sampler.sampling_params.enable_normalization_constants = original_enable_normalization_constants
