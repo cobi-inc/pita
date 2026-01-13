@@ -2,7 +2,7 @@
 
 This guide explains how to set up `pita` with `llama-cpp-python` on Windows using CPU (no GPU required).
 
-## Prerequisite
+## Prerequisites
 - **Miniconda** or **Anaconda** installed on Windows.
 
 ## Installation Steps
