@@ -166,7 +166,7 @@ def test_compare_outputs():
                 tokens[engine] = content.get("tokens", [])
 
         # Compare tokens
-        base_engine = "vllm" # Use lowercase key from OUTPUT_FILES
+        base_engine = "vllm"  # Set default baseline engine for comparison (must match a key in OUTPUT_FILES)
         if base_engine not in tokens:
              # If vllm isn't one of the keys (e.g. if we changed keys), pick arbitrary first
              base_engine = next(iter(tokens))
@@ -177,7 +177,7 @@ def test_compare_outputs():
             if engine == base_engine:
                 continue
                 
-            assert base_tokens == engine_tokens, f"Mismatch between {base_engine} and {engine}"
+            assert np.array_equal(base_tokens, engine_tokens), f"Mismatch between {base_engine} and {engine}"
             
     finally:
         # Cleanup
