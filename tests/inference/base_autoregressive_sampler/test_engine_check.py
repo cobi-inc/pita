@@ -177,7 +177,7 @@ def test_compare_outputs():
             if engine == base_engine:
                 continue
                 
-            assert base_tokens == engine_tokens, f"Mismatch between {base_engine} and {engine}"
+            assert np.array_equal(base_tokens, engine_tokens), f"Mismatch between {base_engine} and {engine}"
             
     finally:
         # Cleanup
