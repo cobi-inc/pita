@@ -16,7 +16,7 @@ def calc_token_metric(
     Args:
         output (Output): The output object containing the token metrics.
         sampler (AutoregressiveSampler): The sampler object containing the sampling parameters.
-        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", or "entropy".
+        metric (str): The metric to calculate. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence".
 
     Returns:
         npt.NDArray[np.float64]: The calculated token metric.
@@ -33,9 +33,12 @@ def calc_token_metric(
         )
     elif metric == "entropy":
         return np.asarray(output.entropy)
+    elif metric == "likelihood_confidence":
+        logprobs = np.asarray(output.top_k_logprobs)
+        return logprobs[:, 0] - np.asarray(output.entropy)
     else:
         raise ValueError(
-            f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', or 'entropy'."
+            f"Invalid metric: {metric}. Expected one of 'logprobs', 'power_distribution', 'entropy', or 'likelihood_confidence'."
         )
 
 def calc_sequence_prob(
