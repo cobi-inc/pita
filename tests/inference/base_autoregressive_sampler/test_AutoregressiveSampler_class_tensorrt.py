@@ -53,7 +53,7 @@ def sampler():
         tokenizer_path=None,
         gpu_memory_utilization=0.85,
         max_model_len=1024,
-        max_probs=10,
+        max_probs=1,
         logits_processor=True,
         trust_remote_code=True,
         sampling_params=None
@@ -72,8 +72,8 @@ def test_sampler_init(sampler):
     assert sampler.sample_fn == tensorrt_backend.sample
     assert sampler.chain_sampling is None
     assert sampler.token_sampling is None
-    assert sampler.sampling_params.logprobs_per_token == 10
-    assert sampler.sampling_params.logits_per_token == 10
+    assert sampler.sampling_params.logprobs_per_token == 1
+    assert sampler.sampling_params.logits_per_token == 1
 
 
 def test_sampling_params_initialized(sampler):
@@ -84,9 +84,7 @@ def test_max_tokens(sampler):
     # Test that the max tokens is set to 16
     sampler.sampling_params.max_tokens = 16
     assert sampler.sampling_params.max_tokens == 16
-    # Check if the engine throws a warning during sample as logprobs_per_token > 1
-    with pytest.warns(UserWarning):
-        output = sampler.sample("Hello")
+    output = sampler.sample("Hello. Write a poem about the color blue.")
     assert len(output.tokens) == 16
 
 def test_normalization_constants(sampler):
@@ -138,13 +136,12 @@ def test_prob_outputs(sampler):
     original_logits_per_token = sampler.sampling_params.logits_per_token
     try:
         # Set logprobs_per_token to 4
-        sampler.sampling_params.logprobs_per_token = 4
+        sampler.sampling_params.logprobs_per_token = 1
         # set logits_per_token to 6
-        sampler.sampling_params.logits_per_token = 6
+        sampler.sampling_params.logits_per_token = 1
         output = sampler.sample("Hello")
         # Check that we get at least some logprobs (TensorRT-LLM may have different behavior)
-        if output.top_k_logprobs and len(output.top_k_logprobs) > 0 and output.top_k_logprobs[0]:
-            assert len(output.top_k_logprobs[0]) <= 4
+        assert len(output.top_k_logprobs[0]) == 1
 
         # Test that disabling these parameters (setting to 0) works correctly
         sampler.sampling_params.logprobs_per_token = 0

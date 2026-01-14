@@ -6,13 +6,13 @@ from pita.inference.vllm_logits_processor import LogitsLoggingProcessor
 from pita.inference.LLM_backend import AutoregressiveSampler, Output
 
 # Memory Libraries
-import redis
+import valkey
 
 # Utilities
 import numpy as np
 from typing import Any
-from pita.utils.constants import REDIS_HOST, REDIS_PORT
-from pita.utils.redis_manager import RedisManager
+from pita.utils.constants import VALKEY_HOST, VALKEY_PORT
+from pita.utils.valkey_manager import ValkeyManager
 
 def sample(
         self,
@@ -61,14 +61,14 @@ def sample(
         # Set the req_id used to store the normalization constants in Redis
         req_id = self.sampling_params.engine_params.extra_args["req_id"]
 
-        # Create a local Redis client to retrieve the normalization constants
-        redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+        # Create a local Valkey client to retrieve the normalization constants
+        valkey_client = valkey.Valkey(host=VALKEY_HOST, port=VALKEY_PORT, db=0, decode_responses=True)
         
-        # Retrieve the normalization constants from Redis using the req_id
-        normalization_terms = redis_client.lrange(req_id, 0, -1)
+        # Retrieve the normalization constants from Valkey using the req_id
+        normalization_terms = valkey_client.lrange(req_id, 0, -1)
         
-        # Clean up the Redis key after retrieval
-        redis_client.delete(req_id)
+        # Clean up the Valkey key after retrieval
+        valkey_client.delete(req_id)
 
         # Parse the normalization terms (format: "norm_val,norm_temp_val,max_val")
         for term in normalization_terms:
@@ -121,9 +121,9 @@ def create_LLM_object(
     """
 
     if(logits_processor):
-        # Enable the Redis logging logits processor by adding it to the kwargs
+        # Enable the Valkey logging logits processor by adding it to the kwargs
         kwargs["logits_processors"] = [LogitsLoggingProcessor]
-        RedisManager.start()
+        ValkeyManager.start()
         print("LogitsLoggingProcessor enabled. Logits will be logged.")
     else:
         print("LogitsLoggingProcessor not enabled. Logits will not be logged.")
