@@ -47,7 +47,7 @@ This library can also be used to generate non-probabilistic, non-test-time scale
 ### Inference Backends
 - **vLLM**: High-throughput GPU inference (primary backend, fully supported)
 - **llama.cpp**: CPU/GPU inference with GGUF model support (fully supported)
-- **TensorRT**: NVIDIA-optimized inference (supported, requires Redis)
+- **TensorRT**: NVIDIA-optimized inference (supported, requires Valkey)
 - **(WIP) Transformers**: HuggingFace integration for flexibility (basic support)
 - **(WIP) DeepSpeed**: Distributed inference support
 

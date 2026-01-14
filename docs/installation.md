@@ -167,7 +167,7 @@ dependencies:
   - pip
   - cuda-toolkit=12.8
   - cxx-compiler
-  - redis-server
+  - valkey-server
   - pip:
     - vllm==0.11.0
     - pandas==2.3.3
@@ -230,8 +230,8 @@ dependencies:
     - regex
     - pydantic
     - fastapi
-    - redis>=4.0.0
-    - redis-server
+    - valkey
+    - valkey-server
     - uvicorn
 ```
 

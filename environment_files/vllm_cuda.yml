@@ -8,7 +8,7 @@ dependencies:
   - pip
   - cuda-toolkit=12.8 # Use the single meta-package from the nvidia channel
   - cxx-compiler      # Use conda-forge's cxx-compiler for a modern GCC
-  - redis-server      # Redis server for vLLM backend
+  - valkey-server      # Valkey server for vLLM backend
   - pip:
     - vllm==0.11.0    # This will pull in torch and all other necessary libs
     - pandas==2.3.3
