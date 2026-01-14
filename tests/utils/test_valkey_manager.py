@@ -5,7 +5,6 @@ This module tests the ValkeyManager class that manages the Valkey server subproc
 for inter-process communication during inference.
 """
 import pytest
-import subprocess
 import time
 from unittest.mock import patch, MagicMock
 import psutil
