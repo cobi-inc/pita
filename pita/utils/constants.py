@@ -1,17 +1,17 @@
 """
-Redis configuration constants for the PITA package.
+Valkey configuration constants for the PITA package.
 
-This module defines Redis connection parameters that can be overridden via
-environment variables. Redis is used for inter-process communication between
+This module defines Valkey connection parameters that can be overridden via
+environment variables. Valkey is used for inter-process communication between
 the main process and logits processors during inference.
 
 Environment Variables:
-    REDIS_HOST: Redis server hostname (default: 'localhost')
-    REDIS_PORT: Redis server port (default: 6379)
-    REDIS_PASSWORD: Redis authentication password (default: None)
+    VALKEY_HOST: Valkey server hostname (default: 'localhost')
+    VALKEY_PORT: Valkey server port (default: 6379)
+    VALKEY_PASSWORD: Valkey authentication password (default: None)
 """
 import os
 
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', None)
+VALKEY_HOST = os.environ.get('VALKEY_HOST', 'localhost')
+VALKEY_PORT = int(os.environ.get('VALKEY_PORT', 6379))
+VALKEY_PASSWORD = os.environ.get('VALKEY_PASSWORD', None)

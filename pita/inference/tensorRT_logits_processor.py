@@ -2,17 +2,17 @@
 TensorRT-LLM Logits Processor for calculating normalization constants and entropy.
 
 This module provides a LogitsProcessor class that can be passed per-request to
-TensorRT-LLM's generate() function. Results are stored in Redis for retrieval
+TensorRT-LLM's generate() function. Results are stored in Valkey for retrieval
 after generation completes, enabling IPC across MPI process boundaries.
 """
 
 import logging
 import torch
-import redis
+import valkey
 from torch.distributions import Categorical
 from typing import List, Optional
 
-from pita.utils.constants import REDIS_HOST, REDIS_PORT
+from pita.utils.constants import VALKEY_HOST, VALKEY_PORT
 
 # Module-level logger
 logger = logging.getLogger(__name__)
@@ -21,18 +21,18 @@ logger = logging.getLogger(__name__)
 class TensorRTLogitsProcessor:
     """
     Logits processor for TensorRT-LLM that calculates and stores normalization constants
-    and entropy for each generated token via Redis IPC.
+    and entropy for each generated token via Valkey IPC.
     
     This processor is designed to be instantiated fresh for each sample() call.
-    Results are written to Redis using the req_id as the key, allowing the main
+    Results are written to Valkey using the req_id as the key, allowing the main
     process to retrieve them after generation completes.
     
     Attributes:
-        req_id (str): Unique request ID used as Redis key.
+        req_id (str): Unique request ID used as Valkey key.
         temperature (float): Temperature for scaling logits.
         calculate_entropy (bool): Whether to calculate entropy.
         calculate_normalization (bool): Whether to calculate normalization constants.
-        redis_client: Redis client for storing computed values.
+        valkey_client: Valkey client for storing computed values.
     """
     
     def __init__(
@@ -55,23 +55,23 @@ class TensorRTLogitsProcessor:
         self.temperature: float = temperature
         self.calculate_normalization: bool = calculate_normalization
         self.calculate_entropy: bool = calculate_entropy
-        self.redis_client = None
+        self.valkey_client = None
         
-    def _ensure_redis(self) -> None:
+    def _ensure_valkey(self) -> None:
         """
-        Ensure Redis client is initialized and connected.
+        Ensure Valkey client is initialized and connected.
         
-        Lazily initializes the Redis connection on first use to avoid connection
+        Lazily initializes the Valkey connection on first use to avoid connection
         issues during processor instantiation (which may happen in a different process).
         """
-        if self.redis_client is None:
+        if self.valkey_client is None:
             try:
-                self.redis_client = redis.Redis(
-                    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+                self.valkey_client = valkey.Valkey(
+                    host=VALKEY_HOST, port=VALKEY_PORT, db=0, decode_responses=True
                 )
             except Exception as e:
-                logger.error(f"Redis connection failed: {e}")
-                raise ConnectionError(f"Failed to connect to Redis at {REDIS_HOST}:{REDIS_PORT}") from e
+                logger.error(f"Valkey connection failed: {e}")
+                raise ConnectionError(f"Failed to connect to Valkey at {VALKEY_HOST}:{VALKEY_PORT}") from e
 
     def __call__(
         self, 
@@ -97,7 +97,7 @@ class TensorRTLogitsProcessor:
         Returns:
             None (this processor only observes, doesn't modify logits).
         """
-        self._ensure_redis()
+        self._ensure_valkey()
         
         # Synchronize with the CUDA stream before reading logits values
         if stream_ptr is not None:
@@ -136,11 +136,11 @@ class TensorRTLogitsProcessor:
         else:
             token_entropy = 0.0
         
-        # Push to Redis: format "norm,norm_temp,entropy"
-        if self.redis_client is None:
-            raise RuntimeError("Redis client is not initialized; cannot push logits data.")
+        # Push to Valkey: format "norm,norm_temp,entropy"
+        if self.valkey_client is None:
+            raise RuntimeError("Valkey client is not initialized; cannot push logits data.")
         data = f"{log_norm_constant},{log_norm_constant_temp_scaled},{token_entropy}"
-        self.redis_client.rpush(self.req_id, data)
+        self.valkey_client.rpush(self.req_id, data)
 
 
 def create_logits_processor(
@@ -153,7 +153,7 @@ def create_logits_processor(
     Create a TensorRTLogitsProcessor for use with TensorRT-LLM.
     
     Args:
-        req_id: Unique request ID used as Redis key for storing results.
+        req_id: Unique request ID used as Valkey key for storing results.
         temperature: Temperature for scaling logits.
         calculate_normalization: Whether to calculate normalization constants.
         calculate_entropy: Whether to calculate entropy.

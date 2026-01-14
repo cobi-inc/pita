@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import Categorical
-import redis
+import valkey
 from vllm.v1.sample.logits_processor.interface import (
     LogitsProcessor, 
     BatchUpdate, 
@@ -10,7 +10,7 @@ from vllm.config import VllmConfig
 from typing import Dict, Optional, List
 from dataclasses import dataclass
 
-from pita.utils.constants import REDIS_HOST, REDIS_PORT
+from pita.utils.constants import VALKEY_HOST, VALKEY_PORT
 
 @dataclass
 class sampling_params:
@@ -38,15 +38,15 @@ class sampling_params:
 
 class LogitsLoggingProcessor(LogitsProcessor):
     """
-    Custom vLLM logits processor that logs normalization constants and entropy to Redis.
+    Custom vLLM logits processor that logs normalization constants and entropy to Valkey.
 
     This processor intercepts logits during generation to calculate and store normalization
-    constants and entropy values. These values are stored in Redis for retrieval by the
+    constants and entropy values. These values are stored in Valkey for retrieval by the
     main process after generation completes.
 
     Attributes:
         active_req_ids: Dictionary mapping request indices to their sampling parameters.
-        redis_client: Redis client for storing computed values.
+        valkey_client: Valkey client for storing computed values.
         temperature: Default temperature value.
     """
     def __init__(
@@ -64,24 +64,24 @@ class LogitsLoggingProcessor(LogitsProcessor):
             is_pin_memory: Whether to use pinned memory for tensors.
         """
         self.active_req_ids: Dict[int, sampling_params] = {}
-        self.redis_client = None
+        self.valkey_client = None
         self.temperature = 1.0  # Default temperature, can be configured per request
 
-    def _ensure_redis(self) -> None:
+    def _ensure_valkey(self) -> None:
         """
-        Ensure Redis client is initialized and connected.
+        Ensure Valkey client is initialized and connected.
 
-        Lazily initializes the Redis connection on first use to avoid connection
+        Lazily initializes the Valkey connection on first use to avoid connection
         issues during processor instantiation.
         """
-        if self.redis_client is None:
+        if self.valkey_client is None:
             try:
-                self.redis_client = redis.Redis(
-                    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+                self.valkey_client = valkey.Valkey(
+                    host=VALKEY_HOST, port=VALKEY_PORT, db=0, decode_responses=True
                 )
             except Exception as e:
-                # If we can't log to Redis, we are flying blind, but try printing just in case
-                print(f"CRITICAL WORKER ERROR: Redis connect failed: {e}")
+                # If we can't log to Valkey, we are flying blind, but try printing just in case
+                print(f"CRITICAL WORKER ERROR: Valkey connect failed: {e}")
 
     def is_argmax_invariant(self) -> bool:
         """
@@ -103,7 +103,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
             batch_update: Information about requests added, removed, or moved in the batch.
                 Can be None if no updates occurred.
         """
-        self._ensure_redis()
+        self._ensure_valkey()
         
         if batch_update is None:
             return
@@ -158,7 +158,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
         Returns:
             The unmodified logits tensor (this processor only observes, doesn't modify).
         """
-        self._ensure_redis()
+        self._ensure_valkey()
         
         if not self.active_req_ids:
             print("WARNING: active_req_ids is empty in apply()!")
@@ -180,8 +180,8 @@ class LogitsLoggingProcessor(LogitsProcessor):
                 entropy[row_idx] = Categorical(logits=logits[row_idx]).entropy()
     
 
-        # Prepare pipeline for batch Redis operations
-        pipe = self.redis_client.pipeline()
+        # Prepare pipeline for batch Valkey operations
+        pipe = self.valkey_client.pipeline()
         
         found_any = False
         for row_idx, params in self.active_req_ids.items():
@@ -194,7 +194,7 @@ class LogitsLoggingProcessor(LogitsProcessor):
             else:
                 print(f"row_idx {row_idx} >= batch size {logits.size(0)}, skipping")
         
-        # Push values to REDIS if we found any valid ones
+        # Push values to Valkey if we found any valid ones
         if found_any:
             pipe.execute()
  
