@@ -7,7 +7,6 @@ for inter-process communication during inference.
 import pytest
 import time
 from unittest.mock import patch, MagicMock
-import psutil
 
 from pita.utils.valkey_manager import ValkeyManager
 from pita.utils.constants import VALKEY_PORT
