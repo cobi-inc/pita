@@ -188,7 +188,7 @@ Commercial licenses allow you to:
 - Avoid AGPLv3 network use obligations
 - Receive custom licensing terms
 
-**Contact:** sales@cobi-inc.com | See [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)
+**Contact:** sales@cobi-inc.com for commercial licensing information.
 
 ### Important Licensing Notes
 
