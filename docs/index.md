@@ -62,7 +62,34 @@ This library can also be used to generate non-probabilistic, non-test-time scale
 We welcome contributions! Please see the [repository](https://github.com/cobi-inc-MC/pita) for more details on how to contribute.
 
 ## License
-(WIP)
+
+PITA is dual-licensed under:
+- **GNU Affero General Public License v3.0 or later (AGPLv3+)** - for open source use
+- **Commercial License** - for proprietary use
+
+### For Open Source Users
+
+Use PITA freely under AGPLv3+. Key requirements:
+- Make source code available to all users (including network users)
+- License derivatives under AGPLv3+
+- See [LICENSE](../LICENSE) for full terms
+
+### For Commercial Users
+
+Use PITA in proprietary software without AGPLv3 obligations.
+- Contact: sales@cobi-inc.com
+- See [LICENSE-COMMERCIAL](../LICENSE-COMMERCIAL)
+
+### Dependencies & Special Cases
+
+**All dependencies** use permissive licenses (MIT, BSD, Apache 2.0). See [NOTICE](../NOTICE).
+
+**TensorRT backend** (optional): Requires NVIDIA's proprietary TensorRT with separate licensing. See [TENSORRT-LICENSE-NOTICE.md](TENSORRT-LICENSE-NOTICE.md).
+
+**HuggingFace models**: Individual models have their own licenses - users must verify before use.
+
+**Complete guide**: See [LICENSING-GUIDE.md](LICENSING-GUIDE.md)
+
 ## Citation
 If you use PITA in your research, please cite it as follows:
 
