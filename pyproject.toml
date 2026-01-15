@@ -6,6 +6,32 @@ build-backend = "setuptools.build_meta"
 name = "pita"
 version = "0.0.1"
 description = "A library to allow probabilistic inference time algorithms from any model"
+license = {text = "AGPL-3.0-or-later"}
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "COBI, Inc.", email = "sales@cobi-inc.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/cobi-inc-MC/pita"
+Repository = "https://github.com/cobi-inc-MC/pita"
+Documentation = "https://github.com/cobi-inc-MC/pita/tree/main/docs"
+"Bug Tracker" = "https://github.com/cobi-inc-MC/pita/issues"
+"Commercial Licensing" = "https://github.com/cobi-inc-MC/pita/blob/main/LICENSE-COMMERCIAL"
 
 # Core dependencies - minimal set needed for the library to work
 dependencies = [

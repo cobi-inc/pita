@@ -1,0 +1,177 @@
+PITA - Probabilistic Inference Time Algorithms Library
+Copyright (C) 2026 COBI, Inc.
+
+This product includes software developed by COBI, Inc. (https://github.com/cobi-inc-MC/pita)
+
+================================================================================
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+================================================================================
+
+This software includes or depends upon the following third-party software
+components. The licenses for these components are included below.
+
+--------------------------------------------------------------------------------
+Apache License 2.0 Components
+--------------------------------------------------------------------------------
+
+The following components are licensed under the Apache License, Version 2.0:
+
+1. Transformers
+   Copyright 2018- The Hugging Face team
+   https://github.com/huggingface/transformers
+   License: Apache License 2.0
+
+2. Datasets
+   Copyright 2020 The HuggingFace Team
+   https://github.com/huggingface/datasets
+   License: Apache License 2.0
+
+3. HuggingFace Hub
+   Copyright 2021 The HuggingFace Team
+   https://github.com/huggingface/huggingface_hub
+   License: Apache License 2.0
+
+4. vLLM
+   Copyright 2023 vLLM Team
+   https://github.com/vllm-project/vllm
+   License: Apache License 2.0
+
+5. TensorRT-LLM
+   Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES
+   https://github.com/NVIDIA/TensorRT-LLM
+   License: Apache License 2.0
+   Note: TensorRT-LLM depends on proprietary NVIDIA TensorRT library with
+   separate licensing. See docs/TENSORRT-LICENSE-NOTICE.md
+
+6. Valkey GLIDE (Python client)
+   Copyright Valkey GLIDE Project Contributors
+   https://github.com/valkey-io/valkey-glide
+   License: Apache License 2.0
+
+7. pytest-asyncio
+   Copyright (c) 2020 pytest-asyncio contributors
+   https://github.com/pytest-dev/pytest-asyncio
+   License: Apache License 2.0
+
+Apache License 2.0 Full Text:
+https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+MIT License Components
+--------------------------------------------------------------------------------
+
+The following components are licensed under the MIT License:
+
+1. FastAPI
+   Copyright (c) 2018 Sebastián Ramírez
+   https://github.com/fastapi/fastapi
+   License: MIT
+
+2. Pydantic
+   Copyright (c) 2017 to present Pydantic Services Inc. and individual contributors
+   https://github.com/pydantic/pydantic
+   License: MIT
+
+3. pylatexenc
+   Copyright (c) 2014-2021, Philippe Faist
+   https://github.com/phfaist/pylatexenc
+   License: MIT
+
+4. llama-cpp-python
+   Copyright (c) 2023 Andrei Betlen
+   https://github.com/abetlen/llama-cpp-python
+   License: MIT
+
+5. pytest
+   Copyright (c) 2004 Holger Krekel and others
+   https://github.com/pytest-dev/pytest
+   License: MIT
+
+--------------------------------------------------------------------------------
+BSD 3-Clause License Components
+--------------------------------------------------------------------------------
+
+The following components are licensed under the BSD 3-Clause License:
+
+1. NumPy
+   Copyright (c) 2005-2024, NumPy Developers
+   https://github.com/numpy/numpy
+   License: BSD 3-Clause
+
+2. SciPy
+   Copyright (c) 2001-2002 Enthought, Inc. 2003-2024, SciPy Developers
+   https://github.com/scipy/scipy
+   License: BSD 3-Clause
+
+3. Uvicorn
+   Copyright © 2017-present, Encode OSS Ltd
+   https://github.com/encode/uvicorn
+   License: BSD 3-Clause
+
+4. pandas
+   Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+   Copyright (c) 2011-2024, Open source contributors
+   https://github.com/pandas-dev/pandas
+   License: BSD 3-Clause
+
+5. psutil
+   Copyright (c) 2009, Jay Loden, Dave Daeschler, Giampaolo Rodola'
+   https://github.com/giampaolo/psutil
+   License: BSD 3-Clause
+
+6. SymPy
+   Copyright (c) 2006-2024 SymPy Development Team
+   https://github.com/sympy/sympy
+   License: BSD 3-Clause
+
+7. Valkey (server)
+   Copyright (c) 2024 The Valkey Project
+   https://github.com/valkey-io/valkey
+   License: BSD 3-Clause
+
+================================================================================
+ATTRIBUTION REQUIREMENTS
+================================================================================
+
+For components licensed under Apache License 2.0:
+- This NOTICE file must be included in any distribution
+- Any modifications to Apache 2.0 components must be documented
+- Attribution must be maintained
+
+For components licensed under MIT and BSD:
+- Copyright notices must be preserved in distributions
+- License texts should be included
+
+================================================================================
+ADDITIONAL NOTICES
+================================================================================
+
+HuggingFace Models:
+When using this library with models from HuggingFace Hub, users are responsible
+for complying with individual model licenses, which may include:
+- GPL/AGPL licenses
+- Non-commercial licenses
+- Proprietary licenses
+- Other restrictions
+
+Always verify the license of any model before use.
+
+TensorRT (Optional Dependency):
+The optional TensorRT backend requires NVIDIA's proprietary TensorRT library,
+which is subject to NVIDIA's Software License Agreement. Users must obtain and
+accept NVIDIA's license separately. See docs/TENSORRT-LICENSE-NOTICE.md for
+detailed information.
+
+================================================================================
+LICENSE INFORMATION
+================================================================================
+
+This software (PITA) is dual-licensed:
+- GNU Affero General Public License v3.0 or later (AGPLv3+) for open source use
+- Commercial license for proprietary use
+
+See the LICENSE file for complete terms.
+See the LICENSE-COMMERCIAL file for commercial licensing options.
+See docs/LICENSING-GUIDE.md for detailed licensing information.
+
+For commercial licensing inquiries: sales@cobi-inc.com

@@ -166,7 +166,42 @@ We welcome contributions! Please see the [repository](https://github.com/cobi-in
 
 ## License
 
-(Work in Progress)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
+PITA is **dual-licensed** to accommodate both open source and commercial use:
+
+### Open Source License (AGPLv3+)
+
+This software is free and open source under the **GNU Affero General Public License v3.0 or later (AGPLv3+)**.
+
+You can freely use, modify, and distribute PITA under the terms of the AGPLv3+. Key requirements:
+- Source code must be made available to users (including network users)
+- Derivative works must also be licensed under AGPLv3+
+- See the [LICENSE](LICENSE) file for complete terms
+
+### Commercial License
+
+If you need to use PITA in a proprietary application without the source code disclosure requirements of AGPLv3, we offer **commercial licensing**.
+
+Commercial licenses allow you to:
+- Use PITA in closed-source software
+- Avoid AGPLv3 network use obligations
+- Receive custom licensing terms
+
+**Contact:** sales@cobi-inc.com | See [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)
+
+### Important Licensing Notes
+
+**Third-Party Dependencies:**
+All direct dependencies use permissive licenses (MIT, BSD, Apache 2.0). See [NOTICE](NOTICE) for attributions.
+
+**TensorRT Backend (Optional):**
+The optional TensorRT backend requires NVIDIA's proprietary TensorRT library with separate licensing. Users must obtain TensorRT from NVIDIA and accept their terms. See [docs/TENSORRT-LICENSE-NOTICE.md](docs/TENSORRT-LICENSE-NOTICE.md) for details.
+
+**HuggingFace Models:**
+Individual models from HuggingFace Hub have their own licenses (including GPL, non-commercial, or proprietary licenses). **Users are responsible for verifying model licenses** before use.
+
+For complete licensing information, see [docs/LICENSING-GUIDE.md](docs/LICENSING-GUIDE.md).
 
 ## Citation
 
