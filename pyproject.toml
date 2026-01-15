@@ -31,7 +31,7 @@ Homepage = "https://github.com/cobi-inc-MC/pita"
 Repository = "https://github.com/cobi-inc-MC/pita"
 Documentation = "https://github.com/cobi-inc-MC/pita/tree/main/docs"
 "Bug Tracker" = "https://github.com/cobi-inc-MC/pita/issues"
-"Commercial Licensing" = "https://github.com/cobi-inc-MC/pita/blob/main/LICENSE-COMMERCIAL"
+"Commercial Licensing" = "https://github.com/cobi-inc-MC/pita/blob/main/docs/LICENSING-GUIDE.md"
 
 # Core dependencies - minimal set needed for the library to work
 dependencies = [
