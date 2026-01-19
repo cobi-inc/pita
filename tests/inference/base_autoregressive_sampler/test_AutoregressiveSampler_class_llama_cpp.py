@@ -1,3 +1,9 @@
+"""
+Test suite for AutoregressiveSampler class with LlamaCPP backend.
+
+This test file supports parameterized model testing via `conftest.py`.
+Default model: TinyLlama-1.1B-Chat GGUF
+"""
 import pytest
 
 # Skip this entire module if llama_cpp is not installed
@@ -7,11 +13,6 @@ from pita.inference.LLM_backend import AutoregressiveSampler
 from transformers import AutoTokenizer
 import pita.inference.llama_cpp_backend as llama_cpp_backend
 
-# Constants
-# Using TheBloke's TinyLlama GGUF model which has actual GGUF files
-MODEL = "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF"
-TOKENIZER_MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
 # Test Utils
 def tokenizer_chat_template(
     tokenizer: AutoTokenizer,
@@ -19,7 +20,9 @@ def tokenizer_chat_template(
     system_message: str, 
     user_message: str,
 ) -> str:
-
+    """
+    Apply chat template to format messages for the model.
+    """
     # Create the message format for apply_chat_template function
     messages = [
         {
@@ -43,23 +46,25 @@ def tokenizer_chat_template(
 
     return prompt
 
-
 # Initialize the AutoregressiveSampler
 # Do it once for all the tests in this file
 @pytest.fixture(scope="module")
-def sampler():
+def sampler(llamacpp_model_config):
+    """
+    Initialize the AutoregressiveSampler with the configured LlamaCPP model.
+    """
     sampler = AutoregressiveSampler(
         engine="llama_cpp",
-        model=MODEL,
-        dtype="Q4_K_M",  # Use Q4_K_M quantization for GGUF
-        tokenizer_path=TOKENIZER_MODEL,  # Need to specify tokenizer separately for GGUF models
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
+        model=llamacpp_model_config["model"],
+        dtype=llamacpp_model_config["dtype"],
+        tokenizer_path=llamacpp_model_config["tokenizer"],
+        gpu_memory_utilization=llamacpp_model_config["gpu_memory_utilization"],
+        max_model_len=llamacpp_model_config["max_model_len"],
         max_probs=10,
         logits_processor=True,
         trust_remote_code=True,
         sampling_params=None,
-        model_type="gguf"  # Explicitly specify GGUF model type
+        model_type="gguf"
     )
     yield sampler
     del sampler.llm
@@ -67,9 +72,9 @@ def sampler():
     del sampler
 
 # Test the init of the AutoregressiveSampler
-def test_sampler_init(sampler):
+def test_sampler_init(sampler, llamacpp_model_config):
     assert sampler.engine == "llama_cpp"
-    assert sampler.model == MODEL
+    assert sampler.model == llamacpp_model_config["model"]
     assert sampler.llm is not None
     assert sampler.tokenizer is not None
     assert sampler.sample_fn == llama_cpp_backend.sample
@@ -194,18 +199,14 @@ def test_entropy(sampler):
         sampler.sampling_params.enable_entropy = original_enable_entropy
 
 def test_single_token_prompt(sampler):
-    """Test that single token prompts work correctly with the manual eval workaround."""
+    """Test that single token prompts work correctly."""
     # Test with a single token ID (BOS)
+    # Using 1 as BOS for Llama generally, but might vary. 
+    # Just need a valid int list.
     req_token_ids = [1] 
-    
-    # We use AutoregressiveSampler's sample method which handles token conversion or direct passage?
-    # Actually sampler.sample takes string prompt or list of tokens?
-    # Checking AutoregressiveSampler.sample signature...
-    # It takes (input_ids: list[int] | str, ...)
     
     output = sampler.sample(
         context=[req_token_ids]
     )
     
     assert len(output.tokens) > 0
-    # Just ensure it generated something and didn't crash

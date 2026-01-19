@@ -1,3 +1,9 @@
+"""
+Test suite for AutoregressiveSampler class with TensorRT backend.
+
+This test file supports parameterized model testing via `conftest.py`.
+Default model: TinyLlama-1.1B-Chat (requires TensorRT engine build)
+"""
 import pytest
 
 # Skip this entire module if tensorrt_llm is not installed
@@ -7,9 +13,6 @@ from pita.inference.LLM_backend import AutoregressiveSampler
 from transformers import AutoTokenizer
 import pita.inference.tensorRT_backend as tensorrt_backend
 
-# Constants
-MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
 # Test Utils
 def tokenizer_chat_template(
     tokenizer: AutoTokenizer,
@@ -17,7 +20,8 @@ def tokenizer_chat_template(
     system_message: str, 
     user_message: str,
 ) -> str:
-
+    """Apply chat template to prompt."""
+    
     # Create the message format for apply_chat_template function
     messages = [
         {
@@ -45,14 +49,17 @@ def tokenizer_chat_template(
 # Initialize the AutoregressiveSampler
 # Do it once for all the tests in this file
 @pytest.fixture(scope="module")
-def sampler():
+def sampler(tensorrt_model_config):
+    """
+    Initialize the AutoregressiveSampler with the configured TensorRT model.
+    """
     sampler = AutoregressiveSampler(
         engine="tensorrt",
-        model=MODEL,
+        model=tensorrt_model_config["model"],
         dtype="auto",
         tokenizer_path=None,
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
+        gpu_memory_utilization=tensorrt_model_config["gpu_memory_utilization"],
+        max_model_len=tensorrt_model_config["max_model_len"],
         max_probs=1,
         logits_processor=True,
         trust_remote_code=True,
@@ -64,9 +71,9 @@ def sampler():
         del sampler
 
 # Test the init of the AutoregressiveSampler
-def test_sampler_init(sampler):
+def test_sampler_init(sampler, tensorrt_model_config):
     assert sampler.engine == "tensorrt"
-    assert sampler.model == MODEL
+    assert sampler.model == tensorrt_model_config["model"]
     assert sampler.llm is not None
     assert sampler.tokenizer is not None
     assert sampler.sample_fn == tensorrt_backend.sample

@@ -1,4 +1,10 @@
+"""
+Test suite for Power Sampling with LlamaCPP backend.
+
+This test file supports parameterized model testing via `conftest.py`.
+"""
 import pytest
+import os
 
 # Skip this entire module if llama_cpp is not installed
 llama_cpp = pytest.importorskip("llama_cpp", reason="llama-cpp-python is required for these tests")
@@ -10,14 +16,6 @@ from pita.sampling.power_sample import Power_Sampling
 # Huggingface Libraries
 from transformers import AutoTokenizer
 
-# Standard Libraries
-import os
-
-# Constants
-# Using TheBloke's TinyLlama GGUF model which has actual GGUF files
-MODEL = "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF"
-TOKENIZER_MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
 # Test Utils
 def tokenizer_chat_template(
     tokenizer: AutoTokenizer,
@@ -25,7 +23,8 @@ def tokenizer_chat_template(
     system_message: str, 
     user_message: str,
 ) -> str:
-
+    """Apply chat template to prompt."""
+    
     # Create the message format for apply_chat_template function
     messages = [
         {
@@ -50,19 +49,20 @@ def tokenizer_chat_template(
     return prompt
 
 @pytest.fixture(scope="module")
-def sampler():
+def sampler(llamacpp_model_config):
+    """Initialize sampler with parameterized LlamaCPP config."""
     sampler = AutoregressiveSampler(
         engine="llama_cpp",
-        model=MODEL,
-        dtype="Q4_K_M",  # Use Q4_K_M quantization for GGUF
-        tokenizer_path=TOKENIZER_MODEL,  # Need to specify tokenizer separately for GGUF models
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
+        model=llamacpp_model_config["model"],
+        dtype=llamacpp_model_config["dtype"],
+        tokenizer_path=llamacpp_model_config["tokenizer"],
+        gpu_memory_utilization=llamacpp_model_config["gpu_memory_utilization"],
+        max_model_len=llamacpp_model_config["max_model_len"],
         max_probs=10,
         logits_processor=True,
         trust_remote_code=True,
         sampling_params=None,
-        model_type="gguf"  # Explicitly specify GGUF model type
+        model_type="gguf"
     )
     yield sampler
     del sampler.llm
