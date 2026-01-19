@@ -4,6 +4,8 @@ TensorRT-LLM Power Sampling Tests.
 This module tests the power sampling integration with the TensorRT-LLM backend,
 following the same pattern as test_power_sampling_vllm.py and 
 test_power_sampling_llama_cpp.py.
+
+Supports parameterized model testing via `conftest.py`.
 """
 
 import pytest
@@ -24,10 +26,6 @@ from transformers import AutoTokenizer
 # Standard Libraries
 import os
 
-# Constants
-# Using the same model as test_AutoregressiveSampler_class_tensorrt.py
-MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
 
 def tokenizer_chat_template(
     tokenizer: AutoTokenizer,
@@ -37,15 +35,6 @@ def tokenizer_chat_template(
 ) -> str:
     """
     Apply chat template to format messages for the model.
-    
-    Args:
-        tokenizer: The tokenizer to use for applying the chat template.
-        enable_thinking: Whether to enable thinking mode in the template.
-        system_message: The system message content.
-        user_message: The user message content.
-    
-    Returns:
-        str: The formatted prompt string.
     """
     # Create the message format for apply_chat_template function
     messages = [
@@ -71,7 +60,7 @@ def tokenizer_chat_template(
 
 
 @pytest.fixture(scope="module")
-def sampler():
+def sampler(tensorrt_model_config):
     """
     Create an AutoregressiveSampler for TensorRT-LLM that persists across all tests.
     
@@ -79,12 +68,12 @@ def sampler():
     """
     sampler = AutoregressiveSampler(
         engine="tensorrt",
-        model=MODEL,
+        model=tensorrt_model_config["model"],
         dtype="auto",
         tokenizer_path=None,
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
-        max_probs=10,
+        gpu_memory_utilization=tensorrt_model_config["gpu_memory_utilization"],
+        max_model_len=tensorrt_model_config["max_model_len"],
+        max_probs=1,
         logits_processor=True,
         trust_remote_code=True,
         sampling_params=None
@@ -103,12 +92,6 @@ METRICS = ["logprobs", "power_distribution", "entropy"]
 def test_power_sampling_enable(sampler, token_metric):
     """
     Test that power sampling can be enabled with correct parameters.
-    
-    Verifies:
-        - block_size is correctly set
-        - MCMC_steps is correctly set
-        - token_metric is correctly set
-        - sampler.token_sampling is a Power_Sampling instance
     """
     # Enable power sampling
     sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
@@ -126,12 +109,6 @@ def test_power_sampling_enable(sampler, token_metric):
 def test_power_sampling_sample(sampler, token_metric):
     """
     Test that power sampling produces valid Output objects with all expected attributes.
-    
-    Verifies:
-        - Output is a valid Output instance
-        - All output lists have consistent lengths
-        - All expected attributes are present
-        - Logging functionality works correctly
     """
     sampler.enable_power_sampling(block_size=192, MCMC_steps=8, token_metric=token_metric)
     

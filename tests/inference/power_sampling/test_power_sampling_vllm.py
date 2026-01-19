@@ -1,3 +1,11 @@
+"""
+Test suite for Power Sampling with vLLM backend.
+
+This test file supports parameterized model testing. Use:
+  - `--vllm-model=opt-125m` (default) for fast testing with small model
+  - `--vllm-model=gpt-oos-20b` to test with GPT OOS 20B
+  - `--all-vllm-models` to run tests against all configured models
+"""
 import pytest
 
 # Skip this entire module if vllm is not properly installed
@@ -18,9 +26,6 @@ from transformers import AutoTokenizer
 
 # Standard Libraries
 import os
-
-# Constants
-MODEL = "Qwen/Qwen3-4B-AWQ"
 
 # Test Utils
 def tokenizer_chat_template(
@@ -54,14 +59,19 @@ def tokenizer_chat_template(
     return prompt
 
 @pytest.fixture(scope="module")
-def sampler():
+def sampler(vllm_model_config):
+    """
+    Initialize the AutoregressiveSampler with the configured model.
+    
+    Uses model configuration from conftest.py based on CLI options.
+    """
     sampler = AutoregressiveSampler(
         engine="vllm",
-        model=MODEL,
+        model=vllm_model_config["model"],
         dtype="auto",
         tokenizer_path=None,
-        gpu_memory_utilization=0.85,
-        max_model_len=1024,
+        gpu_memory_utilization=vllm_model_config["gpu_memory_utilization"],
+        max_model_len=vllm_model_config["max_model_len"],
         max_probs=10,
         logits_processor=True,
         trust_remote_code=True,
@@ -129,4 +139,3 @@ def test_power_sampling_sample(sampler, token_metric):
     finally:
         if os.path.exists("power_sampling_log.csv"):
             os.remove("power_sampling_log.csv")
-
