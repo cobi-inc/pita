@@ -244,7 +244,7 @@ def sample(context: str, temperature: float = 1.0) -> Output:
 pytest
 
 # Run parameterized tests (see tests/README.md for full details)
-pytest tests/inference/ --vllm-model=gpt-oos-20b
+pytest tests/inference/ --vllm-model=gpt-oss-20b
 pytest tests/inference/ --all-vllm-models
 
 # Run specific backend tests
