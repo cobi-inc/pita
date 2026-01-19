@@ -12,7 +12,7 @@ VLLM_MODELS = {
         "gpu_memory_utilization": 0.85,
         "max_model_len": 1024,
     },
-    "gpt-oos-20b": {
+    "gpt-oss-20b": {
         "model": "openai/gpt-oss-20b",
         "gpu_memory_utilization": 0.90,
         "max_model_len": 2048,
