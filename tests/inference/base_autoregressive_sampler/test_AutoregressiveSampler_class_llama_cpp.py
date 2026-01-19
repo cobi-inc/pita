@@ -5,7 +5,6 @@ This test file supports parameterized model testing via `conftest.py`.
 Default model: TinyLlama-1.1B-Chat GGUF
 """
 import pytest
-import math
 
 # Skip this entire module if llama_cpp is not installed
 llama_cpp = pytest.importorskip("llama_cpp", reason="llama-cpp-python is required for these tests")
