@@ -3,7 +3,7 @@ Test suite for Power Sampling with vLLM backend.
 
 This test file supports parameterized model testing. Use:
   - `--vllm-model=opt-125m` (default) for fast testing with small model
-  - `--vllm-model=gpt-oos-20b` to test with GPT OOS 20B
+  - `--vllm-model=gpt-oss-20b` to test with GPT OOS 20B
   - `--all-vllm-models` to run tests against all configured models
 """
 import pytest
