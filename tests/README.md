@@ -14,7 +14,7 @@ Run tests using the vLLM backend. Requires `pita_vllm_cuda` environment.
 pytest tests/inference/
 
 # Run with a specific model
-pytest tests/inference/ --vllm-model=gpt-oos-20b
+pytest tests/inference/ --vllm-model=gpt-oss-20b
 
 # Run with all configured vLLM models
 pytest tests/inference/ --all-vllm-models
@@ -22,7 +22,7 @@ pytest tests/inference/ --all-vllm-models
 
 **Available vLLM Models:**
 - `opt-125m` (Default)
-- `gpt-oos-20b`
+- `gpt-oss-20b`
 - `qwen-4b-awq`
 
 ### LlamaCPP Backend
