@@ -1,0 +1,13 @@
+*.pyc
+__pycache__/
+*.log
+/results/
+*.csv
+*.egg-info
+/build/*
+.vscode
+*.out
+*.json
+site/
+.pytest_cache
+GEMINI.md

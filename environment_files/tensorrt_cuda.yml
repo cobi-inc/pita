@@ -1,0 +1,27 @@
+name: pita_tensorrt_cuda
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cxx-compiler
+  - onnx<1.16.0
+  - mpi4py
+  - openmpi
+  - pytest
+  - pip:
+    - --extra-index-url https://pypi.nvidia.com/
+    - tensorrt_llm
+    - torch
+    - transformers
+    - numpy
+    - scipy
+    - pandas
+    - regex
+    - pydantic
+    - fastapi
+    - valkey
+    - valkey-server
+    - uvicorn

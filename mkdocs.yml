@@ -1,0 +1,68 @@
+site_name: PITA
+theme:
+  name: material
+  logo: assets/pita_cat.png
+  favicon: assets/pita_cat.png
+  palette:
+    # Primary color scheme matching PITA branding
+    scheme: default
+    primary: custom  # Will be overridden by CSS
+    accent: cyan
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - toc.integrate
+
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_signature_annotations: true
+            show_parameter_types: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Examples:
+    - Inference Backends: examples/inference_backends.md
+    - Serving Modes: examples/serving_modes.md
+    - Sampling Strategies: examples/sampling_strategies.md
+    - Token Metrics: examples/token_metrics.md
+  - API Reference:
+    - API Endpoint:
+      - Template: api/api_template.md
+      - Serve: api/serve.md
+      - Test Time Coding: api/test_time_coding.md
+    - Offline Inference:
+      - LLM Backend: inference/LLM_backend.md
+      - DeepSpeed Backend: inference/deepspeed_backend.md
+      - Llama CPP Backend: inference/llama_cpp_backend.md
+      - TensorRT Backend: inference/tensorRT_backend.md
+      - Transformers Backend: inference/transformers_backend.md
+      - vLLM Backend: inference/vllm_backend.md
+      - vLLM Logits Processor: inference/vllm_logits_processor.md
+    - Sampling:
+      - Best Of: sampling/best_of.md
+      - Power Sample: sampling/power_sample.md
+      - SMC: sampling/smc.md
+    - Utils:
+      - Benchmarking: utils/benchmarking_utils.md
+      - Constants: utils/constants.md
+      - Parse Utils: utils/parse_utils.md
+      - Redis Manager: utils/redis_manager.md
+      - System Utils: utils/system_utils.md
+      - Grading:
+        - Math:
+          - Eval Math: utils/grading_utils/math/eval_math.md
+          - Math Grader: utils/grading_utils/math/math_grader.md
+          - Math Normalize: utils/grading_utils/math/math_normalize.md
+          - Parse Utils: utils/grading_utils/math/parse_utils.md

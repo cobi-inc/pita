@@ -1,0 +1,16 @@
+name: pita_vllm_cuda
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - cuda-toolkit=12.8 # Use the single meta-package from the nvidia channel
+  - cxx-compiler      # Use conda-forge's cxx-compiler for a modern GCC
+  - valkey-server      # Valkey server for vLLM backend
+  - pip:
+    - vllm==0.11.0    # This will pull in torch and all other necessary libs
+    - pandas==2.3.3
+    - datasets==4.3.0
+    - regex==2025.9.18
