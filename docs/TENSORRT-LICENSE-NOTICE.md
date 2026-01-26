@@ -226,8 +226,8 @@ Both alternatives are fully open source and have no licensing ambiguity.
 
 ### PITA Resources
 - Complete licensing guide: [LICENSING-GUIDE.md](LICENSING-GUIDE.md)
-- Main license: [../LICENSE](../LICENSE)
-- Dependency notices: [../NOTICE](../NOTICE)
+- Main license: [LICENSE](LICENSE.md)
+- Dependency notices: [NOTICE](NOTICE.md)
 - Commercial licensing: sales@cobi-inc.com
 
 ### Legal Resources

@@ -32,6 +32,9 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Usage: usage.md
+  - Licensing:
+    - Licensing Guide: LICENSING-GUIDE.md
+    - TensorRT Notice: TENSORRT-LICENSE-NOTICE.md
   - Examples:
     - Inference Backends: examples/inference_backends.md
     - Serving Modes: examples/serving_modes.md
@@ -44,21 +47,18 @@ nav:
       - Test Time Coding: api/test_time_coding.md
     - Offline Inference:
       - LLM Backend: inference/LLM_backend.md
-      - DeepSpeed Backend: inference/deepspeed_backend.md
       - Llama CPP Backend: inference/llama_cpp_backend.md
       - TensorRT Backend: inference/tensorRT_backend.md
-      - Transformers Backend: inference/transformers_backend.md
       - vLLM Backend: inference/vllm_backend.md
       - vLLM Logits Processor: inference/vllm_logits_processor.md
     - Sampling:
-      - Best Of: sampling/best_of.md
       - Power Sample: sampling/power_sample.md
       - SMC: sampling/smc.md
     - Utils:
       - Benchmarking: utils/benchmarking_utils.md
       - Constants: utils/constants.md
       - Parse Utils: utils/parse_utils.md
-      - Redis Manager: utils/redis_manager.md
+      - Valkey Manager: utils/valkey_manager.md
       - System Utils: utils/system_utils.md
       - Grading:
         - Math:

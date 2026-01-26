@@ -100,7 +100,7 @@ To comply with AGPLv3+ when using PITA:
 ### Full License Text
 
 The complete AGPLv3 license is available at:
-- In this repository: [../LICENSE](../LICENSE)
+- In this repository: [LICENSE](LICENSE.md)
 - Official source: https://www.gnu.org/licenses/agpl-3.0.txt
 
 ## Commercial License
@@ -137,7 +137,7 @@ You need a commercial license if:
 
 1. **Contact us**: sales@cobi-inc.com
 2. **Discuss your use case**: We'll determine appropriate terms
-3. **Review agreement**: See [../LICENSE-COMMERCIAL](../LICENSE-COMMERCIAL) for template
+3. **Review agreement**: Contact us for template
 4. **Execute license**: Sign agreement and pay licensing fee
 5. **Receive license**: Written authorization to use under commercial terms
 
@@ -165,7 +165,7 @@ PITA depends on various third-party libraries. All use **permissive licenses** t
 
 ### Complete List
 
-See [../NOTICE](../NOTICE) for complete attribution information including:
+See [NOTICE](NOTICE.md) for complete attribution information including:
 - All dependency names and versions
 - Copyright notices
 - License texts
