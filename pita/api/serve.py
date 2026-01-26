@@ -213,7 +213,13 @@ def create_app(config: Dict[str, Any] = None) -> FastAPI:
 # To use custom config, call create_app(config) instead.
 app = create_app()
 
-def start_server(model=None, engine=None, tokenizer=None, port=None, host=None):
+def start_server(
+    model: Optional[str] = None,
+    engine: Optional[str] = None,
+    tokenizer: Optional[str] = None,
+    port: Optional[int] = None,
+    host: Optional[str] = None
+):
     """
     Start the PITA API server with the specified configuration.
     

@@ -72,17 +72,17 @@ PITA is dual-licensed under:
 Use PITA freely under AGPLv3+. Key requirements:
 - Make source code available to all users (including network users)
 - License derivatives under AGPLv3+
-- See [LICENSE](../LICENSE) for full terms
+- See [LICENSE](LICENSE.md) for full terms
 
 ### For Commercial Users
 
 Use PITA in proprietary software without AGPLv3 obligations.
 - Contact: sales@cobi-inc.com
-- See [LICENSE-COMMERCIAL](../LICENSE-COMMERCIAL)
+- Contact: sales@cobi-inc.com
 
 ### Dependencies & Special Cases
 
-**All dependencies** use permissive licenses (MIT, BSD, Apache 2.0). See [NOTICE](../NOTICE).
+**All dependencies** use permissive licenses (MIT, BSD, Apache 2.0). See [NOTICE](NOTICE.md).
 
 **TensorRT backend** (optional): Requires NVIDIA's proprietary TensorRT with separate licensing. See [TENSORRT-LICENSE-NOTICE.md](TENSORRT-LICENSE-NOTICE.md).
 
