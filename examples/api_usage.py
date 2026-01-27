@@ -45,7 +45,7 @@ def main():
     # 2. Advanced Usage with "ITS" (Inference Time Scaling) System Prompt
     # This feature allows you to configure chain/token sampling via a specially formatted system prompt.
     # Format: "ITS <ChainMethod> <TokenMethod>"
-    # Example: "ITS Best-of-N Power-Sampling" (Conceptual)
+    # Example: "ITS SMC Power-Sampling" (Conceptual)
     # Based on decode() in test_time_coding.py, let's use a valid string if known, 
     # or just demonstrate the mechanism. 
     # NOTE: The exact string format depends on pita.api.test_time_coding.decode implementation.
