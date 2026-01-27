@@ -1,6 +1,4 @@
-import os
-from pita.inference.LLM_backend import AutoregressiveSampler, Sampling_Params
-
+from pita.inference.LLM_backend import AutoregressiveSampler
 def main():
     # Configuration
     # You can change these values to match your environment
