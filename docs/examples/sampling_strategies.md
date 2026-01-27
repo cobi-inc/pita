@@ -74,40 +74,10 @@ print(generated_text)
 - `"product"`: Multiply metrics across all tokens
 - `"model_aggregate"`: Custom model-based aggregation (WIP)
 
-## Best-of-N
-
-Best-of-N generates N independent sequences and selects the best one based on a decision metric. It operates at the chain level.
-
-```python
-from pita.inference.LLM_backend import AutoregressiveSampler
-
-# Initialize sampler
-sampler = AutoregressiveSampler(
-    engine="vllm",
-    model="Qwen/Qwen2.5-0.5B-Instruct",
-    logits_processor=True
-)
-
-# Enable Best-of-N
-sampler.enable_best_of_n(
-    N=5,                     # Generate 5 candidate sequences
-    token_metric="likelihood_confidence"  # Metric for selecting best sequence
-)
-
-# Use chain sampling
-prompt = "Explain the concept of entropy in thermodynamics."
-output = sampler.chain_sample(prompt)
-generated_text = sampler.tokenizer.decode(output.output_ids)
-print(generated_text)
-
-# Access the scores of all N candidates
-if hasattr(output, 'candidate_scores'):
-    print(f"Scores of all candidates: {output.candidate_scores}")
-```
 
 ## Combining Strategies (Advanced)
 
-You can combine chain-level and token-level strategies for hybrid scaling. For example, use Power Sampling within Best-of-N.
+You can combine chain-level and token-level strategies for hybrid scaling. 
 
 ```python
 from pita.inference.LLM_backend import AutoregressiveSampler
@@ -119,26 +89,15 @@ sampler = AutoregressiveSampler(
     logits_processor=True
 )
 
-# Enable both token-level (Power Sampling) and chain-level (Best-of-N)
+# Enable token-level (Power Sampling)
 sampler.enable_power_sampling(
     block_size=200,
     MCMC_steps=2,
     token_metric="power_distribution"
 )
 
-sampler.enable_best_of_n(
-    N=3,
-    token_metric="likelihood_confidence"
-)
-
-# When both are enabled, you can control which to use
-# Use power sampling only
+# Use power sampling
 output_power = sampler.token_sample(prompt)
-
-# Use best-of-N only (will use standard sampling, not power)
-output_bon = sampler.chain_sample(prompt)
-
-# Note: Full hybrid (Power Sampling within each Best-of-N candidate) is WIP
 ```
 
 ## Using Sampling Strategies via API

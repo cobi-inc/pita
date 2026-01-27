@@ -3,7 +3,7 @@ import pytest
 from pita.api.test_time_coding import encode, decode
 from pita.sampling.power_sample import Power_Sampling
 from pita.sampling.smc import Sequential_Monte_Carlo
-from pita.sampling.best_of import Best_of_N
+
 
 
 class TestEncode:
@@ -26,11 +26,7 @@ class TestEncode:
         result = encode(chain_sampling=smc, token_sampling=None)
         assert result == "ITS_SMC_8_3_0_NONE"
 
-    def test_encode_best_of_n_only(self):
-        """Encoding Best-of-N without token sampling."""
-        bon = Best_of_N(sequence_n=5, sequence_top_k=2)
-        result = encode(chain_sampling=bon, token_sampling=None)
-        assert result == "ITS_BO_5_2_NONE"
+
 
     def test_encode_power_sampling_only(self):
         """Encoding Power Sampling without chain sampling."""
@@ -45,12 +41,7 @@ class TestEncode:
         result = encode(chain_sampling=smc, token_sampling=ps)
         assert result == "ITS_SMC_10_5_1_PS_192_8"
 
-    def test_encode_best_of_n_with_power_sampling(self):
-        """Encoding Best-of-N combined with Power Sampling."""
-        bon = Best_of_N(sequence_n=5, sequence_top_k=2)
-        ps = Power_Sampling(block_size=256, MCMC_steps=4)
-        result = encode(chain_sampling=bon, token_sampling=ps)
-        assert result == "ITS_BO_5_2_PS_256_4"
+
 
 
 class TestDecode:
@@ -74,13 +65,7 @@ class TestDecode:
         assert chain.stop_on_eos == False
         assert token is None
 
-    def test_decode_best_of_n_only(self):
-        """Decoding Best-of-N without token sampling."""
-        chain, token = decode("ITS_BO_5_2_NONE")
-        assert isinstance(chain, Best_of_N)
-        assert chain.sequence_n == 5
-        assert chain.sequence_top_k == 2
-        assert token is None
+
 
     def test_decode_power_sampling_only(self):
         """Decoding Power Sampling without chain sampling."""
@@ -101,15 +86,7 @@ class TestDecode:
         assert token.block_size == 192
         assert token.MCMC_steps == 8
 
-    def test_decode_best_of_n_with_power_sampling(self):
-        """Decoding Best-of-N combined with Power Sampling."""
-        chain, token = decode("ITS_BO_5_2_PS_256_4")
-        assert isinstance(chain, Best_of_N)
-        assert chain.sequence_n == 5
-        assert chain.sequence_top_k == 2
-        assert isinstance(token, Power_Sampling)
-        assert token.block_size == 256
-        assert token.MCMC_steps == 4
+
 
     def test_decode_with_trailing_text(self):
         """Decoding with trailing text (system prompt content)."""
@@ -138,10 +115,7 @@ class TestDecode:
         with pytest.raises(ValueError, match="Invalid SMC parameters"):
             decode("ITS_SMC_abc_5_1_NONE")
 
-    def test_decode_bo_invalid_params(self):
-        """Decoding BO with non-numeric params raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid BO parameters"):
-            decode("ITS_BO_abc_2_NONE")
+
 
     def test_decode_ps_invalid_params(self):
         """Decoding PS with non-numeric params raises ValueError."""
@@ -168,15 +142,7 @@ class TestRoundTrip:
         assert decoded_chain.stop_on_eos == original_chain.stop_on_eos
         assert decoded_token is None
 
-    def test_roundtrip_best_of_n_only(self):
-        """Roundtrip encoding/decoding Best-of-N only."""
-        original_chain = Best_of_N(sequence_n=5, sequence_top_k=2)
-        encoded = encode(chain_sampling=original_chain, token_sampling=None)
-        decoded_chain, decoded_token = decode(encoded)
-        
-        assert decoded_chain.sequence_n == original_chain.sequence_n
-        assert decoded_chain.sequence_top_k == original_chain.sequence_top_k
-        assert decoded_token is None
+
 
     def test_roundtrip_power_sampling_only(self):
         """Roundtrip encoding/decoding Power Sampling only."""
