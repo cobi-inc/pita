@@ -11,7 +11,6 @@ PITA is a unified Python library for probabilistic inference-time scaling method
 ### Sampling Methodologies
 - **Power Sampling**: Metropolis-Hastings MCMC-based token refinement
 - **Sequential Monte Carlo (SMC)**: Particle filtering for iterative sequence refinement
-- **Best-of-N**: Generate N sequences and select the best based on decision metrics
 - **Hybrid Strategies**: Combine chain and token-level scaling methods
 
 ### Decision Metrics
@@ -148,7 +147,6 @@ pita/                              # Repository root
 │   ├── sampling/                  # Inference-time algorithms
 │   │   ├── power_sample.py        # Power Sampling
 │   │   ├── smc.py                 # Sequential Monte Carlo
-│   │   ├── best_of.py             # Best-of-N
 │   │   └── token_metrics.py       # Metric utilities
 │   ├── api/                       # REST API
 │   │   ├── serve.py               # FastAPI server

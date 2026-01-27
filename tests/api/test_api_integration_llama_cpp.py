@@ -10,7 +10,7 @@ from pita.inference.LLM_backend import AutoregressiveSampler
 from pita.api.test_time_coding import encode, decode
 from pita.sampling.power_sample import Power_Sampling
 from pita.sampling.smc import Sequential_Monte_Carlo
-from pita.sampling.best_of import Best_of_N
+
 
 
 # Constants - Using a small model for testing
@@ -151,39 +151,7 @@ class TestIntegrationSMC:
         assert token is None
 
 
-class TestIntegrationBestOfN:
-    """Integration tests for Best-of-N sampling."""
-    
-    def test_best_of_n_basic(self, sampler):
-        """Best-of-N sampling should work end-to-end."""
-        bon = Best_of_N(
-            sequence_n=3,  # Small for fast testing
-            sequence_top_k=1
-        )
-        prompt = create_prompt(sampler, "You are a helpful assistant.", "Say hello.")
-        
-        original_max_tokens = sampler.sampling_params.max_tokens
-        sampler.sampling_params.max_tokens = 16
-        
-        try:
-            output = bon.sample(sampler, prompt)
-            
-            assert output is not None
-            assert len(output.tokens) > 0
-        finally:
-            sampler.sampling_params.max_tokens = original_max_tokens
-    
-    def test_best_of_n_encoded_roundtrip(self, sampler):
-        """Verify encode/decode works correctly for Best-of-N."""
-        bon = Best_of_N(sequence_n=5, sequence_top_k=2)
-        encoded = encode(chain_sampling=bon, token_sampling=None)
-        
-        assert encoded == "ITS_BO_5_2_NONE"
-        
-        chain, token = decode(encoded)
-        assert chain.sequence_n == 5
-        assert chain.sequence_top_k == 2
-        assert token is None
+
 
 
 class TestIntegrationFullAPI:

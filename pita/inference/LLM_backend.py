@@ -521,63 +521,6 @@ class AutoregressiveSampler:
         self.chain_sample_fn = self.chain_sampling.sample
         self.chain_sample_name = "SMC"
 
-    def enable_best_of_n(
-        self,
-        sequence_n: int,
-        sequence_top_k: int,
-        token_metric: str
-    )-> None:
-        """
-        Enables Best-of-N sampling for the chosen LLM/Engine.
-
-        Args:
-            sequence_n (int): Number of sequences to sample and choose the best from.
-            sequence_top_k (int): Number of top_k sequences to choose from (top_k <= sequence_n). If top_k = 1, greedy selection is used.
-            token_metric (str): Token metric to use to grade each sequence. Can be "logprobs", "power_distribution", "entropy", or "likelihood_confidence". "PRM" is planned but not yet supported.
-        
-        Returns:
-            None
-        """
-        # Check if chain sampling has already been enabled. If so replace it with Best-of-N.
-        if(self.chain_sampling is not None):
-            print("Warning: Current Chain Sampling Strategy is being replaced with Best-of-N.")
-
-        # Validate sequence_n and sequence_top_k
-        if not isinstance(sequence_n, int) or not isinstance(sequence_top_k, int):
-            raise TypeError("sequence_n and sequence_top_k must be integers greater than 0.")
-        if sequence_n <= 0:
-            raise ValueError("sequence_n must be a positive integer greater than 0.")
-        if sequence_top_k <= 0:
-            raise ValueError("sequence_top_k must be a positive integer greater than 0.")
-        # Check if sequence_top_k is valid relative to sequence_n
-        if(sequence_top_k > sequence_n):
-            raise ValueError("sequence_top_k must be less than or equal to sequence_n.")
-        
-        # Check if the engine/LLM is set up for Best-of-N
-        if(token_metric == "PRM"):
-            raise ValueError("PRM is not supported YET for Best-of-N.")
-        elif(token_metric == "logprobs" or token_metric == "power_distribution" or token_metric == "entropy" or token_metric == "likelihood_confidence"):
-            if(self.engine == "vllm"):
-                vllm_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "llama_cpp"):
-                llama_cpp_backend.check_token_metric_compatibility(self, token_metric)
-            elif(self.engine == "tensorrt"):
-                tensorrt_backend.check_token_metric_compatibility(self, token_metric)
-        else:
-            raise ValueError(f"{token_metric} not supported for Best-of-N.")
-
-        # Create the Best-of-N Class
-        from pita.sampling.best_of import Best_of_N
-        self.chain_sampling = Best_of_N(
-            sequence_n=sequence_n,
-            sequence_top_k=sequence_top_k,
-            token_metric=token_metric
-        )
-
-        # Set the chain sampling function to the Best-of-N sample function
-        self.chain_sample_fn = self.chain_sampling.sample
-        self.chain_sample_name = "Best-of-N"
-
     # Token Sampling Methods
     def enable_power_sampling(
         self,

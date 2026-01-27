@@ -38,7 +38,7 @@ print(f"Power distribution shape: {power_dist.shape}")
 print(f"Entropy shape: {entropy.shape}")
 ```
 
-In most workflows, you do **not** need to call `calc_token_metric` directly when generating text. Sampling strategies like power sampling and Best-of-N will compute the requested metric internally when you pass a `token_metric` name (for example, `"logprobs"`, `"power_distribution"`, `"entropy"`, or `"likelihood_confidence"`). Manual metric calculation is mainly useful for inspection, analysis, or debugging outside of these sampling helpers.
+In most workflows, you do **not** need to call `calc_token_metric` directly when generating text. Sampling strategies like power sampling will compute the requested metric internally when you pass a `token_metric` name (for example, `"logprobs"`, `"power_distribution"`, `"entropy"`, or `"likelihood_confidence"`). Manual metric calculation is mainly useful for inspection, analysis, or debugging outside of these sampling helpers.
 ## Calculating Sequence Probabilities
 
 ```python
@@ -123,12 +123,4 @@ sampler.enable_power_sampling(
 )
 
 output = sampler.token_sample(context)
-
-# Enable Best-of-N with a token metric
-sampler.enable_best_of_n(
-    N=5,
-    token_metric="likelihood_confidence"
-)
-
-output = sampler.chain_sample(context)
 ```

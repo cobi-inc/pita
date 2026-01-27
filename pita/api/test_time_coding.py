@@ -18,19 +18,18 @@
 
 from pita.sampling.power_sample import Power_Sampling
 from pita.sampling.smc import Sequential_Monte_Carlo
-from pita.sampling.best_of import Best_of_N
 from typing import Optional
 
 
 def encode(
-    chain_sampling: Optional[Sequential_Monte_Carlo | Best_of_N] = None,
+    chain_sampling: Optional[Sequential_Monte_Carlo] = None,
     token_sampling: Optional[Power_Sampling] = None
 ) -> str:
     """
     Encode test-time scaling parameters into a string for embedding in system prompts.
 
     Args:
-        chain_sampling: Chain sampling configuration (SMC or Best-of-N). Only one allowed.
+        chain_sampling: Chain sampling configuration (SMC).
         token_sampling: Token sampling configuration (Power Sampling).
 
     Returns:
@@ -49,9 +48,6 @@ def encode(
         parts.extend(["SMC", str(chain_sampling.num_particles), 
                       str(chain_sampling.tokens_per_step), 
                       str(int(chain_sampling.stop_on_eos))])
-    elif isinstance(chain_sampling, Best_of_N):
-        parts.extend(["BO", str(chain_sampling.sequence_n), 
-                      str(chain_sampling.sequence_top_k)])
     else:
         raise ValueError(f"Unknown chain sampling type: {type(chain_sampling)}")
     
@@ -67,7 +63,7 @@ def encode(
     return "_".join(parts)
 
 
-def decode(system_string: str) -> tuple[Optional[Sequential_Monte_Carlo | Best_of_N], Optional[Power_Sampling]]:
+def decode(system_string: str) -> tuple[Optional[Sequential_Monte_Carlo], Optional[Power_Sampling]]:
     """
     Decode test-time scaling parameters from a system prompt string.
 
@@ -108,19 +104,8 @@ def decode(system_string: str) -> tuple[Optional[Sequential_Monte_Carlo | Best_o
             stop_on_eos=bool(int(parts[i+3]))
         )
         i += 4
-    elif parts[i] == "BO":
-        # BO requires 2 params: sequence_n, sequence_top_k
-        if i + 2 >= len(parts):
-            raise ValueError("BO requires 2 parameters: sequence_n, sequence_top_k")
-        if not all(parts[i+j].isdigit() for j in range(1, 3)):
-            raise ValueError(f"Invalid BO parameters: expected 2 integers after 'BO'")
-        chain_sampling = Best_of_N(
-            sequence_n=int(parts[i+1]),
-            sequence_top_k=int(parts[i+2])
-        )
-        i += 3
     else:
-        raise ValueError(f"Unknown chain sampling method: '{parts[i]}'. Expected 'SMC', 'BO', or 'NONE'.")
+        raise ValueError(f"Unknown chain sampling method: '{parts[i]}'. Expected 'SMC' or 'NONE'.")
     
     # Parse token sampling method
     if i >= len(parts):
