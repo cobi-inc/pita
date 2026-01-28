@@ -4,7 +4,9 @@
 
 # PITA - Probabilistic Inference Time Algorithms (Community Edition)
 
-PITA is a unified Python library for probabilistic inference-time scaling methods with Large Language Models (LLMs). It provides a consistent interface across multiple inference backends and sampling strategies to improve output quality through test-time computation. PITA is managed by [COBI](https://cobi.tech/). Get in touch with the COBI team at info@cobi.tech.
+PITA is a unified Python library for probabilistic inference-time scaling methods with Large Language Models (LLMs). It provides a consistent interface across multiple inference backends and sampling strategies to improve output quality through test-time computation. 
+
+PITA is managed by [COBI](https://cobi.tech/). Get in touch with the COBI team at info@cobi.tech.
 
 Visualize the PITA library using the [TOKEN SPACE EXPLORER](https://explore.cobi.tech/).
 
