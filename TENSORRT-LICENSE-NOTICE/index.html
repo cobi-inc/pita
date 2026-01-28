@@ -1,0 +1,2455 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../LICENSING-GUIDE/">
+      
+      
+        <link rel="next" href="../examples/inference_backends/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/pita_cat.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>TensorRT Notice - PITA</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tensorrt-licensing-notice" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="PITA" class="md-header__button md-logo" aria-label="PITA" data-md-component="logo">
+      
+  <img src="../assets/pita_cat.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PITA
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TensorRT Notice
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../usage/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Usage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../LICENSING-GUIDE/" class="md-tabs__link">
+          
+  
+  
+  Licensing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/inference_backends/" class="md-tabs__link">
+          
+  
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/api_template/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PITA" class="md-nav__button md-logo" aria-label="PITA" data-md-component="logo">
+      
+  <img src="../assets/pita_cat.png" alt="logo">
+
+    </a>
+    PITA
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Licensing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Licensing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LICENSING-GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Licensing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TensorRT Notice
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TensorRT Notice
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tensorrt-proprietary-license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TensorRT Proprietary License
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TensorRT Proprietary License">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nvidias-license-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVIDIA's License Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-find-nvidias-license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to Find NVIDIA's License
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interaction-with-pitas-agplv3-license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interaction with PITA's AGPLv3 License
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interaction with PITA&#39;s AGPLv3 License">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-theoretical-question" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Theoretical Question
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-is-likely-not-a-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why This Is Likely Not a Problem
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why This Is Likely Not a Problem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-separate-software-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Separate Software Components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-agplv3-mere-aggregation-exception" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. AGPLv3 "Mere Aggregation" Exception
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-dynamic-linking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Dynamic Linking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-optional-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Optional Dependency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-industry-precedent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Industry Precedent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legal-opinion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legal Opinion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison Chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-guidance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Practical Guidance
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Practical Guidance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-agplv3-pita-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For AGPLv3 PITA Users
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-commercial-pita-license-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For Commercial PITA License Users
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation Requirements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#technical-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-to-tensorrt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternatives to TensorRT
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternatives to TensorRT">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vllm-backend-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM Backend (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llamacpp-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        llama.cpp Backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bottom-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bottom Line
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Resources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Additional Resources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nvidia-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVIDIA Resources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pita-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PITA Resources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legal-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legal Resources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/inference_backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inference Backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/serving_modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Serving Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/sampling_strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/token_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Endpoint
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Endpoint
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/api_template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/serve/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Serve
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/test_time_coding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Time Coding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Offline Inference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Offline Inference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/LLM_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/llama_cpp_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Llama CPP Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/tensorRT_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TensorRT Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/vllm_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/vllm_logits_processor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Logits Processor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sampling
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sampling/power_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power Sample
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sampling/smc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utils
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/benchmarking_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/constants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/parse_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/valkey_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Valkey Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/system_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4_6" id="__nav_6_4_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grading
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_6_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Grading
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4_6_1" id="__nav_6_4_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Math
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_6_4_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Math
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/grading_utils/math/eval_math/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Math
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/grading_utils/math/math_grader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Math Grader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/grading_utils/math/math_normalize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Math Normalize
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/grading_utils/math/parse_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="tensorrt-licensing-notice">TensorRT Licensing Notice</h1>
+<p><strong>Important information about using PITA's optional TensorRT backend</strong></p>
+<h2 id="overview">Overview</h2>
+<p>PITA's TensorRT backend is an <strong>optional feature</strong> that provides inference using NVIDIA's TensorRT-LLM library. While TensorRT-LLM itself is Apache 2.0 licensed, it depends on NVIDIA's proprietary <strong>TensorRT</strong> runtime, which has separate licensing requirements.</p>
+<h2 id="tensorrt-proprietary-license">TensorRT Proprietary License</h2>
+<h3 id="nvidias-license-terms">NVIDIA's License Terms</h3>
+<p>NVIDIA TensorRT is proprietary software licensed under NVIDIA's Software License Agreement (SLA). Key restrictions include:</p>
+<ul>
+<li>❌ Cannot redistribute TensorRT</li>
+<li>❌ Cannot create derivative works of TensorRT</li>
+<li>❌ Cannot use in a way that "subjects it to an open source license requiring source redistribution"</li>
+<li>❌ Not designed/tested for certain production business-critical systems (varies by version)</li>
+<li>✅ Users must obtain TensorRT directly from NVIDIA and accept their terms</li>
+</ul>
+<h3 id="where-to-find-nvidias-license">Where to Find NVIDIA's License</h3>
+<ul>
+<li>Official TensorRT page: https://developer.nvidia.com/tensorrt</li>
+<li>License agreement: https://docs.nvidia.com/deeplearning/tensorrt/latest/reference/sla.html</li>
+<li>You must review and accept these terms when installing TensorRT</li>
+</ul>
+<h2 id="interaction-with-pitas-agplv3-license">Interaction with PITA's AGPLv3 License</h2>
+<h3 id="the-theoretical-question">The Theoretical Question</h3>
+<p>NVIDIA's license states TensorRT cannot be "subjected to an open source license that requires the SOFTWARE to be redistributed in source code form." This raises a question: Is there a conflict when using AGPLv3-licensed PITA with proprietary TensorRT?</p>
+<h3 id="why-this-is-likely-not-a-problem">Why This Is Likely Not a Problem</h3>
+<p>The overwhelming legal consensus is that this combination is permissible under the <strong>"mere aggregation"</strong> doctrine:</p>
+<h4 id="1-separate-software-components">1. Separate Software Components</h4>
+<p>TensorRT and PITA are distinct programs:
+- PITA doesn't include TensorRT code
+- Users install TensorRT separately from NVIDIA
+- PITA doesn't redistribute TensorRT
+- They run as separate processes</p>
+<h4 id="2-agplv3-mere-aggregation-exception">2. AGPLv3 "Mere Aggregation" Exception</h4>
+<p>The AGPLv3 license explicitly allows "mere aggregation" of separate programs:</p>
+<blockquote>
+<p>"A compilation of a covered work with other separate and independent works... on a storage medium... is called an 'aggregate' if the compilation and its resulting copyright are not used to limit the access or legal rights of the compilation's users beyond what the individual works permit."</p>
+</blockquote>
+<p>This means running PITA (AGPLv3) with TensorRT (proprietary) on the same system is generally considered acceptable.</p>
+<h4 id="3-dynamic-linking">3. Dynamic Linking</h4>
+<p>PITA uses TensorRT via:
+- Python imports (dynamic, at runtime)
+- No static linking
+- No compilation together
+- Clean separation at runtime</p>
+<p>This further supports the "separate programs" argument.</p>
+<h4 id="4-optional-dependency">4. Optional Dependency</h4>
+<p>TensorRT is <strong>completely optional</strong>:
+- PITA works without TensorRT (vLLM, llama.cpp backends available)
+- TensorRT support is a plugin-like feature
+- Core PITA functionality doesn't require TensorRT</p>
+<h4 id="5-industry-precedent">5. Industry Precedent</h4>
+<p>This situation is common and generally accepted:</p>
+<p><strong>Similar Situations Considered Legal:</strong>
+- ✅ AGPLv3 web applications using proprietary databases (Oracle, SQL Server, MongoDB Enterprise)
+- ✅ AGPLv3 software using proprietary GPU drivers (NVIDIA CUDA drivers)
+- ✅ AGPLv3 code running on proprietary operating systems (Windows, macOS)
+- ✅ AGPLv3 applications calling proprietary APIs (cloud services, etc.)</p>
+<p>All of these involve AGPLv3 code interacting with proprietary components via dynamic linking/runtime interfaces.</p>
+<h3 id="legal-opinion">Legal Opinion</h3>
+<p>Based on:
+- The "mere aggregation" exception in AGPLv3
+- Separation of components
+- Industry practice
+- Legal commentary on similar situations</p>
+<p><strong>We believe this combination is legally sound.</strong></p>
+<p>However, because:
+- NVIDIA's terms are unusually explicit about open source licenses
+- AG PLv3's network clause is stricter than standard GPL
+- Limited specific case law on this exact scenario</p>
+<p><strong>We recommend consulting legal counsel if you have concerns.</strong></p>
+<h3 id="comparison-chart">Comparison Chart</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>TensorRT + AGPLv3 PITA</th>
+<th>Similar Precedent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Separate installation</strong></td>
+<td>✅ Yes</td>
+<td>Oracle DB + AGPLv3 app</td>
+</tr>
+<tr>
+<td><strong>No redistribution</strong></td>
+<td>✅ PITA doesn't distribute TensorRT</td>
+<td>GPU drivers + Linux (GPL)</td>
+</tr>
+<tr>
+<td><strong>Dynamic linking</strong></td>
+<td>✅ Python runtime imports</td>
+<td>System libraries + GPL apps</td>
+</tr>
+<tr>
+<td><strong>Optional component</strong></td>
+<td>✅ Can use other backends</td>
+<td>Database choice in apps</td>
+</tr>
+<tr>
+<td><strong>Mere aggregation</strong></td>
+<td>✅ Separate programs</td>
+<td>Any proprietary OS + GPL software</td>
+</tr>
+</tbody>
+</table>
+<h2 id="practical-guidance">Practical Guidance</h2>
+<h3 id="for-agplv3-pita-users">For AGPLv3 PITA Users</h3>
+<p>If you want to use the TensorRT backend with AGPLv3-licensed PITA:</p>
+<ol>
+<li><strong>Install TensorRT separately from NVIDIA</strong></li>
+<li>Don't expect PITA to bundle or provide TensorRT</li>
+<li>Download from NVIDIA: https://developer.nvidia.com/tensorrt</li>
+<li>
+<p>Accept NVIDIA's license agreement</p>
+</li>
+<li>
+<p><strong>Document your use</strong></p>
+</li>
+<li>Note that TensorRT is a separate component</li>
+<li>Include both PITA's AGPLv3 notice and reference to NVIDIA's TensorRT license</li>
+<li>
+<p>Make clear they are separate programs</p>
+</li>
+<li>
+<p><strong>If providing source to users (AGPLv3 requirement)</strong></p>
+</li>
+<li>Provide PITA source code (as required by AGPLv3)</li>
+<li>Do NOT include TensorRT in your source distribution</li>
+<li>
+<p>Instruct users to obtain TensorRT from NVIDIA separately</p>
+</li>
+<li>
+<p><strong>If you're concerned</strong></p>
+</li>
+<li>Consult with your legal counsel</li>
+<li>Consider using vLLM or llama.cpp backends (both open source)</li>
+<li>Consider obtaining PITA commercial license (removes AGPLv3 question)</li>
+</ol>
+<h3 id="for-commercial-pita-license-users">For Commercial PITA License Users</h3>
+<p>If you have a commercial PITA license:</p>
+<ol>
+<li><strong>TensorRT licensing still separate</strong></li>
+<li>You still need to obtain TensorRT from NVIDIA</li>
+<li>NVIDIA's license terms still apply</li>
+<li>
+<p>Commercial PITA license doesn't include TensorRT rights</p>
+</li>
+<li>
+<p><strong>No AGPLv3 interaction question</strong></p>
+</li>
+<li>Since you're not using AGPLv3 PITA license, no AGPLv3/TensorRT interaction</li>
+<li>
+<p>Only NVIDIA's license requirements apply (for TensorRT)</p>
+</li>
+<li>
+<p><strong>Contact NVIDIA</strong></p>
+</li>
+<li>For commercial TensorRT use, review NVIDIA's terms</li>
+<li>May need commercial TensorRT license depending on your use case</li>
+</ol>
+<h2 id="installation-requirements">Installation Requirements</h2>
+<h3 id="technical-requirements">Technical Requirements</h3>
+<p>When using TensorRT with PITA:</p>
+<pre><code class="language-bash"># Install PITA without TensorRT first
+pip install pita
+
+# Install TensorRT separately from NVIDIA
+# (Follow NVIDIA's installation instructions)
+# Accept NVIDIA's license during installation
+
+# Then install tensorrt_llm
+pip install tensorrt_llm
+</code></pre>
+<p><strong>Note</strong>: PITA's <code>pita[tensorrt]</code> option lists tensorrt_llm as a dependency, but users must still:
+1. Install underlying TensorRT from NVIDIA separately
+2. Accept NVIDIA's license agreement
+3. Ensure they comply with both licenses</p>
+<h3 id="version-compatibility">Version Compatibility</h3>
+<p>Check PITA documentation for compatible TensorRT versions:
+- Different versions may have different license terms
+- Ensure compatibility with your TensorRT-LLM version</p>
+<h2 id="alternatives-to-tensorrt">Alternatives to TensorRT</h2>
+<p>If you're concerned about TensorRT licensing or compatibility:</p>
+<h3 id="vllm-backend-recommended">vLLM Backend (Recommended)</h3>
+<ul>
+<li><strong>License</strong>: Apache 2.0 (permissive, no conflicts)</li>
+<li><strong>Performance</strong>: Excellent for GPU inference</li>
+<li><strong>Compatibility</strong>: Works with AGPLv3 PITA seamlessly</li>
+<li><strong>Installation</strong>: <code>pip install pita[vllm]</code></li>
+</ul>
+<h3 id="llamacpp-backend">llama.cpp Backend</h3>
+<ul>
+<li><strong>License</strong>: MIT (permissive, no conflicts)</li>
+<li><strong>Performance</strong>: Great for CPU inference, good for GPU</li>
+<li><strong>Compatibility</strong>: Works with AGPLv3 PITA seamlessly</li>
+<li><strong>Installation</strong>: <code>pip install pita[llama_cpp]</code></li>
+</ul>
+<p>Both alternatives are fully open source and have no licensing ambiguity.</p>
+<h2 id="summary">Summary</h2>
+<h3 id="bottom-line">Bottom Line</h3>
+<p><strong>Using TensorRT with AGPLv3 PITA is likely legally permissible</strong> under the "mere aggregation" doctrine, similar to many common AGPLv3 + proprietary software combinations.</p>
+<p><strong>However:</strong>
+- TensorRT must be obtained separately from NVIDIA
+- Users must accept NVIDIA's license terms
+- If concerned, consult legal counsel or use open source backends</p>
+<h3 id="decision-matrix">Decision Matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Your Situation</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Research/academic use</strong></td>
+<td>AGPLv3 PITA + TensorRT likely fine, document separation</td>
+</tr>
+<tr>
+<td><strong>Commercial product (AGPLv3 compliant)</strong></td>
+<td>Consult counsel if concerned, or use vLLM/llama.cpp</td>
+</tr>
+<tr>
+<td><strong>Cannot disclose source</strong></td>
+<td>Get commercial PITA license + obtain TensorRT from NVIDIA</td>
+</tr>
+<tr>
+<td><strong>Want zero legal questions</strong></td>
+<td>Use vLLM or llama.cpp backends (fully open source)</td>
+</tr>
+<tr>
+<td><strong>Need commercial PITA</strong></td>
+<td>Commercial license + separate TensorRT from NVIDIA</td>
+</tr>
+</tbody>
+</table>
+<h2 id="additional-resources">Additional Resources</h2>
+<h3 id="nvidia-resources">NVIDIA Resources</h3>
+<ul>
+<li>TensorRT Home: https://developer.nvidia.com/tensorrt</li>
+<li>TensorRT License: https://docs.nvidia.com/deeplearning/tensorrt/latest/reference/sla.html</li>
+<li>TensorRT-LLM (Apache 2.0): https://github.com/NVIDIA/TensorRT-LLM</li>
+</ul>
+<h3 id="pita-resources">PITA Resources</h3>
+<ul>
+<li>Complete licensing guide: <a href="../LICENSING-GUIDE/">LICENSING-GUIDE.md</a></li>
+<li>Main license: <a href="../LICENSE/">LICENSE</a></li>
+<li>Dependency notices: <a href="../NOTICE/">NOTICE</a></li>
+<li>Commercial licensing: sales@cobi-inc.com</li>
+</ul>
+<h3 id="legal-resources">Legal Resources</h3>
+<ul>
+<li>AGPLv3 full text: https://www.gnu.org/licenses/agpl-3.0.txt</li>
+<li>FSF GPL FAQ: https://www.gnu.org/licenses/gpl-faq.html</li>
+<li>"Mere aggregation" discussion: https://www.gnu.org/licenses/gpl-faq.html#MereAggregation</li>
+</ul>
+<h2 id="contact">Contact</h2>
+<p>For questions about TensorRT compatibility with PITA:</p>
+<p><strong>Technical questions</strong>: Open an issue at https://github.com/cobi-inc-MC/pita/issues
+<strong>Licensing questions</strong>: sales@cobi-inc.com
+<strong>Legal concerns</strong>: Consult with qualified legal counsel</p>
+<hr />
+<p><strong>Disclaimer</strong>: This document provides information about licensing considerations. It is not legal advice. For specific legal questions about your use case, consult with a qualified intellectual property attorney.</p>
+<p><strong>Last Updated</strong>: January 2026</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
