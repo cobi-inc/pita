@@ -22,9 +22,18 @@ PITA is a unified Python library for probabilistic inference-time scaling method
 ### Inference Backends
 - **vLLM**: High-throughput GPU inference (primary backend)
 - **llama.cpp**: CPU/GPU inference with GGUF model support
-- **Transformers**: HuggingFace integration for flexibility
+- **Transformers (WIP)**: HuggingFace integration for flexibility
 - **TensorRT**: NVIDIA-optimized inference
-- **DeepSpeed**: Distributed inference support
+- **DeepSpeed (WIP)**: Distributed inference support
+
+## Documentation
+
+**📚 Full documentation available at: [cobi-inc.github.io/pita](https://cobi-inc.github.io/pita/)**
+
+- [Installation Guide](docs/installation.md)
+- [Usage Guide](docs/usage.md)
+- [API Reference](docs/api/api_template.md)
+- [Examples](docs/examples/)
 
 ## Installation
 
@@ -125,13 +134,6 @@ response = client.chat.completions.create(
 
 print(response.choices[0].message.content)
 ```
-
-## Documentation
-
-- [Installation Guide](docs/installation.md)
-- [Usage Guide](docs/usage.md)
-- [API Reference](docs/api/api_template.md)
-- [Examples](docs/examples/)
 
 ## Project Structure
 
